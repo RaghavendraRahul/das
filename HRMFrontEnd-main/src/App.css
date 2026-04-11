@@ -1,0 +1,232 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+input::placeholder,
+textarea::placeholder {
+  @apply text-gray-400 text-sm;
+}
+
+.bg {
+    background-color: red;
+}
+
+.slick-slide>div {
+    transition: 1s linear;
+}
+
+#reader {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    border: 2px solid #000;
+    /* Optional: for visual reference */
+}
+
+.scanner-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: red;
+    animation: scan 1.5s infinite alternate;
+}
+
+@keyframes scan {
+    0% {
+        top: 0;
+    }
+
+    100% {
+        top: 100%;
+    }
+}
+
+.overflowbar {
+    height: 80dvh;
+    overflow-y: scroll;
+
+}
+
+.overflowbar::-webkit-scrollbar {
+    display: none;
+}
+
+.slick-slide>div {
+    margin: 0px 10px;
+}
+
+/* .custom-tooltip .tooltip-inner  {
+    background-color: #3498db !important; 
+    color: white; 
+  }
+  .custom-tooltip .tooltip-arrow{
+    background-color: #3498db !important;
+} */
+.bgrd {
+    background-image: url('./assets/Images/DasboardBanner.png');
+    height: 100vh;
+    width: 100vw;
+    background-position: center;
+    overflow-y: scroll;
+}
+
+.bgmodal {
+    background-image: url('./assets/Images/DasboardBanner.png');
+    background-position: center;
+
+}
+
+.btngrd {
+    background-color: #1D4AE8;
+    color: white;
+}
+
+.bgclr {
+    background-color: white;
+    border: 2px solid white;
+}
+
+.inputbg {
+    background-color: #F1F2F6;
+}
+
+.bgclr1 {
+    background-color: white;
+}
+
+.tablebg {
+    background-color: white;
+    border: 2px solid white;
+    padding: 0px;
+    padding-top: 0px;
+    border-radius: 10px;
+    font-family: "Poppins", sans-serif;
+}
+
+.tablebg tr:first-child {
+    /* Styles for the first row in the table header */
+    background-color: white;
+    font-weight: 400;
+    box-shadow: 1px 1px 5px rgb(219, 217, 217);
+    color: #41496D;
+}
+
+
+/* .tablebg input{
+    background-color: transparent;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+} */
+.tablebg th,
+td {
+    padding: 13px;
+    text-align: center;
+    vertical-align: top;
+
+}
+
+.tablebg td {
+    border-bottom: 1px solid rgba(159, 159, 159, 0.2);
+    font-weight: 400;
+    box-shadow: 0px;
+    height: fit-content;
+    color: #878787;
+    max-width: 300px;
+    word-wrap: break-word; /* Ensures long words wrap */
+    word-break: break-word; /* Ensures text breaks at word boundaries */
+    white-space: normal; /* Allows wrapping */
+}
+
+
+.savebtn {
+    background-color: #069C30;
+}
+
+.bluebtn {
+    background-color: #1D4AE8;
+    color: white;
+}
+
+.backbtn {
+    background: rgb(238, 238, 238);
+    background: linear-gradient(104deg, rgba(238, 238, 238, 1) 0%, rgba(104, 112, 140, 1) 30%);
+}
+
+/* Chrome, Safari, Edge, Opera */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+.transi {
+    transition: all 0.5s ease;
+}
+
+.sticky-left-top {
+    position: sticky;
+    left: 0;
+    top: 0;
+}
+
+.sticky-right {
+    position: sticky;
+    right: 0;
+}
+
+.border-bottom {
+    border-bottom: 2px solid rgb(55, 54, 54);
+}
+
+.sidebarbg {
+    background-color: rgb(30, 74, 232);
+}
+
+.pulse-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: #ef4444; 
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.pulse-badge::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(207, 51, 51, 0.4);
+  border-radius: 50%;
+  z-index: -1;
+  animation: wave 1.5s infinite ease-out;
+}
+
+@keyframes wave {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}

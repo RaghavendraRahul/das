@@ -1,0 +1,177 @@
+.table-responsive {
+  overflow: scroll;
+  white-space: nowrap;
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+  /* Height of horizontal scrollbar */
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+  display: none;
+  /* Track color */
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background-color: #b0b0b0;
+  /* Scrollbar color */
+  border-radius: 30px;
+  /* Roundness of the scrollbar */
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background-color: #9c9c9c;
+  /* Color on hover */
+}
+
+.sticky-left {
+  position: sticky;
+  left: 0px;
+  background-color: #fff;
+  z-index: 11;
+}
+
+.sticky-left1 {
+  position: sticky;
+  left: 150px;
+  background-color: #fff;
+  z-index: 11;
+}
+
+.sticky-left2 {
+  position: sticky;
+  left: 290px;
+  background-color: #fff;
+  z-index: 11;
+}
+
+.scrollbar1::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar1::-webkit-scrollbar-track {
+  background: #e0e0e0;
+
+  /* Track color */
+}
+
+.scrollbar1::-webkit-scrollbar-thumb {
+  background-color: #888;
+  /* Scrollbar color */
+  border-radius: 10px;
+  /* Roundness of the scrollbar */
+  border: 2px solid #e0e0e0;
+  /* Space around scrollbar */
+}
+
+.scrollbar1::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+  /* Color on hover */
+}
+
+.scrollbar1::-webkit-scrollbar-corner {
+  background-color: #555;
+  /* Color on hover */
+}
+
+.downtoupani {
+  animation: upanimation 0.5s linear forwards;
+}
+
+@keyframes upanimation {
+  0% {
+    transform: translateY(20px);
+    /* Start from below the viewport */
+    opacity: 0;
+    /* Optionally start with opacity 0 */
+  }
+
+  100% {
+    transform: translateY(0);
+    /* Move to the original position */
+    opacity: 1;
+    /* Optionally fade in */
+  }
+}
+
+.scrollmade::-webkit-scrollbar {
+display: none;
+}
+
+.scrollmade2 {
+  overflow-y: scroll;
+  transition: 0.8s;
+}
+
+/* Webkit browsers (Chrome, Safari) */
+.scrollmade2:hover::-webkit-scrollbar {
+  width: 5px;
+  transition: 0.8s;
+}
+.scrollmade2::-webkit-scrollbar {
+  transition: 0.8s;
+  width: 0px; /* Width of the scrollbar */
+}
+
+.scrollmade2::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Track background color */
+  border-radius: 10px; /* Rounded corners on track */
+}
+
+.scrollmade2::-webkit-scrollbar-thumb {
+  background-color: #818181; /* Scrollbar color */
+  border-radius: 10px; /* Rounded corners on thumb */
+}
+
+.formbg {
+  background-color: rgb(233, 231, 236);
+}
+
+
+.navscrollbar1 {
+  overflow-y: scroll;
+  transition: 0.8s;
+ margin-right: 2px;
+}
+.navscrollbar1::-webkit-scrollbar {
+  width: 6px; /* Reduce the width */
+}
+
+.navscrollbar1::-webkit-scrollbar-thumb {
+  background-color: #fafafa; /* White scroll thumb */
+  border-radius: 10px; /* Rounded corners */
+}
+
+.navscrollbar1::-webkit-scrollbar-track {
+  background-color: transparent; /* Transparent background */
+}
+
+.navscrollbar1::-webkit-scrollbar-button {
+  display: none; /* Hides the arrow buttons */
+}
+
+/* Add these styles in your CSS file */
+
+.topnavscroll::-webkit-scrollbar {
+  height: 4px; /* Custom height for the scrollbar */
+}
+
+.topnavscroll::-webkit-scrollbar-thumb {
+  background-color: transparent; /* Transparent scroll thumb */
+}
+
+.topnavscroll::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.topnavscroll::-webkit-scrollbar-button:horizontal:decrement {
+  display: none; /* Hide default left scroll button */
+}
+
+.topnavscroll::-webkit-scrollbar-button:horizontal:increment {
+  display: none; /* Hide default right scroll button */
+}

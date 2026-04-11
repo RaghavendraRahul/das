@@ -1,0 +1,38 @@
+﻿
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\core\database\database.g.dart:4314:26 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\src\core\database\database.g.dart:4316:45 - unnecessary_non_null_assertion
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\core\database\database.g.dart:4822:23 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\src\core\database\database.g.dart:4824:42 - unnecessary_non_null_assertion
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\core\database\database.g.dart:5238:27 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\src\core\database\database.g.dart:5240:46 - unnecessary_non_null_assertion
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\core\database\database.g.dart:5727:27 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\src\core\database\database.g.dart:5729:46 - unnecessary_non_null_assertion
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\core\database\database.g.dart:6218:23 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\src\core\database\database.g.dart:6220:42 - unnecessary_non_null_assertion
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\core\database\database.g.dart:6550:26 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\src\core\database\database.g.dart:6552:45 - unnecessary_non_null_assertion
+   info - 'ProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\core\database\database_provider.g.dart:22:23 - deprecated_member_use
+   info - 'ProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\core\networking\api_client.g.dart:22:18 - deprecated_member_use
+   info - 'AutoDisposeProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\auth\auth_providers.g.dart:23:29 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\auth\auth_providers.g.dart:38:29 - deprecated_member_use
+   info - 'AutoDisposeProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\dashboard\dashboard_providers.g.dart:25:34 - deprecated_member_use
+   info - 'AutoDisposeFutureProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\dashboard\dashboard_providers.g.dart:42:7 - deprecated_member_use
+   info - 'AutoDisposeProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\dashboard\dashboard_providers.g.dart:57:31 - deprecated_member_use
+   info - 'AutoDisposeFutureProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\dashboard\dashboard_providers.g.dart:73:31 - deprecated_member_use
+   info - 'AutoDisposeProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\dashboard\dashboard_repository.g.dart:25:34 - deprecated_member_use
+   info - 'AutoDisposeProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\projects\project_providers.g.dart:24:32 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\projects\project_providers.g.dart:40:29 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\projects\project_providers.g.dart:59:7 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\projects\project_providers.g.dart:75:30 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\projects\project_providers.g.dart:92:37 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\projects\project_providers.g.dart:109:7 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\projects\project_providers.g.dart:127:7 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\projects\project_providers.g.dart:144:7 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\src\features\projects\project_repository.dart:247:23 - prefer_const_constructors
+  error - Expected to find ')' - lib\src\features\projects\views\project_grid_page.dart:187:6 - expected_token
+   info - 'StreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\today\today_providers.g.dart:22:23 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\today\today_providers.g.dart:165:8 - deprecated_member_use
+   info - 'AutoDisposeStreamProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\today\today_providers.g.dart:301:8 - deprecated_member_use
+   info - 'ProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\src\features\today\today_repository.g.dart:23:30 - deprecated_member_use
+warning - A value for optional parameter 'navigatorKey' isn't ever given - lib\src\routes\app_router.gr.dart:14:22 - unused_element_parameter
+

@@ -1,0 +1,147 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'project_providers.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+String _$projectRepositoryHash() => r'f7f019cec3564ab7c9fdcdaa57dda471e9a6759c';
+
+/// See also [projectRepository].
+@ProviderFor(projectRepository)
+final projectRepositoryProvider =
+    AutoDisposeProvider<ProjectRepository>.internal(
+  projectRepository,
+  name: r'projectRepositoryProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$projectRepositoryHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef ProjectRepositoryRef = AutoDisposeProviderRef<ProjectRepository>;
+String _$currentProjectHash() => r'57950f459ceb3e9d60ee51288b215f99f8b855cd';
+
+/// See also [currentProject].
+@ProviderFor(currentProject)
+final currentProjectProvider =
+    AutoDisposeFutureProvider<ProjectWithTasks?>.internal(
+  currentProject,
+  name: r'currentProjectProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$currentProjectHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef CurrentProjectRef = AutoDisposeFutureProviderRef<ProjectWithTasks?>;
+String _$projectsWithTasksHash() => r'8377f58bc36a19524407a34bd73e854a562d45d7';
+
+/// All projects with tasks for Activity Catalog
+/// Uses apiTasksProvider which already returns tasks WITH subtasks (via TaskSerializer)
+///
+/// Copied from [projectsWithTasks].
+@ProviderFor(projectsWithTasks)
+final projectsWithTasksProvider =
+    AutoDisposeFutureProvider<List<ProjectWithTasks>>.internal(
+  projectsWithTasks,
+  name: r'projectsWithTasksProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$projectsWithTasksHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef ProjectsWithTasksRef
+    = AutoDisposeFutureProviderRef<List<ProjectWithTasks>>;
+String _$pendingProjectsHash() => r'e1c9094ee328af79243453a0c46671593df6aad9';
+
+/// See also [pendingProjects].
+@ProviderFor(pendingProjects)
+final pendingProjectsProvider =
+    AutoDisposeStreamProvider<List<Project>>.internal(
+  pendingProjects,
+  name: r'pendingProjectsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$pendingProjectsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef PendingProjectsRef = AutoDisposeStreamProviderRef<List<Project>>;
+String _$pendingProjectClosuresHash() =>
+    r'81c0aab78e40d347cd4f9d85fe5cb2b1c3726ae4';
+
+/// See also [pendingProjectClosures].
+@ProviderFor(pendingProjectClosures)
+final pendingProjectClosuresProvider =
+    AutoDisposeStreamProvider<List<Project>>.internal(
+  pendingProjectClosures,
+  name: r'pendingProjectClosuresProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$pendingProjectClosuresHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef PendingProjectClosuresRef = AutoDisposeStreamProviderRef<List<Project>>;
+String _$pendingNewTasksHash() => r'ec722e656eb27ab70abd781fcf93e33cb6f3b4a2';
+
+/// See also [pendingNewTasks].
+@ProviderFor(pendingNewTasks)
+final pendingNewTasksProvider =
+    AutoDisposeStreamProvider<List<TaskWithProject>>.internal(
+  pendingNewTasks,
+  name: r'pendingNewTasksProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$pendingNewTasksHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef PendingNewTasksRef
+    = AutoDisposeStreamProviderRef<List<TaskWithProject>>;
+String _$pendingTaskCompletionsHash() =>
+    r'fc58687b3bc9b8343e2348965dc112d10693799e';
+
+/// See also [pendingTaskCompletions].
+@ProviderFor(pendingTaskCompletions)
+final pendingTaskCompletionsProvider =
+    AutoDisposeStreamProvider<List<TaskWithProject>>.internal(
+  pendingTaskCompletions,
+  name: r'pendingTaskCompletionsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$pendingTaskCompletionsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef PendingTaskCompletionsRef
+    = AutoDisposeStreamProviderRef<List<TaskWithProject>>;
+String _$pendingTemplatesHash() => r'e7e53cba390ac9f9e223705797bb7d05705048f3';
+
+/// See also [pendingTemplates].
+@ProviderFor(pendingTemplates)
+final pendingTemplatesProvider =
+    AutoDisposeStreamProvider<List<ActivityTemplate>>.internal(
+  pendingTemplates,
+  name: r'pendingTemplatesProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$pendingTemplatesHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef PendingTemplatesRef
+    = AutoDisposeStreamProviderRef<List<ActivityTemplate>>;
+// ignore_for_file: type=lint
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

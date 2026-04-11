@@ -1,0 +1,1008 @@
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:project_pm/src/core/providers/user_providers.dart';
+import 'package:project_pm/src/features/projects/models/project_model.dart';
+import 'package:project_pm/src/features/projects/providers/api_providers.dart';
+import '../dashboard_providers.dart';
+
+// Enums removed in favor of direct String-based state management via providers
+
+class ProjectWorkingReport extends HookConsumerWidget {
+  final String filter;
+  const ProjectWorkingReport({super.key, required this.filter});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Watch drill-down state
+    final selectedMonth = ref.watch(workingReportDetailMonthProvider);
+
+    // View state from global providers
+    final currentView = ref.watch(workingReportViewProvider);
+    final currentScope = ref.watch(workingReportScopeProvider);
+    final selectedYear = ref.watch(workingReportYearProvider);
+
+    // Get current user role to hide team toggle for employees
+    final currentUserAsync = ref.watch(currentUserProvider);
+    final isEmployee = currentUserAsync.value?.role == 'EMPLOYEE';
+
+    // Effective filter for API calls
+    final effectiveFilter = isEmployee
+        ? 'my'
+        : (currentScope.toLowerCase() == 'my' ? 'my' : 'team');
+
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _MainTitleSection(isDark: isDark),
+        const SizedBox(height: 12),
+        _ReportCard(
+          isDark: isDark,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Segment: Title + Controls
+              // We hide controls when in drill-down mode to simplify UI
+              if (selectedMonth == null)
+                _HeaderSection(
+                  currentView: currentView,
+                  selectedYear: selectedYear,
+                  isEmployee: isEmployee,
+                  currentScope: currentScope,
+                  onScopeChanged: (val) => ref.read(workingReportScopeProvider.notifier).state = val,
+                  onViewChanged: (val) => ref.read(workingReportViewProvider.notifier).state = val,
+                  onYearChanged: (val) => ref.read(workingReportYearProvider.notifier).state = val,
+                  isDark: isDark,
+                )
+              else
+                _DrillDownHeader(
+                  title: selectedMonth,
+                  onBack: () => ref.read(workingReportDetailMonthProvider.notifier).state = null,
+                  isDark: isDark,
+                ),
+
+              const SizedBox(height: 32),
+
+              // Body Section with Animated Switcher
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                switchInCurve: Curves.easeInOut,
+                switchOutCurve: Curves.easeInOut,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.05),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: selectedMonth != null
+                    ? _MonthlyProjectDetailView(
+                        monthYear: selectedMonth,
+                        isDark: isDark,
+                        scope: effectiveFilter,
+                      )
+                    : SizedBox(
+                        key: const ValueKey('chart_view'),
+                        height: 340,
+                        child: currentView == 'Projects'
+                            ? _ConnectedProjectChart(
+                                selectedYear: selectedYear,
+                                isDark: isDark,
+                                filter: effectiveFilter,
+                              )
+                            : (currentView == 'Tasks'
+                                ? _ConnectedTaskChart(
+                                    selectedYear: selectedYear,
+                                    isDark: isDark,
+                                    filter: effectiveFilter,
+                                  )
+                                : _ConnectedHoursChart(
+                                    selectedYear: selectedYear,
+                                    isDark: isDark,
+                                    filter: effectiveFilter,
+                                  )),
+                      ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ],
+    );
+
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI Components
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MainTitleSection extends StatelessWidget {
+  final bool isDark;
+  const _MainTitleSection({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            Icons.trending_up,
+            size: 18,
+            color: const Color(0xFF0F518B),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          "Project Working Status",
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : const Color(0xFF0F518B),
+            letterSpacing: -0.2,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReportCard extends StatelessWidget {
+  final Widget child;
+  final bool isDark;
+  const _ReportCard({required this.child, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+          width: 1,
+        ),
+        boxShadow: isDark 
+          ? [] 
+          : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 15,
+                offset: const Offset(0, 4),
+              )
+            ],
+      ),
+      padding: const EdgeInsets.all(24),
+      child: child,
+    );
+  }
+}
+
+class _HeaderSection extends StatelessWidget {
+  final String currentView;
+  final int selectedYear;
+  final bool isEmployee;
+  final String currentScope;
+  final ValueChanged<String> onScopeChanged;
+  final ValueChanged<String> onViewChanged;
+  final ValueChanged<int> onYearChanged;
+  final bool isDark;
+
+  const _HeaderSection({
+    required this.currentView,
+    required this.selectedYear,
+    required this.isEmployee,
+    required this.currentScope,
+    required this.onScopeChanged,
+    required this.onViewChanged,
+    required this.onYearChanged,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.start,
+      runSpacing: 20,
+      spacing: 20,
+      children: [
+        // Title & Subtitle
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Project Working Status",
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : const Color(0xFF0F518B),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Monthly project completion trend for $selectedYear",
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+
+        // Controls Block
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (!isEmployee)
+              _SegmentedControl<String>(
+                value: currentScope,
+                items: const {
+                  'My': _SegmentItem(label: 'My', icon: Icons.person_outline),
+                  'Team': _SegmentItem(label: 'Team', icon: Icons.groups_outlined),
+                },
+                onChanged: onScopeChanged,
+                isDark: isDark,
+              ),
+            _SegmentedControl<String>(
+              value: currentView,
+              items: const {
+                'Projects': _SegmentItem(label: 'Projects', icon: Icons.pie_chart_outline),
+                'Tasks': _SegmentItem(label: 'Tasks', icon: Icons.check_circle_outline),
+                'Hours': _SegmentItem(label: 'Hours', icon: Icons.access_time),
+              },
+              onChanged: onViewChanged,
+              isDark: isDark,
+            ),
+            _ModernYearPicker(
+              selectedYear: selectedYear,
+              onChanged: onYearChanged,
+              isDark: isDark,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom Modern UI Widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SegmentItem {
+  final String label;
+  final IconData icon;
+  const _SegmentItem({required this.label, required this.icon});
+}
+
+class _SegmentedControl<T> extends StatelessWidget {
+  final T value;
+  final Map<T, _SegmentItem> items;
+  final ValueChanged<T> onChanged;
+  final bool isDark;
+
+  const _SegmentedControl({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: items.entries.map((entry) {
+          final isSelected = value == entry.key;
+          return GestureDetector(
+            onTap: () => onChanged(entry.key),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 2), // spacing between segments
+              decoration: BoxDecoration(
+                color: isSelected 
+                  ? (isDark ? Colors.blue.shade800 : const Color(0xFFE0F2FE))
+                  : Colors.transparent,
+                borderRadius: BorderRadius.circular(20), // Pill rounded
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    entry.value.icon,
+                    size: 13,
+                    color: isSelected
+                        ? (isDark ? Colors.white : Colors.blue.shade700)
+                        : Colors.grey.shade500,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    entry.value.label,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.normal,
+                      color: isSelected
+                          ? (isDark ? Colors.white : Colors.blue.shade800)
+                          : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _ModernYearPicker extends StatelessWidget {
+  final int selectedYear;
+  final ValueChanged<int> onChanged;
+  final bool isDark;
+
+  const _ModernYearPicker({
+    required this.selectedYear,
+    required this.onChanged,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<int>(
+      initialValue: selectedYear,
+      onSelected: onChanged,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 10,
+      offset: const Offset(0, 45),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: null, // Let context menu handle it
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(20), // match the Pill rounded style
+              color: isDark ? const Color(0xFF1F2937) : Colors.white,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  selectedYear.toString(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10, 
+                    fontWeight: FontWeight.normal,
+                    color: isDark ? Colors.white : const Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.keyboard_arrow_down_rounded, 
+                  size: 14, 
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade500),
+              ],
+            ),
+          ),
+        ),
+      ),
+      itemBuilder: (context) {
+        final currentYear = DateTime.now().year;
+        return List.generate(4, (index) {
+          final year = currentYear - index;
+          return PopupMenuItem(
+            value: year,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              year.toString(),
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+          );
+        });
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Connected Chart Widgets (Logic Preserved)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ConnectedProjectChart extends ConsumerWidget {
+  final int selectedYear;
+  final bool isDark;
+  final String filter;
+
+  const _ConnectedProjectChart(
+      {required this.selectedYear, required this.isDark, required this.filter});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chartDataAsync = ref.watch(projectCompletionChartProvider(
+        ProjectChartParams(year: selectedYear, filter: filter)));
+
+    return chartDataAsync.when(
+      data: (Map<String, dynamic> data) {
+        final List<dynamic> rawDataList = data['data'] ?? [];
+        if (rawDataList.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.bar_chart_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+                const SizedBox(height: 16),
+                Text("No project data available for $selectedYear", 
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
+              ],
+            ),
+          );
+        }
+
+        final List<FlSpot> spots = [];
+        final Map<int, String> xLabels = {};
+
+        double maxX = rawDataList.length.toDouble() - 1;
+        double maxY = 0;
+
+        for (int i = 0; i < rawDataList.length; i++) {
+          final item = rawDataList[i];
+          final count = (item['count'] as num).toDouble();
+          spots.add(FlSpot(i.toDouble(), count));
+          xLabels[i] = item['month_year']?.toString() ?? '';
+          if (count > maxY) maxY = count;
+        }
+
+        return _buildLineChart(
+          context: context,
+          spots: spots,
+          xLabels: xLabels,
+          maxY: (maxY + 5).toDouble(),
+          maxX: maxX,
+          isDark: isDark,
+          color: Colors.orange.shade600,
+          labelSuffix: 'Projects',
+          tooltipColor: isDark ? const Color(0xFF374151) : Colors.white,
+          onSpotTapped: (index) {
+            final monthStr = xLabels[index] ?? '';
+            // Update provider to trigger in-place drill-down instead of bottom sheet
+            ref.read(workingReportDetailMonthProvider.notifier).state = monthStr;
+          },
+
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('Error loading chart: $e', style: GoogleFonts.inter(fontSize: 12))),
+    );
+  }
+}
+
+class _ConnectedTaskChart extends ConsumerWidget {
+  final int selectedYear;
+  final bool isDark;
+  final String filter;
+
+  const _ConnectedTaskChart({
+    required this.selectedYear, 
+    required this.isDark, 
+    required this.filter,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final startDate = '$selectedYear-01-01';
+    final endDate = '$selectedYear-12-31';
+    final chartDataAsync = ref.watch(taskCompletionChartProvider(
+        TaskChartParams(
+            startDate: startDate, endDate: endDate, filter: filter)));
+
+    return chartDataAsync.when(
+      data: (Map<String, dynamic> data) {
+        final List<dynamic> rawDataList = data['data'] ?? [];
+        if (rawDataList.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.task_alt_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+                const SizedBox(height: 16),
+                Text("No task analysis available for $selectedYear", 
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
+              ],
+            ),
+          );
+        }
+
+        final List<FlSpot> spots = [];
+        final Map<int, String> xLabels = {};
+
+        double maxX = rawDataList.length.toDouble() - 1;
+        double maxY = 0;
+
+        for (int i = 0; i < rawDataList.length; i++) {
+          final item = rawDataList[i];
+          final count = (item['count'] as num).toDouble();
+          spots.add(FlSpot(i.toDouble(), count));
+          xLabels[i] =
+              item['month_year']?.toString() ?? item['date']?.toString() ?? '';
+          if (count > maxY) maxY = count;
+        }
+
+        return _buildLineChart(
+          context: context,
+          spots: spots,
+          xLabels: xLabels,
+          maxY: (maxY + 5).toDouble(),
+          maxX: maxX,
+          isDark: isDark,
+          color: Colors.blue.shade600,
+          labelSuffix: 'Tasks',
+          tooltipColor: isDark ? const Color(0xFF374151) : Colors.white,
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('Error loading chart: $e', style: GoogleFonts.inter(fontSize: 12))),
+    );
+  }
+}
+
+class _ConnectedHoursChart extends ConsumerWidget {
+  final int selectedYear;
+  final bool isDark;
+  final String filter;
+
+  const _ConnectedHoursChart({
+    required this.selectedYear,
+    required this.isDark,
+    required this.filter,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final params = ProjectChartParams(year: selectedYear, filter: filter);
+    final hoursAsync = ref.watch(hoursCompletionChartProvider(params));
+
+    return hoursAsync.when(
+      data: (List<dynamic> data) => _HoursLineChart(
+        data: List<Map<String, dynamic>>.from(data),
+        isDark: isDark,
+        selectedYear: selectedYear,
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text("Error loading hours: $err", style: GoogleFonts.inter(fontSize: 12))),
+    );
+  }
+}
+
+class _HoursLineChart extends StatelessWidget {
+  final List<Map<String, dynamic>> data;
+  final bool isDark;
+  final int selectedYear;
+
+  const _HoursLineChart({
+    required this.data, 
+    required this.isDark, 
+    required this.selectedYear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.timer_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+            const SizedBox(height: 16),
+            Text("No hours worked metadata for $selectedYear", 
+              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    final List<FlSpot> spots = [];
+    final Map<int, String> xLabels = {};
+    double maxY = 0;
+
+    for (int i = 0; i < data.length; i++) {
+      final item = data[i];
+      final achieved = (item['achieved'] as num).toDouble();
+      spots.add(FlSpot(i.toDouble(), achieved));
+      xLabels[i] = item['month']?.toString() ?? '';
+      if (achieved > maxY) maxY = achieved;
+    }
+
+    return _buildLineChart(
+      spots: spots,
+      xLabels: xLabels,
+      maxY: (maxY + (maxY * 0.15)).clamp(10, double.infinity),
+      maxX: (data.length - 1).toDouble().clamp(0, 11),
+      isDark: isDark,
+      color: const Color(0xFF6366F1), // Indigo
+      labelSuffix: 'Hrs',
+      tooltipColor: isDark ? const Color(0xFF374151) : Colors.white,
+      context: context,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Month Detail Sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DrillDownHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onBack;
+  final bool isDark;
+
+  const _DrillDownHeader({
+    required this.title,
+    required this.onBack,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onBack,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.arrow_back_ios_new_rounded, 
+                size: 16, 
+                color: isDark ? Colors.white70 : Colors.grey.shade700),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Completed Projects",
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade500,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : const Color(0xFF0F518B),
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MonthlyProjectDetailView extends ConsumerWidget {
+  final String monthYear;
+  final bool isDark;
+  final String scope;
+
+  const _MonthlyProjectDetailView({
+    required this.monthYear,
+    required this.isDark,
+    required this.scope,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final projectsAsync = ref.watch(monthlyCompletedProjectsProvider(monthYear));
+
+    return SizedBox(
+      height: 340,
+      child: projectsAsync.when(
+        data: (projects) {
+          if (projects.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.assignment_turned_in_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.2)),
+                  const SizedBox(height: 16),
+                  Text(
+                    "No projects completed in $monthYear",
+                    style: GoogleFonts.inter(color: Colors.grey, fontSize: 14),
+                  ),
+                ],
+              ),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: projects.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final project = projects[index];
+              return _ProjectDetailCard(project: project, isDark: isDark);
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, st) => Center(child: Text('Error loading projects: $e', style: GoogleFonts.inter(fontSize: 12))),
+      ),
+    );
+  }
+}
+
+class _ProjectDetailCard extends StatelessWidget {
+  final ProjectModel project;
+  final bool isDark;
+
+  const _ProjectDetailCard({required this.project, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final completedAt = project.completedDate != null 
+        ? DateFormat('MMM dd, yyyy').format(DateTime.parse(project.completedDate!))
+        : 'Recently';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.check_circle_outline_rounded, size: 24, color: Colors.orange),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  project.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey.shade500),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Completed: $completedAt',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Line Chart Builder (Refined)
+// ─────────────────────────────────────────────────────────────────────────────
+
+Widget _buildLineChart({
+  required BuildContext context,
+  required List<FlSpot> spots,
+  required Map<int, String> xLabels,
+  required double maxY,
+  required double maxX,
+  required bool isDark,
+  required Color color,
+  required String labelSuffix,
+  required Color tooltipColor,
+  Function(int index)? onSpotTapped,
+}) {
+  return LineChart(
+    LineChartData(
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        horizontalInterval: maxY > 20 ? (maxY / 5) : 5,
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+          strokeWidth: 1.5,
+        ),
+      ),
+      titlesData: FlTitlesData(
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            getTitlesWidget: (value, meta) => Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Text(
+                value.toInt().toString(),
+                style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+            reservedSize: 32,
+          ),
+        ),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            interval: 1,
+            getTitlesWidget: (value, meta) {
+              final intIndex = value.toInt();
+              if (intIndex < 0 || !xLabels.containsKey(intIndex)) {
+                return const SizedBox.shrink();
+              }
+              
+              String label = xLabels[intIndex]!;
+              String displayLabel = label;
+              
+              if (label.contains(' ')) {
+                final parts = label.split(' ');
+                if (parts.length >= 2) {
+                  final month = parts[0];
+                  final shortMonth = month.length > 3 ? month.substring(0, 3) : month;
+                  displayLabel = shortMonth;
+                }
+              }
+              
+              return SideTitleWidget(
+                meta: meta,
+                space: 10,
+                child: Text(
+                  displayLabel,
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w600),
+                ),
+              );
+            },
+            reservedSize: 28,
+          ),
+        ),
+
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      borderData: FlBorderData(show: false),
+      minX: 0,
+      maxX: maxX > 0 ? maxX : 1,
+      minY: 0,
+      maxY: maxY == 0 ? 5 : maxY,
+      lineBarsData: [
+        LineChartBarData(
+          spots: spots.isEmpty ? [const FlSpot(0, 0)] : spots,
+          isCurved: true,
+          color: color,
+          barWidth: 4,
+          isStrokeCapRound: true,
+          shadow: Shadow(color: color.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 5)),
+          dotData: FlDotData(
+            show: spots.length < 30,
+            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+              radius: 5,
+              color: color,
+              strokeWidth: 2.5,
+              strokeColor: isDark ? const Color(0xFF111827) : Colors.white,
+            ),
+          ),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.0)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+      ],
+      lineTouchData: LineTouchData(
+        handleBuiltInTouches: true,
+        touchCallback: (FlTouchEvent event, LineTouchResponse? touchResponse) {
+          if (!event.isInterestedForInteractions ||
+              touchResponse == null ||
+              touchResponse.lineBarSpots == null) {
+            return;
+          }
+          if (event is FlTapDownEvent || event is FlTapUpEvent) {
+            final spotIndex = touchResponse.lineBarSpots!.first.x.toInt();
+            if (onSpotTapped != null) {
+              onSpotTapped(spotIndex);
+            }
+          }
+        },
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (LineBarSpot spot) => tooltipColor,
+          tooltipBorderRadius: BorderRadius.circular(10),
+          tooltipPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          tooltipMargin: 12,
+          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+            return touchedSpots.map((LineBarSpot spot) {
+              final int index = spot.x.toInt();
+              final String label = xLabels[index] ?? '';
+              return LineTooltipItem(
+                  '$label\n',
+                  GoogleFonts.inter(
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '${spot.y.toInt()} $labelSuffix',
+                      style: GoogleFonts.outfit(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    )
+                  ]);
+            }).toList();
+          },
+        ),
+      ),
+    ),
+  );
+}

@@ -1,0 +1,1 @@
+export const dashboardicon='../assets/Images/dashboard.png'

@@ -1,0 +1,485 @@
+.percentage {
+
+    position: absolute;
+    left: 370px;
+    top: 71px
+}
+
+.no-border:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.Reporting_Team_List_Btns {
+    display: flex;
+    justify-content: space-between;
+}
+
+.Activity_sheets_btn {
+
+    position: relative;
+    left: 100px;
+    width: 97%;
+}
+
+.search_Applyed {}
+
+.Assign_Applaylist {
+
+    position: absolute;
+    right: 30px;
+    top: 130px;
+}
+
+.Sample_acti_Topnav {
+    position: relative;
+    left: 20px;
+}
+
+.All_emp_Top_btns {
+    display: flex;
+    justify-content: space-between;
+}
+
+
+
+.otp_verification1 {
+    margin: 100px;
+    background-color: white;
+    min-width: 550px;
+    height: 370px;
+    border-radius: 10px;
+}
+
+.sign_up_inputs {
+    width: 100%;
+    display: flex;
+    justify-content: space-evenly;
+    position: relative;
+    bottom: 5px
+}
+
+.sign_up_inputs1 {
+    width: 100%;
+    display: flex;
+    justify-content: space-evenly;
+    position: relative;
+    bottom: 25px
+}
+
+.sign_up_inputs2 {
+    width: 100%;
+    display: flex;
+    justify-content: space-evenly;
+    position: relative;
+    bottom: 45px
+}
+
+.sign_main {
+    display: flex;
+    justify-content: center;
+    margin-left: 40px;
+
+
+}
+
+
+
+@media only screen and (max-width: 450px) {
+
+    .percentage {
+
+        position: absolute;
+        left: 250px;
+        top: 71px
+    }
+
+    .search_Applyed {
+        position: relative;
+        top: 110px;
+        left: 10px;
+    }
+
+    .filter-Applyed {
+        position: relative;
+        top: 110px;
+        left: 100px;
+    }
+
+    .Assign_Applaylist {
+
+        position: absolute;
+        top: 100px;
+        left: 50px;
+    }
+
+    .Reporting_Team_List_Btns {
+        display: flex;
+        flex-direction: column;
+        /* justify-content: space-between; */
+    }
+
+    .Reporting_Team_Btns {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 5px;
+    }
+
+    .Reporting_Team_search {
+        margin-top: 15px;
+        width: 95%;
+    }
+
+    .Activity_sheets_btn {
+
+        position: relative;
+        left: 1px;
+        width: 97%;
+    }
+
+    .All_emp_Top_btns {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .sign_img {
+        display: none;
+    }
+
+    .sign_up_inputs {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+
+    }
+
+    .sign_up_inputs1 {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+
+    }
+
+    .sign_up_inputs2 {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+
+    }
+}
+
+@media only screen and (max-width: 900px) {
+
+    .percentage {
+
+        position: absolute;
+        left: 330px;
+        top: 71px
+    }
+
+    .Activity_sheets_btn {
+
+        position: relative;
+        left: 1px;
+        width: 97%;
+    }
+
+    .sign_main {
+        display: flex;
+        justify-content: center;
+        margin-left: 0px;
+
+
+    }
+}
+
+@media only screen and (max-width: 400px) {
+
+    .percentage {
+
+        position: absolute;
+        left: 270px;
+        top: 71px
+    }
+
+    .search_Applyed {
+        position: relative;
+        top: 110px;
+        left: 10px;
+    }
+
+    .filter-Applyed {
+        position: relative;
+        top: 83px;
+        left: 250px;
+    }
+
+    .Assign_Applaylist {
+
+        position: absolute;
+        top: 100px;
+        left: 50px;
+    }
+
+    .Activity_sheets_btn {
+
+        position: relative;
+        left: 1px;
+        width: 97%;
+    }
+
+}
+
+@media only screen and (max-width: 380px) {
+
+    .percentage {
+
+        position: absolute;
+        left: 250px;
+        top: 50px
+    }
+
+    .search_Applyed {
+        position: relative;
+        top: 110px;
+        left: 10px;
+    }
+
+    .filter-Applyed {
+        position: relative;
+        top: 83px;
+        left: 250px;
+    }
+
+    .Assign_Applaylist {
+
+        position: absolute;
+        top: 100px;
+        left: 50px;
+    }
+
+    .Activity_sheets_btn {
+
+        position: relative;
+        left: 1px;
+        width: 97%;
+    }
+
+}
+
+@media only screen and (min-width: 992px) {
+    .side-blog {
+        width: 80%;
+    }
+
+    .side {
+        width: 20%;
+
+
+    }
+
+    .Activity_sheets_btn {
+
+        position: relative;
+        left: 40px;
+        width: 97%;
+    }
+
+
+
+}
+
+@media only screen and (max-width: 1000px) {
+    .side-bar {
+        display: none;
+    }
+
+    .side {
+        width: 0%;
+        /* background-color: red; */
+        position: absolute;
+
+    }
+
+    .side-blog {
+        width: 100%;
+        /* background-color: red; */
+    }
+
+
+}
+
+
+
+/* 
+/* Style for the slider arrows */
+/* .slick-prev {
+    font-size: 20px;
+    line-height: 1;
+    position: absolute;
+    top: 50%;
+    border-radius: 50%;
+    padding: 1px;
+    transform: translateY(-50%);
+    z-index: 1;
+    cursor: pointer;
+    background-color: rgb(76, 53, 117);
+    border: none;
+    outline: none;
+    transition: background-color 0.3s ease;
+} */
+/* 
+.slick-next {
+    font-size: 20px;
+    line-height: 1;
+    position: absolute;
+    top: 50%;
+    border-radius: 50%;
+    padding: 1px;
+    transform: translateY(-50%);
+    z-index: 1;
+    cursor: pointer;
+    background-color: rgb(76, 53, 117);
+    border: none;
+    outline: none;
+    transition: background-color 0.3s ease;
+} */
+
+/* Styling on hover */
+/* .slick-prev:hover {
+    background-color: rgb(76, 53, 117);
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: background-color 0.3s ease;
+
+}
+
+.slick-next:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+
+}
+
+/* Positioning for previous arrow */
+/* .slick-prev {
+    left: -15px;
+} */
+
+/* Positioning for next arrow */
+/* .slick-next {
+    right: -15px;
+}  */
+
+
+@media only screen and (max-width: 992px) {
+    .side-blog {
+        width: 100%;
+    }
+
+    .side {
+        width: 20%;
+
+
+    }
+
+    .search_Applyed {
+        position: relative;
+        top: 110px;
+        left: 10px;
+    }
+
+    .filter-Applyed {
+        position: relative;
+        top: 110px;
+        left: 100px;
+    }
+
+    .Assign_Applaylist {
+
+        position: absolute;
+        top: 100px;
+        left: 50px;
+    }
+
+
+}
+
+@media only screen and (max-width: 700px) {
+    .Activity_sheets_btn {
+
+        position: relative;
+        left: 1px;
+        width: 97%;
+    }
+}
+
+.otp-verification-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: '100%';
+    background-color: transparent;
+    position: 'absolute'
+}
+
+.otp_verification {
+    background-color: white;
+    width: 90%;
+    max-width: 550px;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 576px) {
+    .otp_verification {
+        padding: 40px;
+        background-color: white;
+    }
+}
+
+@media (min-width: 768px) {
+    .otp_verification {
+        width: 550px;
+        padding: 40px;
+        background-color: white;
+    }
+}
+
+
+.set-password-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.set_password {
+    background-color: white;
+    width: 90%;
+    max-width: 550px;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 576px) {
+    .set_password {
+        padding: 40px;
+    }
+}
+
+@media (min-width: 768px) {
+    .set_password {
+        width: 550px;
+        padding: 40px;
+    }
+}

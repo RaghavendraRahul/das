@@ -1,0 +1,23 @@
+li{
+    cursor: pointer;
+}
+.overflow::-webkit-scrollbar {
+    width: 0px;
+}
+
+.overflow::-webkit-scrollbar-track {
+    /* background-color: lightgrey; */
+}
+
+.overflow::-webkit-scrollbar-thumb {
+    /* background-color: darkgrey; */
+    border-radius: 6px;
+}
+
+.overflow::-webkit-scrollbar-thumb:hover {
+    /* background-color: grey; */
+}
+.side-nav{
+    text-decoration: none;
+}
+

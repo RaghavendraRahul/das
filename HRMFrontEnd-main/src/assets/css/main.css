@@ -1,0 +1,72 @@
+.form-control::placeholder {
+    /* Change the color */
+    color: rgb(76, 53, 117);
+    /* Adjust the color as needed */
+    /* Change the font size */
+    font-size: 19px;
+    /* Adjust the font size as needed */
+}
+
+
+
+.fanal-shape {
+    width: 350px;
+    height: 300px;
+    clip-path: polygon(0 0, 49% 100%, 100% 0);
+    background-color: rgb(240, 179, 74);
+
+
+}
+
+.pipe {
+    width: 35px;
+    height: 150px;
+    background-color: rgb(240, 179, 74);
+    position: relative;
+    left: 155px;
+    bottom: 270px;
+}
+
+.line {
+    position: relative;
+    bottom: 280px;
+    left: 250px;
+}
+
+.line-per {
+    position: relative;
+    top: 8px;
+    left: 5px;
+    font-size: 18px;
+}
+
+/* Responsive  start */
+
+.inner_sections {
+
+    width: 98%;
+    position: relative;
+    left: 10px;
+
+
+}
+
+@media only screen and (max-width: 450px) {
+    .inner_sections {
+
+        width: 95%;
+        position: relative;
+        left: 10px;
+
+    }
+    .Top_drop_down{
+       position: absolute;
+       top: 100px;
+       right: 100px;
+    }
+
+}
+
+.sidebarbg{
+    background-color: rgb(30,74,232);
+}

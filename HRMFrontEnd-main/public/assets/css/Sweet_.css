@@ -1,0 +1,85 @@
+.professional-alert {
+  background-color: #ffffff !important;
+  /* White background */
+  color: #333333 !important;
+  /* Dark gray text color */
+  border-radius: 10px !important;
+  /* Slightly rounded corners */
+  padding: 20px !important;
+  /* Padding */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+  /* Soft shadow */
+  text-align: left !important;
+  /* Left-align text */
+}
+
+.professional-title {
+  font-size: 24px !important;
+  /* Title font size */
+  font-weight: bold !important;
+  /* Bold title */
+  margin-bottom: 15px !important;
+  /* Spacing below title */
+  color: #007bff !important;
+  /* Primary blue color for title */
+}
+
+.professional-content {
+  font-size: 16px !important;
+  /* Content font size */
+  line-height: 1.5 !important;
+  /* Line height for readability */
+}
+
+.professional-button {
+  background-color: #007bff !important;
+  /* Primary blue background */
+  color: #fff !important;
+  /* White text */
+  border: none !important;
+  /* No border */
+  padding: 10px 20px !important;
+  /* Padding */
+  border-radius: 5px !important;
+  /* Rounded corners */
+  font-size: 14px !important;
+  /* Button font size */
+  cursor: pointer !important;
+  /* Pointer cursor */
+  margin-top: 20px !important;
+  /* Margin above the button */
+}
+
+.professional-button:hover {
+  background-color: #0056b3 !important;
+  /* Darker blue on hover */
+}
+
+/* Sweet_.css */
+
+.professional-alert .sa-title {
+  font-size: 24px;
+  /* Default size */
+}
+
+@media (max-width: 768px) {
+  .professional-alert .sa-title {
+    font-size: 18px;
+    /* Smaller size for mobile devices */
+  }
+}
+
+/* Additional styles for error alert */
+.professional-alert-error .sa-title {
+  color: red;
+  font-size: 24px;
+  /* Default size */
+}
+
+@media (max-width: 768px) {
+  .professional-alert-error .sa-title {
+    font-size: 15px;
+    /* Smaller size for mobile devices */
+  }
+}
+

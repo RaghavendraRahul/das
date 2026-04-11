@@ -1,0 +1,124 @@
+import React, { useState } from 'react';
+import {port} from '../App' 
+
+
+const Emp_leave_grant_form = () => {
+  const [Employee_Id, setEmployee_Id] = useState("");
+  const [Name, setName] = useState("");
+  const [phone, setphone] = useState("");
+  const [email, setemail] = useState("");
+  const [Reporting_manager, setReporting_manager] = useState("");
+  const [Employee_type, setEmployee_type] = useState("");
+  const [LeaveType, setLeaveType] = useState("");
+  const [FromDate, setFromDate] = useState("");
+  const [ToDate, setToDate] = useState("");
+  const [Days, setDays] = useState("");
+  const [Reason, setReason] = useState("");
+  const [Any_proof, setAny_proof] = useState("");
+
+  const handle_Leave_apply_form = (e) => {
+    e.preventDefault();
+
+    // Convert input date strings to Date objects
+    const fromDateObj = new Date(FromDate);
+    const toDateObj = new Date(ToDate);
+
+    // Calculate the difference in milliseconds
+    const differenceInTime = toDateObj.getTime() - fromDateObj.getTime();
+
+    // Convert milliseconds to days
+    const differenceInDays = differenceInTime / (1000 * 3600 * 24);
+
+    // Set the calculated days
+    setDays(differenceInDays);
+
+    // Other form submission logic can follow
+    alert("leave Form");
+
+    const formData1 = new FormData();
+    formData1.append('Employee_Id', Employee_Id);
+    formData1.append('Name', Name);
+    formData1.append('phone', phone);
+    formData1.append('email', email);
+    formData1.append('Reporting_manager', Reporting_manager);
+    formData1.append('Employee_type', Employee_type);
+    formData1.append('LeaveType', LeaveType);
+    formData1.append('FromDate', FromDate);
+    formData1.append('ToDate', ToDate);
+    formData1.append('Days', differenceInDays); // Here we are sending the calculated difference
+    formData1.append('Reason', Reason);
+    formData1.append('Any_proof', Any_proof);
+
+    for (let pair of formData1.entries()) {
+      console.log(pair[0] + ': ' + pair[1]);
+    }
+  };
+
+  return (
+    <div>
+      {/* LEAVE APPLY START */}
+      <div>
+        <form>
+          {/* Form start */}
+          <div className="row justify-content-center m-0">
+            <h3 className='mt-2 text-center p-3' style={{ color: 'rgb(76,53,117)' }}>Leave Grant Form</h3>
+            <div className="col-lg-12 p-4 mt-2 border rounded-lg">
+              <div className="row m-0 pb-2" style={{ lineHeight: '30px' }}>
+                {/* Form fields */}
+                <div className="col-md-6 col-lg-4 mb-3">
+                  <label htmlFor="Name" className="form-label">Employee name* </label>
+                  <input type="text" className="form-control shadow-none" id="Name" name="Name" value={Employee_Id} onChange={(e) => setEmployee_Id(e.target.value)} />
+                </div>
+                <div className="col-md-6 col-lg-4 mb-3">
+                  <label htmlFor="Name" className="form-label">Employee_Id* </label>
+                  <input type="text" className="form-control shadow-none" id="Name" name="Name" value={Employee_Id} onChange={(e) => setEmployee_Id(e.target.value)} />
+                </div>
+                <div className="col-md-6 col-lg-4 mb-3">
+                  <label htmlFor="Name" className="form-label">reason for cancle or accept* </label>
+                  <input type="text" className="form-control shadow-none" id="Name" name="Name" value={Name} onChange={(e) => setName(e.target.value)} />
+                </div>
+
+                <div className="col-md-6 col-lg-4 mb-3">
+                  <label htmlFor="secondaryContact" className="form-label">FromDate*</label>
+                  <input type="date" className="form-control shadow-none" value={FromDate} onChange={(e) => setFromDate(e.target.value)} id="State" name="State" />
+                </div>
+                <div className="col-md-6 col-lg-4 mb-3">
+                  <label htmlFor="secondaryContact" className="form-label">ToDate*</label>
+                  <input type="date" className="form-control shadow-none" value={ToDate} onChange={(e) => setToDate(e.target.value)} id="State" name="State" />
+                </div>
+                <div className="col-md-6 col-lg-4 mb-3">
+                  <label htmlFor="secondaryContact" className="form-label">LeaveType*</label>
+                  <input type="text" className="form-control ms-3 shadow-none" value={Any_proof} onChange={(e) => setAny_proof(e.target.value)} id="State" name="State" />
+                </div>
+
+                <div className="col-md-6 col-lg-4 mb-3">
+                  <label htmlFor="secondaryContact" className="form-label">no of days Balence leaves *</label>
+                  <input type="email" className="form-control shadow-none"  value={Reason} onChange={(e) => setReason(e.target.value)} id="State" name="State" />
+                </div>
+                <div className="col-md-6 col-lg-4 pt-2  mt-4">
+                  <label htmlFor="secondaryContact" className="form-label">grant permission indicate*</label>
+                  <input type="checkbox" className=" ms-3 shadow-none" value={Any_proof} onChange={(e) => setAny_proof(e.target.value)} id="State" name="State" />
+                </div>
+                <div className="col-md-6 col-lg-4  pt-2 mt-4">
+                  <label htmlFor="secondaryContact" className="form-label">grant*</label>
+                  <input type="checkbox" className=" ms-3  shadow-none" value={Any_proof} onChange={(e) => setAny_proof(e.target.value)} id="State" name="State" />
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* form end */}
+          {/* Button start */}
+          <div className="d-flex justify-content-end mt-2">
+            <div className='d-flex gap-2 p-3'>
+              <button type="submit" className="btn btn-success btn-sm" onClick={handle_Leave_apply_form}>Submit</button>
+            </div>
+          </div>
+          {/* Button end */}
+        </form>
+      </div>
+      {/* LEAVE APPLY END */}
+    </div>
+  );
+};
+
+export default Emp_leave_grant_form;

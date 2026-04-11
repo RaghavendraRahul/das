@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+.head{
+    font-family: "Poppins", sans-serif;
+}
+.head1{
+    font-family: "Noto Sans Mono", monospace;
+}
+
+
+.input-bar:focus {
+    outline: none; 
+}
+.sign-back{
+    background-image: url('../Images/login-1.jpg');
+    background-size: cover;
+    background-position: center;
+    border-radius: 20px;
+}
+.img-container {
+   /* Adjust height as needed */
+    background-size: cover;
+    background-position: center;
+    animation: slideshow 25s infinite;
+}
+
+@keyframes slideshow {
+    0% { background-image: url('../Images/login-1.jpg'); }
+    25% { background-image: url('../Images/login-2.jpg'); }
+    50% { background-image: url('../Images/login-3.jpg'); }
+    75% { background-image: url('../Images/login-4.jpg'); }
+    100% { background-image: url('../Images/login-5.jpg'); }
+ 
+}
+

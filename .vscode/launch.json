@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "DAS Frontend (Chrome) - Port 63105",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "${workspaceFolder}\\DAS-Frontend",
+            "deviceId": "chrome",
+            "args": [
+                "--web-port=63105",
+                "--dart-define=API_BASE_URL=http://localhost:8000/api/"
+            ]
+        },
+        {
+            "name": "DAS Frontend (Edge) - Port 63105",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "${workspaceFolder}\\DAS-Frontend",
+            "deviceId": "edge",
+            "args": [
+                "--web-port=63105",
+                "--dart-define=API_BASE_URL=http://localhost:8000/api/"
+            ]
+        }
+    ]
+}

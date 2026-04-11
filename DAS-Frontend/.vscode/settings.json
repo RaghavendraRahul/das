@@ -1,0 +1,7 @@
+{
+    "dart.flutterRunAdditionalArgs": [
+        "--web-port=63105"
+    ],
+    "dart.debugExternalPackageLibraries": false,
+    "dart.debugSdkLibraries": false
+}

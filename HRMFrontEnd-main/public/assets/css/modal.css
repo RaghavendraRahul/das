@@ -1,0 +1,47 @@
+.styled-form {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.styled-form .form-group {
+    margin-bottom: 20px;
+}
+
+.styled-form label {
+    font-weight: bold;
+}
+
+.styled-form input[type="text"],
+.styled-form input[type="date"],
+.styled-form input[type="time"],
+.styled-form select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.styled-form button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.styled-form .btn-primary {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.styled-form .btn-success {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.styled-form .btn-close {
+    color: #000;
+}
+
+
+/* Form style */
+
