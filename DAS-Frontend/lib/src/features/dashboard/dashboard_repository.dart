@@ -144,18 +144,18 @@ class DashboardRepository {
   }
 
   Future<Map<String, dynamic>> fetchProjectCompletionChart(
-      int year, String filter) async {
-    return _api.getProjectCompletionChart(year, filter);
+      int year, String filter, [int? userId]) async {
+    return _api.getProjectCompletionChart(year, filter, userId);
   }
 
   Future<Map<String, dynamic>> fetchTaskCompletionChart(
-      String startDate, String endDate, String filter) async {
-    return _api.getTaskCompletionChart(startDate, endDate, filter);
+      String startDate, String endDate, String filter, [int? userId]) async {
+    return _api.getTaskCompletionChart(startDate, endDate, filter, userId);
   }
 
   Future<List<dynamic>> fetchHoursCompletionChart(
-      int year, String filter) async {
-    return _api.getHoursCompletionChart(year, filter);
+      int year, String filter, [int? userId]) async {
+    return _api.getHoursCompletionChart(year, filter, userId);
   }
 }
 

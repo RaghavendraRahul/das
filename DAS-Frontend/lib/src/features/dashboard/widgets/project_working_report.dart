@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/features/projects/models/project_model.dart';
+import 'package:project_pm/src/features/projects/models/task_model.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import '../dashboard_providers.dart';
 
@@ -29,6 +30,9 @@ class ProjectWorkingReport extends HookConsumerWidget {
     // Get current user role to hide team toggle for employees
     final currentUserAsync = ref.watch(currentUserProvider);
     final isEmployee = currentUserAsync.value?.role == 'EMPLOYEE';
+
+    // Link global selected user stats to charts (Proper State Management)
+    final selectedUserId = ref.watch(selectedStatsUserIdProvider);
 
     // Effective filter for API calls
     final effectiveFilter = isEmployee
@@ -86,11 +90,16 @@ class ProjectWorkingReport extends HookConsumerWidget {
                   );
                 },
                 child: selectedMonth != null
-                    ? _MonthlyProjectDetailView(
-                        monthYear: selectedMonth,
-                        isDark: isDark,
-                        scope: effectiveFilter,
-                      )
+                    ? (ref.watch(workingReportDrillDownTypeProvider) == 'Projects'
+                        ? _MonthlyProjectDetailView(
+                            monthYear: selectedMonth,
+                            isDark: isDark,
+                            scope: effectiveFilter,
+                          )
+                        : _MonthlyTaskDetailView(
+                            monthYear: selectedMonth,
+                            isDark: isDark,
+                          ))
                     : SizedBox(
                         key: const ValueKey('chart_view'),
                         height: 340,
@@ -99,17 +108,20 @@ class ProjectWorkingReport extends HookConsumerWidget {
                                 selectedYear: selectedYear,
                                 isDark: isDark,
                                 filter: effectiveFilter,
+                                userId: selectedUserId,
                               )
                             : (currentView == 'Tasks'
                                 ? _ConnectedTaskChart(
                                     selectedYear: selectedYear,
                                     isDark: isDark,
                                     filter: effectiveFilter,
+                                    userId: selectedUserId,
                                   )
                                 : _ConnectedHoursChart(
                                     selectedYear: selectedYear,
                                     isDark: isDark,
                                     filter: effectiveFilter,
+                                    userId: selectedUserId,
                                   )),
                       ),
               ),
@@ -138,13 +150,13 @@ class _MainTitleSection extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
+            color: Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
+          child: const Icon(
             Icons.trending_up,
             size: 18,
-            color: const Color(0xFF0F518B),
+            color: Color(0xFF05263E),
           ),
         ),
         const SizedBox(width: 12),
@@ -152,8 +164,8 @@ class _MainTitleSection extends StatelessWidget {
           "Project Working Status",
           style: GoogleFonts.inter(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF0F518B),
+            fontWeight: FontWeight.w800,
+            color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
             letterSpacing: -0.2,
           ),
         ),
@@ -170,22 +182,8 @@ class _ReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.shade200,
-          width: 1,
-        ),
-        boxShadow: isDark 
-          ? [] 
-          : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 15,
-                offset: const Offset(0, 4),
-              )
-            ],
+      decoration: const BoxDecoration(
+        color: Colors.transparent, // Background handled by _SectionCard wrapper
       ),
       padding: const EdgeInsets.all(24),
       child: child,
@@ -231,8 +229,8 @@ class _HeaderSection extends StatelessWidget {
               "Project Working Status",
               style: GoogleFonts.inter(
                 fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : const Color(0xFF0F518B),
+                fontWeight: FontWeight.w800,
+                color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
               ),
             ),
             const SizedBox(height: 4),
@@ -240,7 +238,7 @@ class _HeaderSection extends StatelessWidget {
               "Monthly project completion trend for $selectedYear",
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A),
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -313,8 +311,11 @@ class _SegmentedControl<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : Colors.grey.shade100,
+        color: isDark ? const Color(0xFF0D1E36) : const Color(0xFFEEF3F9),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -329,7 +330,7 @@ class _SegmentedControl<T> extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 2), // spacing between segments
               decoration: BoxDecoration(
                 color: isSelected 
-                  ? (isDark ? Colors.blue.shade800 : const Color(0xFFE0F2FE))
+                  ? (isDark ? Colors.blue.shade800 : const Color(0xFF05263E))
                   : Colors.transparent,
                 borderRadius: BorderRadius.circular(20), // Pill rounded
               ),
@@ -339,18 +340,18 @@ class _SegmentedControl<T> extends StatelessWidget {
                     entry.value.icon,
                     size: 13,
                     color: isSelected
-                        ? (isDark ? Colors.white : Colors.blue.shade700)
-                        : Colors.grey.shade500,
+                        ? Colors.white
+                        : (isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A)),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     entry.value.label,
                     style: GoogleFonts.inter(
                       fontSize: 10,
-                      fontWeight: FontWeight.normal,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected
-                          ? (isDark ? Colors.white : Colors.blue.shade800)
-                          : Colors.grey.shade600,
+                          ? Colors.white
+                          : (isDark ? const Color(0xFFB0C8E0) : const Color(0xFF374151)),
                     ),
                   ),
                 ],
@@ -390,9 +391,9 @@ class _ModernYearPicker extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(20), // match the Pill rounded style
-              color: isDark ? const Color(0xFF1F2937) : Colors.white,
+              border: Border.all(color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0)),
+              borderRadius: BorderRadius.circular(20),
+              color: isDark ? const Color(0xFF0D1E36) : Colors.white,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -401,8 +402,8 @@ class _ModernYearPicker extends StatelessWidget {
                   selectedYear.toString(),
                   style: GoogleFonts.inter(
                     fontSize: 10, 
-                    fontWeight: FontWeight.normal,
-                    color: isDark ? Colors.white : const Color(0xFF1F2937),
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFF0D1B2A),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -440,14 +441,15 @@ class _ConnectedProjectChart extends ConsumerWidget {
   final int selectedYear;
   final bool isDark;
   final String filter;
+  final int? userId;
 
   const _ConnectedProjectChart(
-      {required this.selectedYear, required this.isDark, required this.filter});
+      {required this.selectedYear, required this.isDark, required this.filter, this.userId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chartDataAsync = ref.watch(projectCompletionChartProvider(
-        ProjectChartParams(year: selectedYear, filter: filter)));
+        ProjectChartParams(year: selectedYear, filter: filter, userId: userId)));
 
     return chartDataAsync.when(
       data: (Map<String, dynamic> data) {
@@ -457,7 +459,7 @@ class _ConnectedProjectChart extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.bar_chart_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+                Icon(Icons.bar_chart_rounded, size: 48, color: Colors.grey.withOpacity(0.3)),
                 const SizedBox(height: 16),
                 Text("No project data available for $selectedYear", 
                   style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
@@ -492,7 +494,8 @@ class _ConnectedProjectChart extends ConsumerWidget {
           tooltipColor: isDark ? const Color(0xFF374151) : Colors.white,
           onSpotTapped: (index) {
             final monthStr = xLabels[index] ?? '';
-            // Update provider to trigger in-place drill-down instead of bottom sheet
+            // Update provider to trigger in-place drill-down
+            ref.read(workingReportDrillDownTypeProvider.notifier).state = 'Projects';
             ref.read(workingReportDetailMonthProvider.notifier).state = monthStr;
           },
 
@@ -508,11 +511,13 @@ class _ConnectedTaskChart extends ConsumerWidget {
   final int selectedYear;
   final bool isDark;
   final String filter;
+  final int? userId;
 
   const _ConnectedTaskChart({
     required this.selectedYear, 
     required this.isDark, 
     required this.filter,
+    this.userId,
   });
 
   @override
@@ -521,7 +526,7 @@ class _ConnectedTaskChart extends ConsumerWidget {
     final endDate = '$selectedYear-12-31';
     final chartDataAsync = ref.watch(taskCompletionChartProvider(
         TaskChartParams(
-            startDate: startDate, endDate: endDate, filter: filter)));
+            startDate: startDate, endDate: endDate, filter: filter, userId: userId)));
 
     return chartDataAsync.when(
       data: (Map<String, dynamic> data) {
@@ -531,7 +536,7 @@ class _ConnectedTaskChart extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.task_alt_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+                Icon(Icons.task_alt_rounded, size: 48, color: Colors.grey.withOpacity(0.3)),
                 const SizedBox(height: 16),
                 Text("No task analysis available for $selectedYear", 
                   style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
@@ -564,6 +569,11 @@ class _ConnectedTaskChart extends ConsumerWidget {
           isDark: isDark,
           color: Colors.blue.shade600,
           labelSuffix: 'Tasks',
+          onSpotTapped: (index) {
+            final monthStr = xLabels[index] ?? '';
+            ref.read(workingReportDrillDownTypeProvider.notifier).state = 'Tasks';
+            ref.read(workingReportDetailMonthProvider.notifier).state = monthStr;
+          },
           tooltipColor: isDark ? const Color(0xFF374151) : Colors.white,
         );
       },
@@ -577,16 +587,18 @@ class _ConnectedHoursChart extends ConsumerWidget {
   final int selectedYear;
   final bool isDark;
   final String filter;
+  final int? userId;
 
   const _ConnectedHoursChart({
     required this.selectedYear,
     required this.isDark,
     required this.filter,
+    this.userId,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final params = ProjectChartParams(year: selectedYear, filter: filter);
+    final params = ProjectChartParams(year: selectedYear, filter: filter, userId: userId);
     final hoursAsync = ref.watch(hoursCompletionChartProvider(params));
 
     return hoursAsync.when(
@@ -601,7 +613,7 @@ class _ConnectedHoursChart extends ConsumerWidget {
   }
 }
 
-class _HoursLineChart extends StatelessWidget {
+class _HoursLineChart extends ConsumerWidget {
   final List<Map<String, dynamic>> data;
   final bool isDark;
   final int selectedYear;
@@ -613,13 +625,13 @@ class _HoursLineChart extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (data.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.timer_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+            Icon(Icons.timer_rounded, size: 48, color: Colors.grey.withOpacity(0.3)),
             const SizedBox(height: 16),
             Text("No hours worked metadata for $selectedYear", 
               style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
@@ -650,6 +662,11 @@ class _HoursLineChart extends StatelessWidget {
       labelSuffix: 'Hrs',
       tooltipColor: isDark ? const Color(0xFF374151) : Colors.white,
       context: context,
+      onSpotTapped: (index) {
+        final monthStr = xLabels[index] ?? '';
+        ref.read(workingReportDrillDownTypeProvider.notifier).state = 'Tasks';
+        ref.read(workingReportDetailMonthProvider.notifier).state = monthStr;
+      },
     );
   }
 }
@@ -658,7 +675,7 @@ class _HoursLineChart extends StatelessWidget {
 // Month Detail Sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _DrillDownHeader extends StatelessWidget {
+class _DrillDownHeader extends ConsumerWidget {
   final String title;
   final VoidCallback onBack;
   final bool isDark;
@@ -670,7 +687,7 @@ class _DrillDownHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
         Material(
@@ -695,7 +712,9 @@ class _DrillDownHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Completed Projects",
+              ref.watch(workingReportDrillDownTypeProvider) == 'Projects' 
+                  ? "Completed Projects" 
+                  : "Completed Tasks",
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -707,8 +726,8 @@ class _DrillDownHeader extends StatelessWidget {
               title,
               style: GoogleFonts.inter(
                 fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : const Color(0xFF0F518B),
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF0D1B2A),
                 letterSpacing: -0.5,
               ),
             ),
@@ -743,7 +762,7 @@ class _MonthlyProjectDetailView extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.assignment_turned_in_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.2)),
+                  Icon(Icons.assignment_turned_in_rounded, size: 48, color: Colors.grey.withOpacity(0.2)),
                   const SizedBox(height: 16),
                   Text(
                     "No projects completed in $monthYear",
@@ -785,10 +804,10 @@ class _ProjectDetailCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+        color: isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF5F8FC),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.shade200,
+          color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
         ),
       ),
       child: Row(
@@ -797,7 +816,7 @@ class _ProjectDetailCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(Icons.check_circle_outline_rounded, size: 24, color: Colors.orange),
@@ -864,7 +883,7 @@ Widget _buildLineChart({
         drawVerticalLine: false,
         horizontalInterval: maxY > 20 ? (maxY / 5) : 5,
         getDrawingHorizontalLine: (value) => FlLine(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
           strokeWidth: 1.5,
         ),
       ),
@@ -938,7 +957,7 @@ Widget _buildLineChart({
           color: color,
           barWidth: 4,
           isStrokeCapRound: true,
-          shadow: Shadow(color: color.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 5)),
+          shadow: Shadow(color: color.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5)),
           dotData: FlDotData(
             show: spots.length < 30,
             getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
@@ -951,7 +970,7 @@ Widget _buildLineChart({
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.0)],
+              colors: [color.withOpacity(0.2), color.withOpacity(0.0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -991,18 +1010,175 @@ Widget _buildLineChart({
                   ),
                   children: [
                     TextSpan(
-                      text: '${spot.y.toInt()} $labelSuffix',
+                      text: '${spot.y.toInt()} $labelSuffix\n',
                       style: GoogleFonts.outfit(
                         color: isDark ? Colors.white : Colors.black,
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
-                    )
+                    ),
+                    TextSpan(
+                      text: 'Tap to view list',
+                      style: GoogleFonts.inter(
+                        color: Colors.blue.shade400,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ]);
             }).toList();
+
           },
         ),
       ),
     ),
   );
 }
+
+class _MonthlyTaskDetailView extends ConsumerWidget {
+  final String monthYear;
+  final bool isDark;
+
+  const _MonthlyTaskDetailView({
+    required this.monthYear,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksAsync = ref.watch(monthlyCompletedTasksProvider(monthYear));
+
+    return Column(
+      children: [
+        tasksAsync.when(
+          data: (tasks) {
+            if (tasks.isEmpty) {
+              return SizedBox(
+                height: 200,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.assignment_turned_in_outlined, 
+                        size: 48, 
+                        color: isDark ? Colors.white24 : Colors.grey.shade300),
+                      const SizedBox(height: 16),
+                      Text(
+                        "No tasks completed in $monthYear",
+                        style: GoogleFonts.inter(
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: tasks.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) => _TaskDetailCard(
+                task: tasks[index],
+                isDark: isDark,
+              ),
+            );
+          },
+          loading: () => const SizedBox(
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (err, stack) => SizedBox(
+            height: 200,
+            child: Center(child: Text('Error loading tasks')),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TaskDetailCard extends StatelessWidget {
+  final TaskModel task;
+  final bool isDark;
+
+  const _TaskDetailCard({
+    required this.task,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.check_circle_outline, color: Colors.blue, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFF0D1B2A),
+                  ),
+                ),
+                if (task.projectName != null)
+                  Text(
+                    task.projectName!,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'Done',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.green,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

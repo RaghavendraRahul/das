@@ -35,6 +35,7 @@ class _ProjectContextView extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isEditing = useState(false);
+    final isLoading = useState(false);
     final contextController =
         useTextEditingController(text: project.project.context);
 
@@ -132,17 +133,41 @@ class _ProjectContextView extends HookConsumerWidget {
                   children: [
                     if (isEditing.value)
                       ElevatedButton(
-                        onPressed: () {
-                          ref
-                              .read(projectRepositoryProvider)
-                              .updateProjectContext(
+                        onPressed: isLoading.value ? null : () async {
+                          isLoading.value = true;
+                          try {
+                            await ref.read(projectRepositoryProvider).updateProjectContext(
                                   project.project.id, contextController.text);
-                          isEditing.value = false;
+                            isEditing.value = false;
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Project context updated successfully!"),
+                                  backgroundColor: Colors.green,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Failed to update context: $e"),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } finally {
+                            isLoading.value = false;
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white),
-                        child: const Text("Save"),
+                        child: isLoading.value 
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text("Save"),
                       )
                     else
                       OutlinedButton(

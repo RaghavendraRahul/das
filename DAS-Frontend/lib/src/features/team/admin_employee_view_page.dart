@@ -699,7 +699,7 @@ class _SectionHeader extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : const Color(0xFF111827),
+            color: isDark ? Colors.white : const Color(0xFF05263E),
           ),
         ),
         const SizedBox(height: 4),

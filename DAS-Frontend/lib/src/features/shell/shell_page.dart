@@ -12,6 +12,11 @@ import 'package:project_pm/src/shared/widgets/sidebar.dart';
 import 'package:project_pm/src/features/auth/auth_state_providers.dart';
 import 'package:project_pm/src/features/projects/providers/approval_polling_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:project_pm/src/core/networking/api_client.dart';
+import 'package:project_pm/src/features/projects/providers/api_providers.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
+import 'package:project_pm/src/features/quick_notes/notes_provider.dart';
+import 'package:project_pm/src/features/today/today_repository.dart';
 
 @RoutePage()
 class ShellPage extends ConsumerWidget {
@@ -171,6 +176,7 @@ class ShellPage extends ConsumerWidget {
             );
 
         return Scaffold(
+          backgroundColor: Colors.transparent, // Ensures Scaffold background lets gradient show through
           // Drawer for mobile
           drawer: isMobile
               ? Drawer(
@@ -180,6 +186,18 @@ class ShellPage extends ConsumerWidget {
           body: Builder(
             builder: (scaffoldContext) => Stack(
               children: [
+                // Global Background Gradient matches sidebar theme vibe
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: Theme.of(context).brightness == Brightness.dark
+                          ? [const Color(0xFF0B1426), const Color(0xFF0F172A), const Color(0xFF1E293B)]
+                          : [const Color(0xFFF4F7FB), const Color(0xFFE8F0F8), const Color(0xFFF4F7FB)],
+                    ),
+                  ),
+                ),
                 // Main layout
                 Column(
                   children: [
@@ -207,6 +225,20 @@ class ShellPage extends ConsumerWidget {
                           ref
                               .read(impersonatingFromUserIdProvider.notifier)
                               .state = null;
+
+                          // Invalidate the root Dio provider so that API calls are
+                          // made without the impersonation header and admin's original
+                          // data is fetched.
+                          ref.invalidate(dioProvider);
+                          ref.invalidate(taskApiServiceProvider);
+                          ref.invalidate(dashboardApiProjectsProvider);
+                          ref.invalidate(apiPaginatedProjectsProvider);
+                          ref.invalidate(paginatedDashboardProjectsProvider);
+                          ref.invalidate(filteredDashboardStatsProvider);
+                          ref.invalidate(apiTasksProvider);
+                          // Explicitly invalidate other major modules to ensure clean UI refresh
+                          ref.invalidate(stickyNotesProvider);
+                          ref.invalidate(todayRepositoryProvider);
 
                           // Navigate to Dashboard to reload original data
                           router.navigate(const DashboardRoute());
@@ -430,7 +462,7 @@ class ShellPage extends ConsumerWidget {
         subtitle = ""; // Removed per user request
         break;
       case ViewMode.projects:
-        subtitle = "Manage all your projects.";
+        subtitle = "";
         break;
       case ViewMode.projectOverview:
         subtitle = "Detailed project metrics and details.";
@@ -573,10 +605,10 @@ class _AppBarProjectSelector extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : Colors.blue.withOpacity(0.05),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-            color: isDark ? Colors.white24 : Colors.blue.withOpacity(0.2)),
+            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       child: Row(
@@ -587,7 +619,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: isMobile ? 11 : 12,
-              color: isDark ? Colors.grey.shade400 : Colors.blue.shade700,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             ),
           ),
           const SizedBox(width: 8),

@@ -17,7 +17,7 @@ final selectedProjectIdProvider = StateProvider<String?>((ref) => null);
 ProjectRepository projectRepository(ProjectRepositoryRef ref) {
   final db = ref.watch(databaseProvider);
   final apiService = ref.watch(taskApiServiceProvider);
-  return ProjectRepository(db, apiService);
+  return ProjectRepository(db, apiService, ref);
 }
 
 @riverpod
@@ -69,12 +69,6 @@ Future<List<ProjectWithTasks>> projectsWithTasks(
     final List<ProjectWithTasks> result = [];
     for (final project in projects) {
       final projectTasks = tasksByProject[project.id] ?? [];
-
-      // Skip projects with no tasks for better UX (especially for employees)
-      // They can see the project exists, but can't plan tasks they don't have access to
-      if (projectTasks.isEmpty) {
-        continue; // Don't add projects with no accessible tasks
-      }
 
       final localProject = project.toLocalProject();
 

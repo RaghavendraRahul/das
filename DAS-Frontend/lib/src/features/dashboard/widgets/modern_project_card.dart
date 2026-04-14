@@ -10,8 +10,9 @@ import 'package:intl/intl.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 import '../../../core/utils/user_color_service.dart';
+import '../modals/create_new_workspace_modal.dart';
 
-class ModernProjectCard extends StatefulWidget {
+class ModernProjectCard extends ConsumerStatefulWidget {
   final ProjectWithTasks project;
   final VoidCallback? onTap;
   final bool isDark;
@@ -24,29 +25,30 @@ class ModernProjectCard extends StatefulWidget {
   });
 
   @override
-  State<ModernProjectCard> createState() => _ModernProjectCardState();
+  ConsumerState<ModernProjectCard> createState() => _ModernProjectCardState();
 }
 
-class _ModernProjectCardState extends State<ModernProjectCard> {
+class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
   bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final approvalStatus =
         widget.project.project.approvalStatus?.toLowerCase() ?? '';
-    final status = widget.project.project.status.toLowerCase() ?? 'active';
+    final status = widget.project.project.status.toLowerCase();
 
     Color projectColor;
     if (status == 'completed') {
       projectColor = Colors.green;
     } else if (approvalStatus == 'pending_completion') {
       projectColor = Colors.orange;
+    } else if (approvalStatus == 'rejected') {
+      projectColor = Colors.red;
     } else {
       switch (status) {
         case 'active':
         case 'working':
-          projectColor = const Color(0xFF0F518B);
+          projectColor = const Color(0xFF05263E);
           break;
         case 'on_hold':
           projectColor = Colors.orange;
@@ -55,10 +57,6 @@ class _ModernProjectCardState extends State<ModernProjectCard> {
           projectColor = const Color(0xFF64748B); // Slate for others
       }
     }
-
-    final borderColor = _isHovered
-        ? projectColor.withOpacity(0.5)
-        : (widget.isDark ? const Color(0xFF374151) : Colors.grey.shade200);
 
     final criticalCount = widget.project.tasks
         .where((t) =>
@@ -87,22 +85,22 @@ class _ModernProjectCardState extends State<ModernProjectCard> {
                       end: Alignment.bottomRight,
                       colors: [
                         const Color(0xFF1E293B),
-                        const Color(0xFF0F172A).withValues(alpha: 0.8),
+                        const Color(0xFF0F172A).withOpacity(0.8),
                       ],
                     )
                   : null,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _isHovered 
-                    ? projectColor.withValues(alpha: 0.5) 
-                    : (widget.isDark ? Colors.white10 : Colors.indigo.withValues(alpha: 0.05)),
+                    ? projectColor.withOpacity(0.5) 
+                    : (widget.isDark ? Colors.white10 : Colors.indigo.withOpacity(0.05)),
                 width: _isHovered ? 2.0 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
                   color: _isHovered
-                      ? projectColor.withValues(alpha: 0.25)
-                      : Colors.black.withValues(alpha: widget.isDark ? 0.3 : 0.06),
+                      ? projectColor.withOpacity(0.25)
+                      : Colors.black.withOpacity(widget.isDark ? 0.3 : 0.06),
                   blurRadius: _isHovered ? 30 : 15,
                   spreadRadius: _isHovered ? 2 : 0,
                   offset: Offset(0, _isHovered ? 12 : 6),
@@ -138,11 +136,29 @@ class _ModernProjectCardState extends State<ModernProjectCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _ProjectHeader(project: widget.project.project),
+                          if (status == 'active' &&
+                              approvalStatus != 'rejected' &&
+                              (widget.project.project.rejectionReason?.isNotEmpty ??
+                                  false)) ...[
+                            const SizedBox(height: 6),
+                            _ReopenedBanner(
+                              reason: widget.project.project.rejectionReason!,
+                              isDark: widget.isDark,
+                            ),
+                          ],
+                          if (widget.project.project.approvalStatus?.toLowerCase() == 'rejected') ...[
+                            const SizedBox(height: 6),
+                            _RejectionBanner(
+                              rejectionReason: widget.project.project.rejectionReason,
+                              projectWithTasks: widget.project,
+                              isDark: widget.isDark,
+                            ),
+                          ],
                           if (criticalCount > 0) ...[
                             const SizedBox(height: 6),
                             _CriticalBadge(count: criticalCount),
                           ],
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           _ProjectKPISection(
                                   project: widget.project.project,
                                   tasks: widget.project.tasks,
@@ -150,7 +166,7 @@ class _ModernProjectCardState extends State<ModernProjectCard> {
                               .animate()
                               .fadeIn(delay: 100.ms)
                               .slideX(begin: -0.1, end: 0),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           Expanded(
                             child: _TaskPreviewSection(
                                     tasks: widget.project.tasks,
@@ -159,7 +175,7 @@ class _ModernProjectCardState extends State<ModernProjectCard> {
                                 .fadeIn(delay: 200.ms)
                                 .slideY(begin: 0.1, end: 0),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           _ProjectFooter(
                                   project: widget.project,
                                   isDark: widget.isDark)
@@ -171,9 +187,40 @@ class _ModernProjectCardState extends State<ModernProjectCard> {
                   ),
                   Positioned(
                     top: 12,
-                    right: 12,
-                    child: _ApprovalAction(
-                        project: widget.project, isDark: widget.isDark),
+                    right: 8,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(width: 8),
+
+                        // Edit Button (ONLY if NOT completed and NOT rejected)
+                        if (status != 'completed' &&
+                            (status == 'active' || status == 'working') &&
+                            approvalStatus != 'rejected')
+                          IconButton(
+                            onPressed: () =>
+                                _showEditModal(context, widget.project),
+                            icon: Icon(Icons.edit_note,
+                                size: 20,
+                                color: widget.isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600),
+                            tooltip: 'Edit Project Details',
+                            splashRadius: 20,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+
+                        // Reopen Button (ONLY if completed)
+                        if (status == 'completed')
+                          _AdminReopenAction(
+                              project: widget.project, isDark: widget.isDark),
+
+                        const SizedBox(width: 8),
+                        _ApprovalAction(
+                            project: widget.project, isDark: widget.isDark),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -183,6 +230,22 @@ class _ModernProjectCardState extends State<ModernProjectCard> {
       ),
     );
   }
+}
+
+void _showEditModal(BuildContext context, ProjectWithTasks project) {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: '',
+    transitionDuration: const Duration(milliseconds: 300),
+    pageBuilder: (context, anim1, anim2) => CreateNewWorkspaceModal(projectToEdit: project),
+    transitionBuilder: (context, anim1, anim2, child) {
+      return SlideTransition(
+        position: Tween(begin: const Offset(1, 0), end: const Offset(0, 0)).animate(anim1),
+        child: child,
+      );
+    },
+  );
 }
 
 class _ProjectHeader extends StatelessWidget {
@@ -208,13 +271,20 @@ class _ProjectHeader extends StatelessWidget {
       statusColor = Colors.orange;
       statusText = 'Waiting Approval';
     } else if (approvalStatus == 'rejected') {
-      statusColor = Colors.red;
-      statusText = 'Closure Rejected';
+      // Differentiate: if the project status is 'completed' or was previously approved,
+      // it's a closure rejection. Otherwise, it's a creation rejection.
+      if (status == 'completed') {
+        statusColor = Colors.red;
+        statusText = 'Closure Rejected';
+      } else {
+        statusColor = Colors.red;
+        statusText = 'Rejected';
+      }
     } else {
       switch (status) {
         case 'active':
         case 'working':
-          statusColor = Colors.blue;
+          statusColor = const Color(0xFF05263E);
           statusText = 'Open';
           break;
         case 'on_hold':
@@ -243,7 +313,7 @@ class _ProjectHeader extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(
-                right: 32.0), // Room for top-right action button
+                right: 100.0), // Room for top-right action buttons (Tasks, Edit, Reopen/Compare)
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -251,10 +321,10 @@ class _ProjectHeader extends StatelessWidget {
                   project.name,
                   style: GoogleFonts.inter(
                     fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
                     height: 1.2,
-                    color: isDark ? Colors.white : const Color(0xFF0F518B),
+                    color: isDark ? Colors.white : const Color(0xFF05263E),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -299,20 +369,23 @@ class _PlannedHoursBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.indigo.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.indigo.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.timer_outlined,
             size: 12,
-            color: Colors.indigo,
+            color: color,
           ),
           const SizedBox(width: 4),
           Text(
@@ -320,7 +393,7 @@ class _PlannedHoursBadge extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: Colors.indigo,
+              color: color,
               letterSpacing: 0.5,
             ),
           ),
@@ -410,7 +483,7 @@ class _ProjectKPISection extends StatelessWidget {
             backgroundColor:
                 isDark ? Colors.grey.shade800 : Colors.grey.shade200,
             valueColor: AlwaysStoppedAnimation<Color>(
-                percentage == 100 ? Colors.green : Colors.blue),
+                percentage == 100 ? Colors.green : const Color(0xFF05263E)),
             minHeight: 6,
           ),
         ),
@@ -496,7 +569,7 @@ class _TaskPreviewSection extends StatelessWidget {
                   height: 6,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isHighPriority ? Colors.red : Colors.blue,
+                    color: isHighPriority ? Colors.red : const Color(0xFF05263E),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -661,7 +734,7 @@ class _ProjectFooter extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: assignee['role'] == 'TEAMLEAD'
                                   ? Colors.orange.shade700
-                                  : Colors.blue.shade700,
+                                  : const Color(0xFF05263E),
                               shape: BoxShape.circle,
                               border:
                                   Border.all(color: Colors.white, width: 1.5),
@@ -706,10 +779,10 @@ class _ProjectFooter extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.2),
+                              color: Colors.amber.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: Colors.amber.withValues(alpha: 0.5),
+                                  color: Colors.amber.withOpacity(0.5),
                                   width: 0.5),
                             ),
                             child: const Text(
@@ -728,16 +801,16 @@ class _ProjectFooter extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.2),
+                              color: const Color(0xFF05263E).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: Colors.blue.withValues(alpha: 0.5),
+                                  color: const Color(0xFF05263E).withOpacity(0.3),
                                   width: 0.5),
                             ),
                             child: const Text(
                               'TEAM LEAD',
                               style: TextStyle(
-                                color: Colors.blue,
+                                color: Color(0xFF05263E),
                                 fontSize: 6,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,
@@ -943,6 +1016,67 @@ class _DaysRemainingPill extends StatelessWidget {
   }
 }
 
+class _RejectionBanner extends ConsumerWidget {
+  final String? rejectionReason;
+  final ProjectWithTasks projectWithTasks;
+  final bool isDark;
+
+  const _RejectionBanner({
+    required this.rejectionReason,
+    required this.projectWithTasks,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF450A0A).withOpacity(0.6) : Colors.red.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? Colors.red.shade900.withOpacity(0.5) : Colors.red.shade200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red.shade400, size: 14),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Rejected by Admin',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.red.shade300 : Colors.red.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (rejectionReason != null && rejectionReason!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Reason: $rejectionReason',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: isDark ? Colors.red.shade200 : Colors.red.shade600,
+                height: 1.3,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          ],
+        ),
+      );
+    }
+}
+
 class _ApprovalAction extends ConsumerStatefulWidget {
   final ProjectWithTasks project;
   final bool isDark;
@@ -1079,9 +1213,9 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
                   ),
                 )
               : Icon(
-                  isRejected ? Icons.refresh : Icons.check,
+                  isRejected ? Icons.history_rounded : Icons.check,
                   size: 16,
-                  color: isRejected ? Colors.red : Colors.green.shade700,
+                  color: isRejected ? const Color(0xFF6366F1) : Colors.green.shade700,
                 ),
         ),
       );
@@ -1148,5 +1282,171 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
       );
     }
     return const SizedBox.shrink();
+  }
+}
+
+class _AdminReopenAction extends ConsumerStatefulWidget {
+  final ProjectWithTasks project;
+  final bool isDark;
+
+  const _AdminReopenAction({required this.project, required this.isDark});
+
+  @override
+  ConsumerState<_AdminReopenAction> createState() => _AdminReopenActionState();
+}
+
+class _AdminReopenActionState extends ConsumerState<_AdminReopenAction> {
+  bool _isLoading = false;
+
+  void _showReopenDialog() {
+    final reasonController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reopen Project', 
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Why are you reopening this project?', 
+              style: GoogleFonts.inter(fontSize: 14)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              autofocus: true,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Enter reason for reopening...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                filled: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF05263E),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              if (reasonController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Reason is mandatory'), backgroundColor: Colors.red),
+                );
+                return;
+              }
+              
+              Navigator.pop(context);
+              setState(() => _isLoading = true);
+              
+              try {
+                await ref.read(projectRepositoryProvider).reopenProject(
+                  widget.project.project.id, 
+                  reasonController.text.trim()
+                );
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Project Reopened'), backgroundColor: Colors.green),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _isLoading = false);
+              }
+            },
+            child: const Text('Reopen Project'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Only show for admins
+    final isAdmin = ref.watch(currentUserProvider).valueOrNull?.role == 'ADMIN';
+    if (!isAdmin) return const SizedBox.shrink();
+
+    return IconButton(
+      onPressed: _isLoading ? null : _showReopenDialog,
+      icon: _isLoading 
+        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+        : Icon(Icons.history_rounded, size: 22, 
+            color: widget.isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5)),
+      tooltip: 'Reopen Project',
+      splashRadius: 20,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
+    );
+  }
+}
+
+class _ReopenedBanner extends StatelessWidget {
+  final String reason;
+  final bool isDark;
+
+  const _ReopenedBanner({required this.reason, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark 
+          ? Colors.blue.withOpacity(0.15) 
+          : const Color(0xFFEFF6FF), // Light blue background
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? Colors.blue.withOpacity(0.3) : const Color(0xFFDBEAFE),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 14, 
+            color: isDark ? Colors.blue.shade300 : Colors.blue.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'REOPENED BY ADMIN',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  reason,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: isDark ? Colors.grey.shade300 : Colors.blue.shade900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

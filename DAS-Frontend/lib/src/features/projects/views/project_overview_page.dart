@@ -148,7 +148,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
+              color: Colors.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(Icons.business_center_outlined,
@@ -220,9 +220,9 @@ class ProjectOverviewPage extends HookConsumerWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+              border: Border.all(color: statusColor.withOpacity(0.3)),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Container(
@@ -300,16 +300,16 @@ class ProjectOverviewPage extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: chip.color.withValues(alpha: 0.08),
+        color: chip.color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: chip.color.withValues(alpha: 0.2)),
+        border: Border.all(color: chip.color.withOpacity(0.2)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: chip.color.withValues(alpha: 0.12),
+              color: chip.color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(chip.icon, size: 18, color: chip.color),
@@ -592,7 +592,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.03)
+            ? Colors.white.withOpacity(0.03)
             : Colors.grey.shade50,
         borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(14),
@@ -840,9 +840,9 @@ class ProjectOverviewPage extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.25))),
+          border: Border.all(color: color.withOpacity(0.25))),
       child: Text(label,
           style: GoogleFonts.inter(
               fontSize: 11,
@@ -858,7 +858,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(9)),
           child: Icon(icon, size: 16, color: color),
         ),
@@ -893,9 +893,9 @@ class ProjectOverviewPage extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
+          color: color.withOpacity(0.06),
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: color.withValues(alpha: 0.2))),
+          border: Border.all(color: color.withOpacity(0.2))),
       child: Row(children: [
         Icon(
             isOverdue
@@ -984,9 +984,9 @@ class ProjectOverviewPage extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withValues(alpha: 0.3))),
+          border: Border.all(color: color.withOpacity(0.3))),
       child: Text(label,
           style: GoogleFonts.inter(
               fontSize: 10,
@@ -1000,7 +1000,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(6)),
       child: Text(priority.toUpperCase(),
           style: GoogleFonts.inter(
@@ -1033,7 +1033,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
               child: CircleAvatar(
                 radius: 12,
                 backgroundColor: isDark
-                    ? Colors.indigo.withValues(alpha: 0.3)
+                    ? Colors.indigo.withOpacity(0.3)
                     : Colors.indigo.shade50,
                 backgroundImage: avatar != null && avatar.toString().isNotEmpty
                     ? NetworkImage(avatar.toString())
@@ -1067,7 +1067,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
       child: CircleAvatar(
         radius: 20,
         backgroundColor:
-            isDark ? Colors.indigo.withValues(alpha: 0.25) : Colors.indigo.shade50,
+            isDark ? Colors.indigo.withOpacity(0.25) : Colors.indigo.shade50,
         backgroundImage: avatar != null && avatar.toString().isNotEmpty
             ? NetworkImage(avatar.toString())
             : null,
@@ -1086,14 +1086,14 @@ class ProjectOverviewPage extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: color.withValues(alpha: 0.3))),
+          border: Border.all(color: color.withOpacity(0.3))),
       child: Text(label,
           style: GoogleFonts.inter(
               fontSize: 9,
               fontWeight: FontWeight.w700,
-              color: color.withValues(alpha: isDark ? 0.95 : 0.85),
+              color: color.withOpacity(isDark ? 0.95 : 0.85),
               letterSpacing: 0.2)),
     );
   }
@@ -1105,7 +1105,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
       border: Border.all(color: borderColor),
       boxShadow: [
         BoxShadow(
-            color: Colors.black.withValues(alpha: 0.025),
+            color: Colors.black.withOpacity(0.025),
             blurRadius: 8,
             offset: const Offset(0, 2))
       ],

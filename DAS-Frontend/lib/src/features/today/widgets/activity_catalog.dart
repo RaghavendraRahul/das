@@ -102,12 +102,21 @@ class ActivityCatalog extends HookConsumerWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0.02),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -128,7 +137,7 @@ class ActivityCatalog extends HookConsumerWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.2,
-                        color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                        color: isDark ? Colors.white : const Color(0xFF05263E),
                       ),
                     ),
                     // Add Template Button
@@ -1310,7 +1319,7 @@ class _CatalogItemCard extends ConsumerWidget {
             border: Border.all(color: color, width: 2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: Colors.black.withOpacity(0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

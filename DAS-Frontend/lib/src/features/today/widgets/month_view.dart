@@ -231,10 +231,10 @@ class MonthView extends HookConsumerWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: navy.withValues(alpha: 0.08),
+                      color: navy.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(20),
                       border:
-                          Border.all(color: navy.withValues(alpha: 0.2)),
+                          Border.all(color: navy.withOpacity(0.2)),
                     ),
                     child: Text(
                       'Today',
@@ -444,7 +444,7 @@ class MonthView extends HookConsumerWidget {
                         final isDragHover = candidateData.isNotEmpty;
 
                         final dayColor = isDragHover
-                            ? todayBlue.withValues(alpha: isDark ? 0.15 : 0.05)
+                            ? todayBlue.withOpacity(isDark ? 0.15 : 0.05)
                             : null;
 
                         return InkWell(
@@ -651,8 +651,8 @@ class MonthView extends HookConsumerWidget {
                                               BorderRadius.circular(6),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: todayBlue.withValues(
-                                                  alpha: 0.3),
+                                              color: todayBlue.withOpacity(
+                                                  0.3),
                                               blurRadius: 4,
                                               offset: const Offset(0, 1),
                                             ),
@@ -673,7 +673,7 @@ class MonthView extends HookConsumerWidget {
                                     child: Icon(
                                         Icons.add_circle_outline_rounded,
                                         color:
-                                            todayBlue.withValues(alpha: 0.5),
+                                            todayBlue.withOpacity(0.5),
                                         size: 28),
                                   ),
                               ],

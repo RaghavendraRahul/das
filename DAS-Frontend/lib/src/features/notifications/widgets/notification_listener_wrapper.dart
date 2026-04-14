@@ -6,6 +6,7 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/features/quick_notes/notes_provider.dart';
 import 'package:project_pm/src/features/today/services/instruction_service.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
 
 class NotificationListenerWrapper extends ConsumerWidget {
   final Widget? child;
@@ -35,6 +36,10 @@ class NotificationListenerWrapper extends ConsumerWidget {
           ref.invalidate(paginatedDashboardProjectsProvider);
           ref.invalidate(projectsPageProjectsProvider);
           ref.invalidate(apiPaginatedProjectsProvider);
+          
+          // ADDED: Invalidate statistics providers for dynamic updates
+          ref.invalidate(filteredDashboardStatsProvider);
+          ref.invalidate(dashboardProjectsProvider);
 
           // Also invalidate catalog if project/task changes
           ref.invalidate(apiCatalogProjectsProvider);

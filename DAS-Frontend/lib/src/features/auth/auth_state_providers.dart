@@ -5,7 +5,7 @@ import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
-import 'dart:html' as html show window;
+import 'package:project_pm/src/features/auth/utils/platform_utils.dart';
 
 part 'auth_state_providers.g.dart';
 
@@ -58,7 +58,8 @@ class AuthNotifier extends _$AuthNotifier {
     // Intercept auto-login parameters from URL (HRM to DAS SSO)
     if (kIsWeb) {
       try {
-        final uri = Uri.parse(html.window.location.href);
+        final url = PlatformUtils.getCurrentUrl();
+        final uri = Uri.parse(url);
         debugPrint(
             '🔵 [AuthNotifier] Boot: Checking for HRM SSO parameters in URL...');
 
@@ -84,7 +85,7 @@ class AuthNotifier extends _$AuthNotifier {
 
           // Clean URL safely - we do this AFTER we have the code to avoid losing it if a re-render happens
           try {
-            html.window.history.replaceState(null, '', '/');
+            PlatformUtils.cleanUrl();
             debugPrint(
                 '🔵 [AuthNotifier] URL parameters cleaned from address bar');
           } catch (e) {

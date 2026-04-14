@@ -41,7 +41,7 @@ final apiProjectsProvider =
 
 typedef ApiProjectsRef = AutoDisposeFutureProviderRef<List<ProjectModel>>;
 String _$dashboardApiProjectsHash() =>
-    r'757049d5415a0cd8108b14bf2a3466fdb3d2349b';
+    r'862021bdbe65ead7a87f833fb8e7e6d2df9d6b0e';
 
 /// Fetch only authorized projects for the dashboard to avoid 401 errors
 ///
@@ -2397,6 +2397,140 @@ class _MonthlyCompletedProjectsProviderElement
   @override
   String get monthYear =>
       (origin as MonthlyCompletedProjectsProvider).monthYear;
+}
+
+String _$monthlyCompletedTasksHash() =>
+    r'9622388742150085de8a5f7b813fdf88832abab7';
+
+/// See also [monthlyCompletedTasks].
+@ProviderFor(monthlyCompletedTasks)
+const monthlyCompletedTasksProvider = MonthlyCompletedTasksFamily();
+
+/// See also [monthlyCompletedTasks].
+class MonthlyCompletedTasksFamily extends Family<AsyncValue<List<TaskModel>>> {
+  /// See also [monthlyCompletedTasks].
+  const MonthlyCompletedTasksFamily();
+
+  /// See also [monthlyCompletedTasks].
+  MonthlyCompletedTasksProvider call(
+    String monthYear,
+  ) {
+    return MonthlyCompletedTasksProvider(
+      monthYear,
+    );
+  }
+
+  @override
+  MonthlyCompletedTasksProvider getProviderOverride(
+    covariant MonthlyCompletedTasksProvider provider,
+  ) {
+    return call(
+      provider.monthYear,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'monthlyCompletedTasksProvider';
+}
+
+/// See also [monthlyCompletedTasks].
+class MonthlyCompletedTasksProvider
+    extends AutoDisposeFutureProvider<List<TaskModel>> {
+  /// See also [monthlyCompletedTasks].
+  MonthlyCompletedTasksProvider(
+    String monthYear,
+  ) : this._internal(
+          (ref) => monthlyCompletedTasks(
+            ref as MonthlyCompletedTasksRef,
+            monthYear,
+          ),
+          from: monthlyCompletedTasksProvider,
+          name: r'monthlyCompletedTasksProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$monthlyCompletedTasksHash,
+          dependencies: MonthlyCompletedTasksFamily._dependencies,
+          allTransitiveDependencies:
+              MonthlyCompletedTasksFamily._allTransitiveDependencies,
+          monthYear: monthYear,
+        );
+
+  MonthlyCompletedTasksProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.monthYear,
+  }) : super.internal();
+
+  final String monthYear;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<TaskModel>> Function(MonthlyCompletedTasksRef provider)
+        create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: MonthlyCompletedTasksProvider._internal(
+        (ref) => create(ref as MonthlyCompletedTasksRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        monthYear: monthYear,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<List<TaskModel>> createElement() {
+    return _MonthlyCompletedTasksProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MonthlyCompletedTasksProvider &&
+        other.monthYear == monthYear;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, monthYear.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+mixin MonthlyCompletedTasksRef
+    on AutoDisposeFutureProviderRef<List<TaskModel>> {
+  /// The parameter `monthYear` of this provider.
+  String get monthYear;
+}
+
+class _MonthlyCompletedTasksProviderElement
+    extends AutoDisposeFutureProviderElement<List<TaskModel>>
+    with MonthlyCompletedTasksRef {
+  _MonthlyCompletedTasksProviderElement(super.provider);
+
+  @override
+  String get monthYear => (origin as MonthlyCompletedTasksProvider).monthYear;
 }
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

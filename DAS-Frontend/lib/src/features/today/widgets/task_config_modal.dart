@@ -175,10 +175,10 @@ class TaskConfigModal extends HookConsumerWidget {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.hardEdge,
       child: Container(
         width: 500,
         constraints: const BoxConstraints(maxHeight: 700),
-        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1F2937) : Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -188,59 +188,67 @@ class TaskConfigModal extends HookConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (effectiveProjectName.isNotEmpty)
-                        Text(
-                          effectiveProjectName.toUpperCase(),
-                          style: GoogleFonts.outfit(
-                            color: Colors.blue.shade600,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                            letterSpacing: 0.5,
+            Container(
+              color: const Color(0xFF05263E),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (effectiveProjectName.isNotEmpty)
+                          Text(
+                            effectiveProjectName.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              color: Colors.blue.shade200,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                            ),
                           ),
-                        ),
-                      const SizedBox(height: 4),
-                      TextField(
-                        controller: nameController,
-                        style: GoogleFonts.outfit(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.grey.shade900,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: "New Task",
-                          hintStyle: GoogleFonts.outfit(
+                        if (effectiveProjectName.isNotEmpty)
+                          const SizedBox(height: 4),
+                        TextField(
+                          controller: nameController,
+                          cursorColor: Colors.white,
+                          style: GoogleFonts.inter(
                             fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade400,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
                           ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+                          decoration: InputDecoration(
+                            hintText: "New Task",
+                            hintStyle: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white.withOpacity(0.6),
+                            ),
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  child: Icon(Icons.close, color: Colors.grey.shade400),
-                ),
-              ],
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(Icons.close, color: Colors.white),
+                  ),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 16),
 
             // Scrollable Content
             Flexible(
               child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -390,16 +398,16 @@ class TaskConfigModal extends HookConsumerWidget {
                       Row(
                         children: [
                           Icon(FontAwesomeIcons.listCheck,
-                              size: 14, color: Colors.blue.shade600),
+                              size: 14, color: isDark ? Colors.white : const Color(0xFF05263E)),
                           const SizedBox(width: 8),
                           Text(
                             'Select Milestones to Tackle',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                               color: isDark
                                   ? Colors.grey.shade300
-                                  : Colors.grey.shade700,
+                                  : const Color(0xFF05263E),
                             ),
                           ),
                         ],
@@ -414,7 +422,7 @@ class TaskConfigModal extends HookConsumerWidget {
                                   : Colors.grey.shade200),
                           borderRadius: BorderRadius.circular(8),
                           color: isDark
-                              ? Colors.grey.shade900.withValues(alpha: 0.5)
+                              ? Colors.grey.shade900.withOpacity(0.5)
                               : Colors.grey.shade50,
                         ),
                         child: ListView.builder(
@@ -439,7 +447,7 @@ class TaskConfigModal extends HookConsumerWidget {
                                       onChanged: m.isCompleted
                                           ? null
                                           : (_) => toggleMilestone(m.id),
-                                      activeColor: Colors.blue,
+                                      activeColor: const Color(0xFF05263E),
                                     ),
                                     Expanded(
                                       child: Text(
@@ -488,10 +496,10 @@ class TaskConfigModal extends HookConsumerWidget {
                     // Quadrant Selector
                     Text(
                       'Add to Quadrant:',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
-                        color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        color: isDark ? Colors.grey.shade300 : const Color(0xFF05263E),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -511,7 +519,7 @@ class TaskConfigModal extends HookConsumerWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: selectedQuadrant.value == q.$1
-                                    ? q.$3.withAlpha(30)
+                                    ? q.$3.withOpacity(0.3)
                                     : Colors.transparent,
                                 border: Border.all(
                                   color: selectedQuadrant.value == q.$1
@@ -545,19 +553,19 @@ class TaskConfigModal extends HookConsumerWidget {
                       children: [
                         Text(
                           'Planned Duration:',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                             color: isDark
                                 ? Colors.grey.shade300
-                                : Colors.grey.shade700,
+                                : const Color(0xFF05263E),
                           ),
                         ),
                         Text(
                           formatDuration(duration.value),
-                          style: GoogleFonts.outfit(
-                            color: Colors.blue.shade600,
-                            fontWeight: FontWeight.bold,
+                          style: GoogleFonts.inter(
+                            color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
+                            fontWeight: FontWeight.w700,
                             fontSize: 14,
                           ),
                         ),
@@ -565,12 +573,12 @@ class TaskConfigModal extends HookConsumerWidget {
                     ),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: Colors.blue.shade600,
+                        activeTrackColor: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
                         inactiveTrackColor: isDark
-                            ? Colors.grey.shade700
-                            : Colors.grey.shade300,
-                        thumbColor: Colors.blue.shade600,
-                        overlayColor: Colors.blue.withAlpha(30),
+                            ? Colors.grey.shade800
+                            : Colors.orange.shade100,
+                        thumbColor: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
+                        overlayColor: (isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316)).withOpacity(0.4),
                       ),
                       child: Slider(
                         value: duration.value.toDouble().clamp(15.0, 120.0),
@@ -584,13 +592,13 @@ class TaskConfigModal extends HookConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('15m',
-                            style: TextStyle(
+                            style: GoogleFonts.inter(
                                 color: Colors.grey.shade400, fontSize: 11)),
                         Text('1h',
-                            style: TextStyle(
+                            style: GoogleFonts.inter(
                                 color: Colors.grey.shade400, fontSize: 11)),
                         Text('2h',
-                            style: TextStyle(
+                            style: GoogleFonts.inter(
                                 color: Colors.grey.shade400, fontSize: 11)),
                       ],
                     ),
@@ -600,74 +608,79 @@ class TaskConfigModal extends HookConsumerWidget {
             ),
 
             // Actions
-            const SizedBox(height: 28),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        side: BorderSide(color: Colors.red.shade600),
+                        foregroundColor: Colors.red.shade600,
+                      ),
+                      child: Text('Cancel',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                     ),
-                    child: Text('Cancel',
-                        style: TextStyle(color: Colors.grey.shade600)),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (onConfirm != null) {
-                        String finalName = nameController.text.trim();
-                        if ((finalName == 'New Task' || finalName.isEmpty) &&
-                            descriptionController.text.trim().isNotEmpty) {
-                          finalName = descriptionController.text.trim();
-                        }
-                        if (finalName.isEmpty) finalName = 'New Task';
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (onConfirm != null) {
+                          String finalName = nameController.text.trim();
+                          if ((finalName == 'New Task' || finalName.isEmpty) &&
+                              descriptionController.text.trim().isNotEmpty) {
+                            finalName = descriptionController.text.trim();
+                          }
+                          if (finalName.isEmpty) finalName = 'New Task';
 
-                        onConfirm!(
-                          name: finalName,
-                          duration: duration.value,
-                          description: descriptionController.text,
-                          selectedMilestoneIds:
-                              selectedMilestoneIds.value.toList(),
-                          quadrant: selectedQuadrant.value,
-                        );
-                      } else if (plannedItem != null) {
-                        try {
-                          final repo = ref.read(todayRepositoryProvider);
-                          await repo.updatePlannedItem(
-                            plannedItem!.id,
-                            PlannedItemsCompanion(
-                              description:
-                                  drift.Value(descriptionController.text),
-                              durationMinutes: drift.Value(duration.value),
-                            ),
+                          onConfirm!(
+                            name: finalName,
+                            duration: duration.value,
+                            description: descriptionController.text,
+                            selectedMilestoneIds:
+                                selectedMilestoneIds.value.toList(),
+                            quadrant: selectedQuadrant.value,
                           );
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text('Failed to update task: $e')),
+                        } else if (plannedItem != null) {
+                          try {
+                            final repo = ref.read(todayRepositoryProvider);
+                            await repo.updatePlannedItem(
+                              plannedItem!.id,
+                              PlannedItemsCompanion(
+                                description:
+                                    drift.Value(descriptionController.text),
+                                durationMinutes: drift.Value(duration.value),
+                              ),
                             );
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text('Failed to update task: $e')),
+                              );
+                            }
                           }
                         }
-                      }
-                      if (context.mounted) Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: const Color(0xFF05263E),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Text('Confirm Plan',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
                     ),
-                    child: const Text('Confirm Plan',
-                        style: TextStyle(color: Colors.white)),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

@@ -298,6 +298,13 @@ class Projects(models.Model):
         # Sum achieved hours from tasks
         return sum(task.get_achieved_hours() for task in self.tasks.all())
 
+    def save(self, *args, **kwargs):
+        """Auto-populate completed_date whenever project reaches COMPLETED status."""
+        if self.status == 'COMPLETED' and not self.completed_date:
+            from django.utils import timezone
+            self.completed_date = timezone.now().date()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -418,7 +425,18 @@ class Task(models.Model):
         super().clean()
 
     def save(self, *args, **kwargs):
-        self.full_clean()
+        # Only validate planned_hours budget when it is actually being changed.
+        # Status-only saves must NOT re-run the budget check.
+        update_fields = kwargs.get('update_fields')
+        # Auto-populate completed_at whenever task reaches DONE status
+        if self.status == 'DONE' and not self.completed_at:
+            from django.utils import timezone
+            self.completed_at = timezone.now().date()
+            # If update_fields specified, ensure completed_at is included
+            if update_fields is not None and 'completed_at' not in update_fields:
+                kwargs['update_fields'] = list(update_fields) + ['completed_at']
+        if update_fields is None or 'planned_hours' in update_fields:
+            self.full_clean()
         super().save(*args, **kwargs)
     
     next_occurrence = models.DateField(null=True, blank=True, help_text='For recurring tasks')
@@ -455,6 +473,9 @@ class Task(models.Model):
     
     def calculate_progress(self):
         """Calculate task progress dynamically based on count of subtasks (100/N)"""
+        if self.approval_status == 'pending_completion':
+            return 100
+            
         subtasks = self.subtasks.all()
         count = subtasks.count()
         if count == 0:
@@ -653,7 +674,7 @@ class Catalog(models.Model):
     def calculate_progress(self):
         """Calculate progress based on linked task or project"""
         if self.task:
-            if self.task.status == 'DONE':
+            if self.task.status == 'DONE' or self.task.approval_status == 'pending_completion':
                 self.progress_percentage = 100
             elif self.task.status in ['IN_PROGRESS', 'PENDING_APPROVAL', 'PENDING']:
                 # Calculate based on subtasks if available
@@ -666,12 +687,15 @@ class Catalog(models.Model):
             else:
                 self.progress_percentage = 0
         elif self.project:
-            tasks = self.project.tasks.all()
-            if tasks.count() > 0:
-                completed = tasks.filter(status='DONE').count()
-                self.progress_percentage = int((completed / tasks.count()) * 100)
+            if self.project.status == 'COMPLETED' or self.project.approval_status == 'pending_completion':
+                self.progress_percentage = 100
             else:
-                self.progress_percentage = 0
+                tasks = self.project.tasks.all()
+                if tasks.count() > 0:
+                    completed = tasks.filter(status='DONE').count()
+                    self.progress_percentage = int((completed / tasks.count()) * 100)
+                else:
+                    self.progress_percentage = 0
         self.save()
         return self.progress_percentage
 

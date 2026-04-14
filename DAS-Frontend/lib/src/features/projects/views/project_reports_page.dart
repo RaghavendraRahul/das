@@ -241,7 +241,7 @@ class _ReportsView extends StatelessWidget {
                         FlSpot(10, totalTasks.toDouble()),
                       ],
                       isCurved: false,
-                      color: Colors.grey.withValues(alpha: 0.5),
+                      color: Colors.grey.withOpacity(0.5),
                       barWidth: 2,
                       dotData: const FlDotData(show: false),
                       dashArray: [5, 5],
@@ -259,7 +259,7 @@ class _ReportsView extends StatelessWidget {
                       barWidth: 3,
                       belowBarData: BarAreaData(
                           show: true,
-                          color: Colors.green.withValues(alpha: 0.1)),
+                          color: Colors.green.withOpacity(0.1)),
                     ),
                   ],
                 ),

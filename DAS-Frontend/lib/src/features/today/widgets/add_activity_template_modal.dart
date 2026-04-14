@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/today/models/catalog_model.dart';
 import 'package:project_pm/src/features/today/services/catalog_service.dart';
@@ -100,6 +101,7 @@ class AddActivityTemplateModal extends HookConsumerWidget {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.hardEdge,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
         width: 400,
@@ -108,24 +110,24 @@ class AddActivityTemplateModal extends HookConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header
-            Padding(
-              padding: const EdgeInsets.all(24.0),
+            Container(
+              color: const Color(0xFF05263E),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
               child: Row(
                 children: [
-                  Icon(Icons.create_new_folder, color: Colors.blue.shade600),
+                  const Icon(Icons.create_new_folder, color: Colors.white),
                   const SizedBox(width: 8),
                   Text(
                     'New Activity Template',
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.grey.shade900,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
                     ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
 
             // Scrollable Content
             Flexible(
@@ -143,7 +145,7 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                         controller: nameController,
                         decoration:
                             _inputDecoration('e.g. Yoga Session', isDark),
-                        style: const TextStyle(fontSize: 14),
+                        style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                         validator: (value) => value == null || value.isEmpty
                             ? 'Name is required'
                             : null,
@@ -157,7 +159,7 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                         controller: descriptionController,
                         decoration:
                             _inputDecoration('Short description...', isDark),
-                        style: const TextStyle(fontSize: 14),
+                        style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                         maxLines: 2,
                       ),
                       const SizedBox(height: 16),
@@ -191,7 +193,7 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                                       : Colors.white,
                                   items: existingCategories.map((cat) {
                                     return DropdownMenuItem(
-                                        value: cat, child: Text(cat));
+                                        value: cat, child: Text(cat, style: GoogleFonts.inter(fontSize: 14)));
                                   }).toList(),
                                   onChanged: (val) {
                                     if (val != null) {
@@ -204,7 +206,10 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                             const SizedBox(width: 8),
                             OutlinedButton(
                               onPressed: () => isNewCategory.value = true,
-                              child: const Text('+ New'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: isDark ? Colors.white : const Color(0xFF05263E),
+                              ),
+                              child: Text('+ New', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                             ),
                           ],
                         )
@@ -217,7 +222,7 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                                 autofocus: true,
                                 decoration: _inputDecoration(
                                     'New Category Name', isDark),
-                                style: const TextStyle(fontSize: 14),
+                                style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                                 validator: (value) =>
                                     value == null || value.isEmpty
                                         ? 'Category is required'
@@ -227,7 +232,10 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                             const SizedBox(width: 8),
                             OutlinedButton(
                               onPressed: () => isNewCategory.value = false,
-                              child: const Text('Cancel'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                              ),
+                              child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                             ),
                           ],
                         ),
@@ -240,9 +248,9 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                           const SizedBox(width: 8),
                           Text(
                             '${duration.value ~/ 60}h ${duration.value % 60}m',
-                            style: TextStyle(
-                              color: Colors.blue.shade600,
-                              fontWeight: FontWeight.bold,
+                            style: GoogleFonts.inter(
+                              color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -253,6 +261,8 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                         min: 15,
                         max: 240,
                         divisions: 15,
+                        activeColor: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
+                        inactiveColor: isDark ? Colors.grey.shade800 : Colors.orange.shade100,
                         onChanged: (val) => duration.value = val.round(),
                       ),
                     ],
@@ -272,14 +282,20 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                     onPressed: isSubmitting.value
                         ? null
                         : () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red.shade600,
+                    ),
+                    child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: isSubmitting.value ? null : handleSubmit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade600,
+                      backgroundColor: const Color(0xFF05263E),
                       foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
                     child: isSubmitting.value
                         ? const SizedBox(
@@ -291,7 +307,7 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                                   AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text('Submit Template'),
+                        : Text('Submit Template', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -305,10 +321,10 @@ class AddActivityTemplateModal extends HookConsumerWidget {
   Widget _buildLabel(String text, bool isDark) {
     return Text(
       text,
-      style: TextStyle(
+      style: GoogleFonts.inter(
         fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+        fontWeight: FontWeight.w600,
+        color: isDark ? Colors.grey.shade300 : const Color(0xFF05263E),
       ),
     );
   }
@@ -316,6 +332,7 @@ class AddActivityTemplateModal extends HookConsumerWidget {
   InputDecoration _inputDecoration(String hint, bool isDark) {
     return InputDecoration(
       hintText: hint,
+      hintStyle: GoogleFonts.inter(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400, fontSize: 13),
       isDense: true,
       filled: true,
       fillColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,

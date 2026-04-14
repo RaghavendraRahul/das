@@ -214,7 +214,11 @@ class UserPreferencesViewSet(viewsets.GenericViewSet):
 
 class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
       serializer_class = ProjectSerializer
-      queryset = Projects.objects.all() # Base queryset, overridden by mixin
+      queryset = Projects.objects.select_related(
+          'created_by', 'project_lead', 'handled_by'
+      ).prefetch_related(
+          'assignees', 'tasks', 'tasks__assignees', 'tasks__assignees__user'
+      ).all()  # Prefetch relationships to avoid N+1 queries
       
       filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
       filterset_fields = ['status', 'handled_by', 'created_by', 'project_lead']
@@ -243,15 +247,44 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
                   except User.DoesNotExist:
                       pass # Fallback to request.user if not found
 
-              # Filter projects where user is creator, lead, handled_by, or assigned to any task
+              if user.role == 'ADMIN':
+                  queryset = queryset.filter(
+                      models.Q(assignees=user) |
+                      models.Q(project_lead=user) | 
+                      models.Q(tasks__assignees__user=user)
+                  ).distinct()
+              else:
+                  # Filter projects where user is creator, lead, handled_by, or assigned to any task
+                  queryset = queryset.filter(
+                      models.Q(created_by=user) | 
+                      models.Q(assignees=user) |
+                      models.Q(project_lead=user) | 
+                      models.Q(handled_by=user) |
+                      models.Q(tasks__assignees__user=user)
+                  ).distinct()
+
+          elif self.request.user.role == 'ADMIN':
+              # "Team Projects" tab (no filter param) for admin:
+              # Show only projects that have at least ONE other user involved
+              # (project-level or task-level assignee who is NOT the admin).
+              # This hides solo/personal admin projects from the team view.
+              from django.db.models import Exists, OuterRef
+              from .models import TaskAssignee as _TaskAssignee
+
+              admin_user = self.request.user
+
+              # Subquery: project has a task assigned to someone other than the admin
+              other_task_assignee = _TaskAssignee.objects.filter(
+                  task__project=OuterRef('pk')
+              ).exclude(user=admin_user)
+
+              # Keep projects where at least one project-level assignee is not the admin
+              # OR at least one task-level assignee is not the admin
               queryset = queryset.filter(
-                  models.Q(created_by=user) | 
-                  models.Q(assignees=user) |
-                  models.Q(project_lead=user) | 
-                  models.Q(handled_by=user) |
-                  models.Q(tasks__assignees__user=user)
+                  models.Q(assignees__isnull=False) & ~models.Q(assignees__in=[admin_user]) |
+                  Exists(other_task_assignee)
               ).distinct()
-          
+
           return queryset
 
       def list(self, request, *args, **kwargs):
@@ -394,6 +427,59 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
               return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
           
           return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+      def perform_update(self, serializer):
+          """Override update to handle resubmission of REJECTED projects and pending edits"""
+          project_instance = serializer.instance
+          was_rejected = project_instance.approval_status == 'REJECTED'
+          was_pending = not project_instance.is_approved and project_instance.approval_status != 'REJECTED'
+          
+          with transaction.atomic():
+              updated_project = serializer.save()
+              
+              # If previously rejected, editing it resubmits it for approval
+              if was_rejected and not updated_project.is_approved:
+                  updated_project.approval_status = None
+                  updated_project.rejection_reason = None
+                  updated_project.save()
+                  
+                  # Delete any old requests for this project creation
+                  ApprovalRequest.objects.filter(
+                      reference_type='PROJECT',
+                      reference_id=updated_project.id,
+                      approval_type='CREATION'
+                  ).delete()
+                  
+                  # Create new approval request
+                  ApprovalRequest.objects.create(
+                      reference_type='PROJECT',
+                      reference_id=updated_project.id,
+                      approval_type='CREATION',
+                      requested_by=self.request.user,
+                      request_data={
+                          'project_name': updated_project.name,
+                          'description': updated_project.description,
+                          'requested_by': self.request.user.email,
+                          'is_resubmission': True
+                      }
+                  )
+              # If editing while pending, just update the request data
+              elif was_pending and not updated_project.is_approved:
+                  pending_request = ApprovalRequest.objects.filter(
+                      reference_type='PROJECT',
+                      reference_id=updated_project.id,
+                      approval_type='CREATION',
+                      status='PENDING'
+                  ).first()
+                  if pending_request:
+                      # request_data is a JSON field
+                      request_data_copy = dict(pending_request.request_data) if pending_request.request_data else {}
+                      request_data_copy.update({
+                          'project_name': updated_project.name,
+                          'description': updated_project.description,
+                      })
+                      pending_request.request_data = request_data_copy
+                      pending_request.save()
       
       def _repair_limbo_tasks(self, project):
           """Helper to detect and fix tasks in a limbo state (pending approval with no request)"""
@@ -746,13 +832,20 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
               project.completed_date = timezone.now().date()
               project.save()
               
-              # Update associated ApprovalRequest
-              ApprovalRequest.objects.filter(
+              pending_request = ApprovalRequest.objects.filter(
                   reference_type='PROJECT',
                   reference_id=project.id,
                   approval_type='COMPLETION',
                   status='PENDING'
-              ).update(status='APPROVED', approved_by=user, approved_at=timezone.now())
+              ).first()
+              
+              if pending_request:
+                  from .models import ApprovalResponse
+                  ApprovalResponse.objects.create(
+                      approval_request=pending_request,
+                      action='APPROVED',
+                      reviewed_by=user
+                  )
 
           return Response({
               "message": "Project completion approved",
@@ -773,18 +866,78 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
               )
               
           with transaction.atomic():
+              project.approval_status = 'REJECTED_CLOSURE'
               project.status = 'ACTIVE'
-              project.approval_status = 'rejected'
               project.rejection_reason = reason
               project.save()
               
-              # Update associated ApprovalRequest
-              ApprovalRequest.objects.filter(
+              # Reset all tasks to PENDING (Task Bucket) so they can be worked on again
+              tasks = project.tasks.all()
+              tasks.update(status='PENDING', approval_status='REJECTED', completed_at=None)
+              
+              # Reset all completed subtasks (milestones) across the whole project
+              from .models import SubTask, Notification
+              SubTask.objects.filter(task__in=tasks, status='DONE').update(
+                  status='PENDING', 
+                  completed_at=None
+              )
+              
+              pending_request = ApprovalRequest.objects.filter(
                   reference_type='PROJECT',
                   reference_id=project.id,
                   approval_type='COMPLETION',
                   status='PENDING'
-              ).update(status='REJECTED', reason=reason)
+              ).first()
+              
+              if pending_request:
+                  from .models import ApprovalResponse
+                  ApprovalResponse.objects.create(
+                      approval_request=pending_request,
+                      action='REJECTED',
+                      reviewed_by=user,
+                      rejection_reason=reason
+                  )
+
+              # Notify all stakeholders
+              try:
+                  # 1. Collect all recipients
+                  recipients = set()
+                  if project.project_lead: recipients.add(project.project_lead)
+                  if project.handled_by: recipients.add(project.handled_by)
+                  if project.created_by: recipients.add(project.created_by)
+                  # Adding all task assignees too
+                  for task in tasks:
+                      for task_assignee in task.assignees.all():
+                          recipients.add(task_assignee.user)
+                  # Also include direct project assignees if any
+                  for user in project.assignees.all():
+                      recipients.add(user)
+
+                  # 2. Send notifications
+                  notif_title = 'Project Closure Request Rejected'
+                  notif_message = f'Admin rejected closure of "{project.name}". Tasks are moved back to Task bucket. Reason: {reason}'
+                  
+                  from .signals import send_websocket_notification
+                  for recipient in recipients:
+                      notif = Notification.objects.create(
+                          user=recipient,
+                          notification_type='PROJECT_OVERDUE',  # Reuse or add new 'PROJECT_REJECTED'
+                          title=notif_title,
+                          message=notif_message,
+                          reference_type='project',
+                          reference_id=project.id
+                      )
+                      send_websocket_notification(recipient.id, {
+                          'id': notif.id,
+                          'title': notif.title,
+                          'message': notif.message,
+                          'type': notif.notification_type,
+                          'reference_type': notif.reference_type,
+                          'reference_id': notif.reference_id,
+                          'created_at': str(notif.created_at),
+                      })
+              except Exception as e:
+                  print(f"WebSocket notification error (closure rejection): {e}")
 
           return Response({"message": "Project completion rejected"})
 
@@ -805,8 +958,8 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return ApprovalRequest.objects.none()
         if user.role == 'ADMIN':
-            return ApprovalRequest.objects.all()
-        return ApprovalRequest.objects.filter(requested_by=user)
+            return ApprovalRequest.objects.select_related('requested_by').prefetch_related('responses').all()
+        return ApprovalRequest.objects.select_related('requested_by').prefetch_related('responses').filter(requested_by=user)
     
     def perform_create(self, serializer):
         """Set the requested_by field to current user"""
@@ -956,23 +1109,27 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
                 project = Projects.objects.get(id=approval.reference_id)
                 item_name = project.name
                 if approval.approval_type == 'CREATION':
-                    # Delete rejected project creations
-                    project.delete()
+                    # Do NOT delete rejected project creations
+                    # Mark as REJECTED so the creator/assignees can edit and resubmit
+                    project.is_approved = False
+                    project.approval_status = 'REJECTED'
+                    project.rejection_reason = reason
+                    project.save()
                     notif_title = 'Project Request Not Approved'
                     notif_message = (
                         f'Your request to create the project "{item_name}" was not approved. '
-                        f'The project has been removed. You may create a new project if needed.'
+                        f'Reason: {reason or "No reason provided"}. You may edit and resubmit the project.'
                     )
                 elif approval.approval_type == 'COMPLETION':
                     # Reset approval status — project stays open for rework
-                    project.approval_status = 'REJECTED'
+                    project.approval_status = 'REJECTED_CLOSURE'
                     project.status = 'ACTIVE'
                     project.rejection_reason = reason
                     project.save()
                     
-                    # Also reset all project tasks and milestones
+                    # Also reset all project tasks and milestones to PENDING (Task Bucket)
                     tasks = project.tasks.all()
-                    tasks.update(status='IN_PROGRESS', approval_status=None, completed_at=None)
+                    tasks.update(status='PENDING', approval_status='REJECTED', completed_at=None)
                     SubTask.objects.filter(task__in=tasks, status='DONE').update(
                         status='PENDING', 
                         completed_at=None
@@ -987,12 +1144,15 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
                 task = Task.objects.get(id=approval.reference_id)
                 item_name = task.title
                 if approval.approval_type == 'CREATION':
-                    # Delete rejected task creations
-                    task.delete()
+                    # Do NOT delete rejected task creations
+                    # Mark as REJECTED so it can be edited and resubmitted
+                    task.approval_status = 'REJECTED'
+                    task.rejection_reason = reason
+                    task.save()
                     notif_title = 'Task Request Not Approved'
                     notif_message = (
                         f'Your request to create task "{item_name}" was not approved. '
-                        f'The task has been removed. You may create a new task if needed.'
+                        f'Reason: {reason or "No reason provided"}. You may edit and resubmit the task.'
                     )
                 elif approval.approval_type == 'COMPLETION':
                     # Reset task status to PENDING (Task Bucket) and clear approval flags
@@ -1315,7 +1475,9 @@ class ApprovalResponseViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = ApprovalResponseSerializer
     pagination_class = None
-    queryset = ApprovalResponse.objects.all()
+    queryset = ApprovalResponse.objects.select_related(
+        'approval_request', 'approval_request__requested_by', 'reviewed_by'
+    ).all()  # Prefetch approval relations
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['action', 'reviewed_by', 'approval_request']
     search_fields = ['reviewed_by__email', 'approval_request__requested_by__email']
@@ -1327,7 +1489,7 @@ class ApprovalResponseViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return ApprovalResponse.objects.none()
         if user.role == 'ADMIN':
-            return ApprovalResponse.objects.all()
+            return ApprovalResponse.objects.select_related('approval_request', 'approval_request__requested_by', 'reviewed_by').all()
         return ApprovalResponse.objects.none()
     
     def create(self, request, *args, **kwargs):
@@ -1378,8 +1540,12 @@ class ApprovalResponseViewSet(viewsets.ModelViewSet):
                         project.is_approved = True
                         project.save()
                     elif action == 'REJECTED':
-                        # Delete rejected project creations
-                        project.delete()
+                        # Project rejected during creation - do not delete it!
+                        # Mark it as REJECTED so the creator/assignees can edit and resubmit
+                        project.is_approved = False
+                        project.approval_status = 'REJECTED'
+                        project.rejection_reason = response.rejection_reason
+                        project.save()
                         
                 elif approval_request.approval_type == 'COMPLETION':
                     if action == 'APPROVED':
@@ -1388,22 +1554,70 @@ class ApprovalResponseViewSet(viewsets.ModelViewSet):
                         project.completed_date = timezone.now().date()
                         project.save()
                     elif action == 'REJECTED':
-                        # If rejected, set status to REJECTED so frontend can enable resubmission
-                        project.approval_status = 'REJECTED'
+                        # If rejected for closure, set specific status to distinguish from creation rejection
+                        project.approval_status = 'REJECTED_CLOSURE'
                         project.status = 'ACTIVE'
                         project.rejection_reason = response.rejection_reason
                         project.save()
                         
-                        # Reset all tasks to IN_PROGRESS so they can be worked on again
+                        # Reset all tasks to PENDING (Task Bucket) so they can be worked on again
                         tasks = project.tasks.all()
-                        tasks.update(status='IN_PROGRESS', approval_status='REJECTED', completed_at=None)
+                        tasks.update(status='PENDING', approval_status='REJECTED', completed_at=None)
                         
                         # Reset all completed subtasks (milestones) across the whole project
-                        from .models import SubTask
+                        from .models import SubTask, Notification
                         SubTask.objects.filter(task__in=tasks, status='DONE').update(
                             status='PENDING', 
                             completed_at=None
                         )
+
+                        # Notify all stakeholders
+                        try:
+                            # 1. Collect all recipients
+                            recipients = set()
+                            if project.project_lead: recipients.add(project.project_lead)
+                            if project.handled_by: recipients.add(project.handled_by)
+                            if project.created_by: recipients.add(project.created_by)
+                            # Adding all task assignees too
+                            for task in tasks:
+                                for task_assignee in task.assignees.all():
+                                    recipients.add(task_assignee.user)
+                            # Also include direct project assignees if any
+                            for user in project.assignees.all():
+                                recipients.add(user)
+
+                            # 2. Send notifications
+                            notif_title = 'Project Closure Request Rejected'
+                            notif_message = (
+                                f'The closure request for project "{project.name}" was rejected by Admin. '
+                                f'Reason: {response.rejection_reason}. All tasks have been returned to the bucket for rework.'
+                            )
+                            
+                            from .signals import send_websocket_notification
+                            for recipient in recipients:
+                                # Don't notify the admin who just rejected it (unlikely to be in the list, but good practice)
+                                if recipient.id == request.user.id:
+                                    continue
+                                    
+                                notification = Notification.objects.create(
+                                    user=recipient,
+                                    notification_type='APPROVAL_REJECTED',
+                                    title=notif_title,
+                                    message=notif_message,
+                                    reference_type='project',
+                                    reference_id=project.id
+                                )
+                                send_websocket_notification(recipient.id, {
+                                    'id': notification.id,
+                                    'title': notification.title,
+                                    'message': notification.message,
+                                    'type': notification.notification_type,
+                                    'reference_type': notification.reference_type,
+                                    'reference_id': notification.reference_id,
+                                    'created_at': str(notification.created_at),
+                                })
+                        except Exception as e:
+                            print(f"Error notifying project stakeholders: {e}")
                     
             except Projects.DoesNotExist:
                 pass
@@ -1417,11 +1631,13 @@ class ApprovalResponseViewSet(viewsets.ModelViewSet):
                         # Task creation approved - ensure status reflects correctly
                         if task.status == 'PENDING_APPROVAL':
                             task.status = 'PENDING'
-                            task.approval_status = 'APPROVED'
+                            task.approval_status = None # Clear pending_creation status
                             task.save()
                     elif action == 'REJECTED':
-                        # Delete rejected task creations
-                        task.delete()
+                        # Non-destructive rejection for Zero-Barrier workflow
+                        task.approval_status = 'REJECTED'
+                        task.rejection_reason = response.rejection_reason
+                        task.save()
                         
                 elif approval_request.approval_type == 'COMPLETION':
                     if action == 'APPROVED':
@@ -1488,12 +1704,74 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
     """ViewSet for managing tasks"""
     serializer_class = TaskSerializer
     pagination_class = None
-    queryset = Task.objects.all() # Base default
+    queryset = Task.objects.select_related(
+        'project', 'project__project_lead', 'project__created_by'
+    ).prefetch_related(
+        'assignees', 'assignees__user', 'subtasks'
+    ).all()  # Prefetch relationships to avoid N+1 queries
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['priority', 'status', 'project', 'due_date', 'start_date']
     search_fields = ['title', 'project__name']
     ordering_fields = ['created_at', 'due_date', 'start_date', 'priority']
     
+    def update(self, request, *args, **kwargs):
+        """Enforce all milestones are complete before allowing task to be marked DONE"""
+        instance = self.get_object()
+        
+        # Check both direct status change and any update that results in a DONE status
+        new_status = request.data.get('status')
+        if new_status == 'DONE':
+            pending_subtasks_count = instance.subtasks.exclude(status='DONE').count()
+            if pending_subtasks_count > 0:
+                from rest_framework import status as rest_status
+                return Response(
+                    {"error": f"Cannot complete task. There are {pending_subtasks_count} pending milestones remaining."},
+                    status=rest_status.HTTP_400_BAD_REQUEST
+                )
+        
+        return super().update(request, *args, **kwargs)
+    
+    def perform_update(self, serializer):
+        """Override update to handle resubmission of REJECTED tasks"""
+        task_instance = serializer.instance
+        was_rejected = task_instance.approval_status == 'REJECTED'
+        
+        # Check if the most recent rejection was for CREATION
+        was_creation_rejection = False
+        from .models import ApprovalRequest
+        if was_rejected:
+            last_request = ApprovalRequest.objects.filter(
+                reference_type='TASK',
+                reference_id=task_instance.id
+            ).order_by('-created_at').first()
+            if last_request and last_request.approval_type == 'CREATION':
+                was_creation_rejection = True
+                
+        with transaction.atomic():
+            updated_task = serializer.save()
+            
+            # If previously rejected for creation, editing it resubmits it automatically
+            if was_creation_rejection:
+                updated_task.approval_status = 'pending_creation'
+                updated_task.rejection_reason = None
+                updated_task.save()
+                
+                # Delete old creation requests
+                ApprovalRequest.objects.filter(
+                    reference_type='TASK',
+                    reference_id=updated_task.id,
+                    approval_type='CREATION'
+                ).delete()
+                
+                # Create fresh request for Admin
+                request_data = TaskSerializer(updated_task).data
+                ApprovalRequest.objects.create(
+                    reference_type='TASK',
+                    reference_id=updated_task.id,
+                    approval_type='CREATION',
+                    requested_by=self.request.user,
+                    request_data=request_data
+                )
     
     def _cleanup_stuck_tasks(self, queryset):
         """Detect and fix tasks incorrectly in Approval or Completed buckets (incomplete milestones)"""
@@ -1541,6 +1819,7 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
             elif user.is_authenticated:
                 # For authenticated EMPLOYEE, MANAGER, TEAMLEAD require approval
                 task.status = 'PENDING_APPROVAL'
+                task.approval_status = 'pending_creation'
                 task.save()
                 
                 ApprovalRequest.objects.create(
@@ -1678,6 +1957,14 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
             
+        # Check if all milestones (subtasks) are completed
+        pending_subtasks_count = task.subtasks.exclude(status='DONE').count()
+        if pending_subtasks_count > 0:
+            return Response(
+                {"error": f"Cannot approve completion. There are {pending_subtasks_count} pending milestones remaining."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
         with transaction.atomic():
             task.status = 'DONE'
             task.approval_status = 'approved'
@@ -1691,13 +1978,20 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
                 if new_task:
                     new_task_data = TaskSerializer(new_task).data
                 
-            # Update the associated ApprovalRequest
-            ApprovalRequest.objects.filter(
+            pending_request = ApprovalRequest.objects.filter(
                 reference_type='TASK',
                 reference_id=task.id,
                 approval_type='COMPLETION',
                 status='PENDING'
-            ).update(status='APPROVED', approved_by=user, approved_at=timezone.now())
+            ).first()
+            
+            if pending_request:
+                from .models import ApprovalResponse
+                ApprovalResponse.objects.create(
+                    approval_request=pending_request,
+                    action='APPROVED',
+                    reviewed_by=user
+                )
 
         return Response({
             "message": "Task completion approved",
@@ -1724,13 +2018,21 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
             task.rejection_reason = reason
             task.save()
             
-            # Update associated ApprovalRequest
-            ApprovalRequest.objects.filter(
+            pending_request = ApprovalRequest.objects.filter(
                 reference_type='TASK',
                 reference_id=task.id,
                 approval_type='COMPLETION',
                 status='PENDING'
-            ).update(status='REJECTED', reason=reason)
+            ).first()
+            
+            if pending_request:
+                from .models import ApprovalResponse
+                ApprovalResponse.objects.create(
+                    approval_request=pending_request,
+                    action='REJECTED',
+                    reviewed_by=user,
+                    rejection_reason=reason
+                )
 
         return Response({"message": "Task completion rejected"})
 
@@ -1775,7 +2077,7 @@ class TaskAssigneeViewSet(viewsets.ModelViewSet):
     """ViewSet for managing task assignments"""
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = TaskAssigneeSerializer
-    queryset = TaskAssignee.objects.all()
+    queryset = TaskAssignee.objects.select_related('task', 'task__project', 'user').all()  # Prefetch for assignee lookups
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['task', 'user', 'role']
     search_fields = ['task__title', 'user__email']
@@ -1788,7 +2090,7 @@ class TaskAssigneeViewSet(viewsets.ModelViewSet):
             return TaskAssignee.objects.all()
         else:
             # Return assignments for the user
-            return TaskAssignee.objects.filter(user=user)
+            return TaskAssignee.objects.select_related('task', 'task__project', 'user').filter(user=user)
 
 
 # ===== PLANNER CATALOG ENDPOINTS =====
@@ -1831,7 +2133,7 @@ class CatalogTaskViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = TaskSerializer
     pagination_class = None
-    queryset = Task.objects.all()
+    queryset = Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').all()
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['priority', 'status', 'project', 'due_date', 'start_date']
@@ -1841,7 +2143,7 @@ class CatalogTaskViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Show all active tasks for the catalog - visible to all users"""
         # For ALL users, show all tasks that are not 'DONE'
-        return Task.objects.exclude(status='DONE').distinct()
+        return Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').exclude(status='DONE').distinct()
 
 
 class SubTaskViewSet(viewsets.ModelViewSet):
@@ -1849,7 +2151,7 @@ class SubTaskViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # Allow unauthenticated access
     serializer_class = SubTaskSerializer
     pagination_class = None
-    queryset = SubTask.objects.all()
+    queryset = SubTask.objects.select_related('task', 'task__project', 'completed_by').all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['task', 'status', 'due_date']
     search_fields = ['title', 'task__title']
@@ -1860,9 +2162,9 @@ class SubTaskViewSet(viewsets.ModelViewSet):
         user = self.request.user
         # Allow unauthenticated users to access all subtasks (for AllowAny permission)
         if not user.is_authenticated:
-            return SubTask.objects.all()
+            return SubTask.objects.select_related('task', 'task__project', 'completed_by').all()
         if user.role == 'ADMIN':
-            return SubTask.objects.all()
+            return SubTask.objects.select_related('task', 'task__project', 'completed_by').all()
         else:
             from django.db import models
             # Return subtasks for tasks assigned to the user or if they are assigned to the parent project
@@ -1896,7 +2198,7 @@ class SubTaskViewSet(viewsets.ModelViewSet):
                 task.status = 'IN_PROGRESS'
                 task.approval_status = None # Reset approval status when task is reverted for rework
                 task.completed_at = None
-                task.save()
+                task.save(update_fields=['status', 'approval_status', 'completed_at'])
             
             serializer = SubTaskSerializer(subtask)
             return Response({
@@ -1908,33 +2210,35 @@ class SubTaskViewSet(viewsets.ModelViewSet):
         subtask.status = 'DONE'
         from django.utils import timezone
         subtask.completed_at = timezone.now().date()
-        subtask.completed_by = request.user
+        
+        # Safely assign completed_by
+        user = request.user
+        is_authenticated = user and hasattr(user, 'is_authenticated') and user.is_authenticated
+        if is_authenticated:
+            subtask.completed_by = user
         subtask.save()
         
         # Calculate progress
-        progress = subtask.task.calculate_progress()
+        progress = task.calculate_progress()
         
-        # Check for auto-completion triggering
-        task = subtask.task
+        # Check for auto-completion triggering (move to Approval Bucket)
         if progress == 100 and task.status != 'DONE':
-            user = request.user
-            
-            # Use specific timezone for consistency
-            from django.utils import timezone
             current_date = timezone.now().date()
+            user_role = get_user_role(user)
             
-            # If ADMIN, auto-complete
-            if user.role == 'ADMIN':
+            # If ADMIN, auto-complete immediately
+            if user_role == 'ADMIN':
                 task.status = 'DONE'
                 task.completed_at = current_date
-                task.save()
+                task.save(update_fields=['status', 'completed_at'])
                 
                 # Handle recurring task regeneration
                 if task.task_type == 'RECURRING':
                     task.regenerate_recurring_task()
-                    
-            else:
-                # Check for existing pending request
+            
+            # Otherwise, move to PENDING_APPROVAL and create request
+            elif task.status != 'PENDING_APPROVAL':
+                # Check for existing pending request to avoid duplicates
                 existing_request = ApprovalRequest.objects.filter(
                     reference_type='TASK',
                     reference_id=task.id,
@@ -1943,58 +2247,69 @@ class SubTaskViewSet(viewsets.ModelViewSet):
                 ).exists()
                 
                 if not existing_request:
-                    with transaction.atomic():
-                        # If task is still PENDING_APPROVAL (Creation), resolve that request as well
-                        if task.status == 'PENDING_APPROVAL':
-                            from .models import ApprovalRequest
+                    try:
+                        with transaction.atomic():
+                            # Resolve any pending creation requests first
                             ApprovalRequest.objects.filter(
                                 reference_type='TASK',
                                 reference_id=task.id,
                                 approval_type='CREATION',
                                 status='PENDING'
-                            ).update(status='RESOLVED', reason='Task completed before creation approval.')
-                        
-                        ApprovalRequest.objects.create(
-                            reference_type='TASK',
-                            reference_id=task.id,
-                            approval_type='COMPLETION',
-                            requested_by=user,
-                            request_data={
-                                'task_title': task.title,
-                                'project': task.project.name,
-                                'completed_date': str(current_date),
-                                'auto_triggered': True
-                            }
-                        )
-                        # Update status to indicate pending approval
-                        task.status = 'PENDING_APPROVAL'
-                        task.approval_status = 'pending_completion'
-                        task.save()
-                    
-                    # Send WebSocket notification to all admins
-                    try:
-                        from .signals import send_websocket_notification
-                        admins = User.objects.filter(role='ADMIN')
-                        for admin in admins:
-                            notification = Notification.objects.create(
-                                user=admin,
-                                notification_type='APPROVAL_REQUESTED',
-                                title='Task Completion Request',
-                                message=f'{user.email} completed all subtasks for task "{task.title}". Pending your approval.',
-                                reference_type='task',
-                                reference_id=task.id
-                            )
-                            send_websocket_notification(admin.id, {
-                                'id': notification.id,
-                                'title': notification.title,
-                                'message': notification.message,
-                                'type': notification.notification_type,
-                                'reference_type': notification.reference_type,
-                                'reference_id': notification.reference_id,
-                                'created_at': str(notification.created_at),
-                            })
+                            ).update(status='RESOLVED')
+                            
+                            # Create completion approval request if we have a valid user
+                            if is_authenticated:
+                                ApprovalRequest.objects.create(
+                                    reference_type='TASK',
+                                    reference_id=task.id,
+                                    approval_type='COMPLETION',
+                                    requested_by=user,
+                                    request_data={
+                                        'task_title': task.title,
+                                        'project': getattr(task.project, 'name', 'Unknown'),
+                                        'completed_date': str(current_date),
+                                        'auto_triggered': True
+                                    }
+                                )
+                            
+                            # Update task status to indicate it is now in the Approval Bucket
+                            task.status = 'PENDING_APPROVAL'
+                            task.approval_status = 'pending_completion'
+                            task.save(update_fields=['status', 'approval_status'])
+
+                        # Send WebSocket notification to all admins
+                        # Wrap in a separate try-except to ensure notifications don't crash the main update
+                        try:
+                            from .signals import send_websocket_notification
+                            admins = User.objects.filter(role='ADMIN')
+                            user_id_str = getattr(user, 'email', str(user)) if is_authenticated else "An employee"
+                            
+                            for admin in admins:
+                                notification = Notification.objects.create(
+                                    user=admin,
+                                    notification_type='APPROVAL_REQUESTED',
+                                    title='Task Completion Request',
+                                    message=f'{user_id_str} completed all subtasks for task "{task.title}". Pending your approval.',
+                                    reference_type='task',
+                                    reference_id=task.id
+                                )
+                                send_websocket_notification(admin.id, {
+                                    'id': notification.id,
+                                    'title': notification.title,
+                                    'message': notification.message,
+                                    'type': notification.notification_type,
+                                    'reference_type': notification.reference_type,
+                                    'reference_id': notification.reference_id,
+                                    'created_at': str(notification.created_at),
+                                })
+                        except Exception as ne:
+                            print(f"Non-critical notification error in toggle_completion: {ne}")
+                            
                     except Exception as e:
-                        print(f"WebSocket notification error in toggle_completion: {e}")
+                        # Log catastrophic failure but avoid 500 if possible (though atomic rollback will happen)
+                        print(f"Catastrophic error in task auto-completion logic: {e}")
+                        # Re-raise to ensure transaction rollback if it was a DB error
+                        raise
 
         # Return updated subtask data along with parent task's new progress
         serializer = SubTaskSerializer(subtask)
@@ -2009,7 +2324,7 @@ class PendingViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = PendingSerializer
     pagination_class = None
-    queryset = Pending.objects.all()
+    queryset = Pending.objects.select_related('user', 'today_plan', 'today_plan__catalog_item', 'activity_log').all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['user', 'status', 'original_plan_date', 'replanned_date']
     search_fields = ['today_plan__catalog_item__name', 'reason']
@@ -2018,7 +2333,7 @@ class PendingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter pending tasks based on user permissions"""
         user = self.request.user
-        queryset = Pending.objects.all()
+        queryset = Pending.objects.select_related('user', 'today_plan', 'today_plan__catalog_item', 'activity_log').all()
         target_user_id = self.request.query_params.get('user_id')
         
         # If target_user_id is provided, check if the current user has permission to view it
@@ -2121,7 +2436,7 @@ class CatalogViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # Temporarily allow unauthenticated access for testing
     serializer_class = CatalogSerializer
     pagination_class = None
-    queryset = Catalog.objects.all()
+    queryset = Catalog.objects.select_related('user', 'project', 'task').all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['catalog_type', 'user', 'is_active']
     search_fields = ['name', 'description']
@@ -2221,7 +2536,9 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # Temporarily allow unauthenticated access for testing
     serializer_class = TodayPlanSerializer
     pagination_class = None
-    queryset = TodayPlan.objects.all()
+    queryset = TodayPlan.objects.select_related(
+        'user', 'catalog_item', 'catalog_item__project', 'project', 'task'
+    ).all()  # Prefetch planner relations to avoid N+1 queries
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['plan_date', 'status', 'catalog_item__catalog_type']
     search_fields = ['catalog_item__name', 'notes']
@@ -2232,7 +2549,9 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
         Admin can pass ?user_id=<id> to view any employee's plan.
         """
         user = self.request.user
-        queryset = TodayPlan.objects.all()
+        queryset = TodayPlan.objects.select_related(
+            'user', 'catalog_item', 'catalog_item__project', 'project', 'task'
+        ).all()  # Reuse optimized queryset in get_queryset
 
         if user.is_authenticated:
             target_user_id = self.request.query_params.get('user_id')
@@ -3015,7 +3334,9 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = ActivityLogSerializer
     pagination_class = None
-    queryset = ActivityLog.objects.all()
+    queryset = ActivityLog.objects.select_related(
+        'user', 'today_plan', 'today_plan__catalog_item', 'today_plan__project', 'today_plan__task'
+    ).all()  # Prefetch for activity log lookups
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'is_task_completed']
     search_fields = ['work_notes', 'today_plan__catalog_item__name']
@@ -3024,7 +3345,9 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter activity logs based on user permissions"""
         user = self.request.user
-        queryset = ActivityLog.objects.all()
+        queryset = ActivityLog.objects.select_related(
+            'user', 'today_plan', 'today_plan__catalog_item', 'today_plan__project', 'today_plan__task'
+        ).all()  # Reuse optimized queryset in get_queryset
         target_user_id = self.request.query_params.get('user_id')
         
         # Handle anonymous users (id = -1 in dev mode)
@@ -3264,7 +3587,7 @@ class DaySessionViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = DaySessionSerializer
     pagination_class = None
-    queryset = DaySession.objects.all()
+    queryset = DaySession.objects.select_related('user').all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['session_date', 'is_active']
     ordering_fields = ['session_date', 'started_at']
@@ -3272,7 +3595,7 @@ class DaySessionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter day sessions based on user"""
         user = self.request.user
-        queryset = DaySession.objects.all()
+        queryset = DaySession.objects.select_related('user').all()
         target_user_id = self.request.query_params.get('user_id')
         
         if target_user_id:
@@ -3419,16 +3742,16 @@ class TeamInstructionViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = TeamInstructionSerializer
     pagination_class = None
-    queryset = TeamInstruction.objects.all()
+    queryset = TeamInstruction.objects.select_related('sent_by', 'project').prefetch_related('recipients').all()
     
     def get_queryset(self):
         """Filter instructions based on user permissions"""
         user = self.request.user
         if user.role == 'ADMIN':
-            return TeamInstruction.objects.all()
+            return TeamInstruction.objects.select_related('sent_by', 'project').prefetch_related('recipients').all()
         else:
             # Users can see instructions they sent or received
-            return TeamInstruction.objects.filter(
+            return TeamInstruction.objects.select_related('sent_by', 'project').prefetch_related('recipients').filter(
                 models.Q(sent_by=user) | models.Q(recipients=user)
             ).distinct()
     
@@ -4425,11 +4748,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = NotificationSerializer
     pagination_class = None
-    queryset = Notification.objects.all()
+    queryset = Notification.objects.select_related('user').all()
     
     def get_queryset(self):
         """Filter notifications for current user"""
-        return Notification.objects.filter(user=self.request.user)
+        return Notification.objects.select_related('user').filter(user=self.request.user)
     
     @action(detail=False, methods=['get'])
     def unread(self, request):
@@ -4997,7 +5320,7 @@ class CatalogProjectViewSet(viewsets.ModelViewSet):
     """
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = ProjectSerializer
-    queryset = Projects.objects.all()
+    queryset = Projects.objects.select_related('created_by', 'project_lead', 'handled_by').prefetch_related('assignees', 'tasks', 'tasks__assignees', 'tasks__assignees__user').all()
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'handled_by', 'created_by', 'project_lead']
@@ -5015,7 +5338,7 @@ class CatalogProjectViewSet(viewsets.ModelViewSet):
         
         # Admin, Manager, TeamLead see all active projects
         if user.role in ['ADMIN', 'MANAGER', 'TEAMLEAD']:
-            return Projects.objects.all().distinct()
+            return Projects.objects.select_related('created_by', 'project_lead', 'handled_by').prefetch_related('assignees').all().distinct()
         
         # Employees see only their assigned projects
         return Projects.objects.filter(
@@ -5052,7 +5375,7 @@ class CatalogTaskViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
     serializer_class = TaskSerializer
     pagination_class = None
-    queryset = Task.objects.all()
+    queryset = Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').all()
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['priority', 'status', 'project', 'due_date', 'start_date']
@@ -5069,10 +5392,10 @@ class CatalogTaskViewSet(viewsets.ModelViewSet):
         
         # Admin, Manager, TeamLead see all active tasks
         if user.role in ['ADMIN', 'MANAGER', 'TEAMLEAD']:
-            return Task.objects.exclude(status='DONE').distinct()
+            return Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').exclude(status='DONE').distinct()
         
         # Employees see only their assigned tasks
-        return Task.objects.filter(assignees__user=user).exclude(status='DONE').distinct()
+        return Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').filter(assignees__user=user).exclude(status='DONE').distinct()
 
 
 class HoursCompletionLineChartViewSet(viewsets.ViewSet):
@@ -5096,12 +5419,34 @@ class HoursCompletionLineChartViewSet(viewsets.ViewSet):
         from .models import ActivityLog
         queryset = ActivityLog.objects.all()
         
+        user_id_param = request.query_params.get('user_id')
         if filter_type == 'team' and user.role in ['ADMIN', 'MANAGER', 'TEAMLEAD']:
-            # For team, we might want to filter by managed users - but for now show all accessible
-            pass
+            if user_id_param:
+                # Filter for specific user if provided
+                if user.role == 'ADMIN':
+                    queryset = queryset.filter(user_id=user_id_param)
+                elif user.role == 'MANAGER':
+                    subordinates = user.get_all_subordinates()
+                    if int(user_id_param) in [s.id for s in subordinates] or int(user_id_param) == user.id:
+                        queryset = queryset.filter(user_id=user_id_param)
+                elif user.role == 'TEAMLEAD':
+                    team_members = user.get_team_members()
+                    if int(user_id_param) in [m.id for m in team_members] or int(user_id_param) == user.id:
+                        queryset = queryset.filter(user_id=user_id_param)
+            else:
+                # Default team behavior
+                if user.role == 'ADMIN':
+                    pass
+                elif user.role == 'MANAGER':
+                    subordinates = user.get_all_subordinates()
+                    queryset = queryset.filter(user__in=subordinates)
+                elif user.role == 'TEAMLEAD':
+                    team_members = user.get_team_members()
+                    queryset = queryset.filter(user__in=team_members)
         else:
-            # Default to current user
-            queryset = queryset.filter(user=user)
+            # Default to current user or specific my-filter user
+            requested_user_id = user_id_param if user_id_param and user.role in ['ADMIN', 'MANAGER', 'TEAMLEAD'] else user.id
+            queryset = queryset.filter(user_id=requested_user_id)
             
         months_data = []
         import calendar
@@ -5183,23 +5528,40 @@ class ProjectCompletionLineChartViewSet(viewsets.ViewSet):
         # Base queryset for completed projects
         queryset = Projects.objects.filter(status='COMPLETED')
         
-        # Filter by date range using completed_date (with fallback to create_date for visibility)
-        # Use Cast and output_field to avoid "mixed types: DateField, DateTimeField" error
-        queryset = queryset.annotate(
-            actual_completion_date=Coalesce(
-                'completed_date', 
-                Cast('create_date', DateField()),
-                output_field=DateField()
-            )
-        ).filter(
-            actual_completion_date__gte=start_date,
-            actual_completion_date__lte=end_date
+        # Filter by date range using completed_date ONLY (no fallback to create_date for accuracy)
+        queryset = queryset.filter(
+            completed_date__gte=start_date,
+            completed_date__lte=end_date
         )
         
         filter_param = request.query_params.get('filter')
         
         # Apply role-based filtering
-        if filter_param == 'my':
+        if user_id_param and user.role in ['ADMIN', 'MANAGER', 'TEAMLEAD']:
+            # Allow Admin/Lead to see a specific user's completions
+            is_authorized = False
+            if user.role == 'ADMIN':
+                is_authorized = True
+            elif user.role == 'MANAGER':
+                subordinates = user.get_all_subordinates()
+                is_authorized = int(user_id_param) in [s.id for s in subordinates] or int(user_id_param) == user.id
+            elif user.role == 'TEAMLEAD':
+                team_members = user.get_team_members()
+                is_authorized = int(user_id_param) in [m.id for m in team_members] or int(user_id_param) == user.id
+            
+            if is_authorized:
+                queryset = queryset.filter(
+                    Q(created_by_id=user_id_param) | 
+                    Q(project_lead_id=user_id_param) | 
+                    Q(handled_by_id=user_id_param) |
+                    Q(assignees__id=user_id_param) |
+                    Q(tasks__assignees__user_id=user_id_param)
+                ).distinct()
+            else:
+                # Falls back to standard filtering if unauthorized user_id provided
+                pass
+
+        elif filter_param == 'my':
             # 'my' filter: only show projects explicitly created/led/handled by user
             queryset = queryset.filter(
                 Q(created_by=user) | 
@@ -5255,8 +5617,8 @@ class ProjectCompletionLineChartViewSet(viewsets.ViewSet):
                 month_end = month_start.replace(month=month_start.month + 1, day=1) - timedelta(days=1)
             
             count = queryset.filter(
-                actual_completion_date__gte=month_start,
-                actual_completion_date__lte=month_end
+                completed_date__gte=month_start,
+                completed_date__lte=month_end
             ).count()
             
             completion_data.append({
@@ -5340,23 +5702,37 @@ class TaskCompletionLineChartViewSet(viewsets.ViewSet):
         # Base queryset for completed tasks
         queryset = Task.objects.filter(status='DONE')
 
-        # Filter by date range using completed_at (with fallback to created_at for visibility)
-        # Use Cast and output_field to avoid "mixed types: DateField, DateTimeField" error
-        queryset = queryset.annotate(
-            actual_completion_date=Coalesce(
-                'completed_at', 
-                Cast('created_at', DateField()),
-                output_field=DateField()
-            )
-        ).filter(
-            actual_completion_date__gte=start_date,
-            actual_completion_date__lte=end_date
+        # Filter by date range using completed_at ONLY (no fallback to created_at for accuracy)
+        queryset = queryset.filter(
+            completed_at__gte=start_date,
+            completed_at__lte=end_date
         )
         
         filter_param = request.query_params.get('filter')
+        user_id_param = request.query_params.get('user_id')
         
         # Apply role-based filtering
-        if filter_param == 'my':
+        if user_id_param and user.role in ['ADMIN', 'MANAGER', 'TEAMLEAD']:
+            # Allow Admin/Lead to see a specific user's completions
+            is_authorized = False
+            if user.role == 'ADMIN':
+                is_authorized = True
+            elif user.role == 'MANAGER':
+                subordinates = user.get_all_subordinates()
+                is_authorized = int(user_id_param) in [s.id for s in subordinates] or int(user_id_param) == user.id
+            elif user.role == 'TEAMLEAD':
+                team_members = user.get_team_members()
+                is_authorized = int(user_id_param) in [m.id for m in team_members] or int(user_id_param) == user.id
+            
+            if is_authorized:
+                queryset = queryset.filter(
+                    Q(assignees__user_id=user_id_param) | 
+                    Q(project__created_by_id=user_id_param)
+                ).distinct()
+            else:
+                pass
+
+        elif filter_param == 'my':
             # Match DashboardViewSet.statistics "Task Efficiency" logic
             queryset = queryset.filter(
                 Q(assignees__user=user) | 
@@ -5369,24 +5745,24 @@ class TaskCompletionLineChartViewSet(viewsets.ViewSet):
             # Manager sees tasks where they or their subordinates are involved
             subordinates = user.get_all_subordinates()
             queryset = queryset.filter(
-                Q(project_lead=user) |
+                Q(project__project_lead=user) |
                 Q(assignees__user=user) |
-                Q(project_lead__in=subordinates) |
+                Q(project__project_lead__in=subordinates) |
                 Q(assignees__user__in=subordinates)
             ).distinct()
         elif user.role == 'TEAMLEAD':
             # Team Lead sees tasks for their team members
             team_members = user.get_team_members()
             queryset = queryset.filter(
-                Q(project_lead=user) |
+                Q(project__project_lead=user) |
                 Q(assignees__user=user) |
-                Q(project_lead__in=team_members) |
+                Q(project__project_lead__in=team_members) |
                 Q(assignees__user__in=team_members)
             ).distinct()
         else:  # EMPLOYEE
             # Employee sees only their own tasks
             queryset = queryset.filter(
-                Q(project_lead=user) |
+                Q(project__project_lead=user) |
                 Q(assignees__user=user)
             ).distinct()
         
@@ -5402,8 +5778,8 @@ class TaskCompletionLineChartViewSet(viewsets.ViewSet):
                 month_end = month_start.replace(month=month_start.month + 1, day=1) - timedelta(days=1)
             
             count = queryset.filter(
-                actual_completion_date__gte=month_start,
-                actual_completion_date__lte=month_end
+                completed_at__gte=month_start,
+                completed_at__lte=month_end
             ).count()
             
             completion_data.append({

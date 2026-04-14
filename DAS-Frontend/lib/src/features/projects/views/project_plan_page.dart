@@ -10,9 +10,12 @@ import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/core/models/milestone.dart';
 import 'package:project_pm/src/features/projects/modals/add_project_task_modal.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/utils/user_color_service.dart';
+import '../../../core/widgets/error_view.dart';
+import '../../dashboard/dashboard_providers.dart';
+import '../../dashboard/modals/create_new_workspace_modal.dart';
 
 @RoutePage()
 class ProjectPlanPage extends HookConsumerWidget {
@@ -29,7 +32,15 @@ class ProjectPlanPage extends HookConsumerWidget {
         }
         return _ProjectPlanView(project: data);
       },
-      error: (err, st) => Scaffold(body: Center(child: Text("Error: $err"))),
+      error: (err, st) => Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark 
+            ? const Color(0xFF0F172A) 
+            : const Color(0xFFF1F5F9),
+        body: PremiumErrorView(
+          message: err.toString(),
+          onRetry: () => ref.invalidate(currentProjectProvider),
+        ),
+      ),
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       skipLoadingOnReload: true,
@@ -65,6 +76,8 @@ class _ProjectPlanView extends HookConsumerWidget {
     }, [project]);
 
     final loadingTaskIds = useState<Set<String>>({});
+    final isBannerDismissed = useState(false);
+    final isBannerMinimized = useState(false);
 
     // Filter tasks into buckets
     final todoTasks = project.tasks.where((t) {
@@ -101,7 +114,7 @@ class _ProjectPlanView extends HookConsumerWidget {
           milestones = decoded.map((j) => Milestone.fromJson(j as Map<String, dynamic>)).toList();
         }
       } catch (_) {}
-      final allMilestonesDone = milestones.isNotEmpty && milestones.every((m) => m.completed);
+      final allMilestonesDone = milestones.isEmpty || milestones.every((m) => m.completed);
 
       return status == 'pending_completion' && allMilestonesDone;
     }).toList()
@@ -147,24 +160,29 @@ class _ProjectPlanView extends HookConsumerWidget {
 
     final isPendingClosure =
         project.project.approvalStatus?.toLowerCase() == 'pending_completion';
+    final approvalStatus = project.project.approvalStatus?.toLowerCase();
     final isProjectRejected =
-        project.project.approvalStatus?.toLowerCase() == 'rejected';
+        approvalStatus == 'rejected' || approvalStatus == 'rejected_closure';
+    final isClosureRejection = approvalStatus == 'rejected_closure';
 
     return Scaffold(
-      floatingActionButton: canClose
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+      floatingActionButton: (canClose && (!isProjectRejected || isClosureRejection))
           ? (isPendingClosure
               ? _buildWaitingClosureFab(context, isDark)
               : _buildRequestClosureFab(
                   context, ref, hasPendingTasks, isAdmin, isProjectRejected))
-          : null,
+          : (project.project.status == 'completed' && isAdmin
+              ? _buildAdminReopenFab(context, ref)
+              : null),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Row
             _buildProjectDetailsHeader(
-                context, ref, isDark, theme, isProjectRejected),
+                context, ref, isDark, theme, isProjectRejected, isClosureRejection, isBannerDismissed, isBannerMinimized),
             const SizedBox(height: 24),
 
             // Kanban Board
@@ -173,62 +191,71 @@ class _ProjectPlanView extends HookConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _TaskBucket(
-                    title: "TASK BUCKET",
+                    title: "Task Bucket", // Sentence Case
                     tasks: todoTasks,
                     isDark: isDark,
                     bucketType: 'todo',
                     onAccept: (taskItem) => _handleBucketTransition(
-                        context, ref, taskItem, 'todo', isAdmin),
+                        context, ref, taskItem, 'todo', isAdmin, updatedProgressMap),
                     child: (taskItem) => _BoardTaskCard(
                       taskItem: taskItem,
                       isDark: isDark,
                       isAdmin: isAdmin,
+                      bucketType: 'todo',
                       updatedProgressMap: updatedProgressMap,
                       updatedMilestoneMap: updatedMilestoneMap,
                       updatedMilestoneAssigneeMap: updatedMilestoneAssigneeMap,
                       loadingTaskIds: loadingTaskIds,
                       isProjectRejected: isProjectRejected,
+                      isClosureRejection: isClosureRejection,
                       ref: ref,
+                      project: project,
                     ),
                   ),
                   const SizedBox(width: 16),
                   _TaskBucket(
-                    title: "APPROVAL BUCKET",
+                    title: "Approval Bucket", // Sentence Case
                     tasks: approvalTasks,
                     isDark: isDark,
                     bucketType: 'approval',
                     onAccept: (taskItem) => _handleBucketTransition(
-                        context, ref, taskItem, 'approval', isAdmin),
+                        context, ref, taskItem, 'approval', isAdmin, updatedProgressMap),
                     child: (taskItem) => _BoardTaskCard(
                       taskItem: taskItem,
                       isDark: isDark,
                       isAdmin: isAdmin,
+                      bucketType: 'approval',
                       updatedProgressMap: updatedProgressMap,
                       updatedMilestoneMap: updatedMilestoneMap,
                       updatedMilestoneAssigneeMap: updatedMilestoneAssigneeMap,
                       loadingTaskIds: loadingTaskIds,
                       isProjectRejected: isProjectRejected,
+                      isClosureRejection: isClosureRejection,
                       ref: ref,
+                      project: project,
                     ),
                   ),
                   const SizedBox(width: 16),
                   _TaskBucket(
-                    title: "COMPLETED BUCKET",
+                    title: "Completed Bucket", // Sentence Case
                     tasks: completedTasks,
                     isDark: isDark,
                     bucketType: 'completed',
                     onAccept: (taskItem) => _handleBucketTransition(
-                        context, ref, taskItem, 'completed', isAdmin),
+                        context, ref, taskItem, 'completed', isAdmin, updatedProgressMap),
                     child: (taskItem) => _BoardTaskCard(
                       taskItem: taskItem,
                       isDark: isDark,
                       isAdmin: isAdmin,
+                      bucketType: 'completed',
                       updatedProgressMap: updatedProgressMap,
                       updatedMilestoneMap: updatedMilestoneMap,
                       updatedMilestoneAssigneeMap: updatedMilestoneAssigneeMap,
                       loadingTaskIds: loadingTaskIds,
                       isProjectRejected: isProjectRejected,
+                      isClosureRejection: isClosureRejection,
                       ref: ref,
+                      project: project,
                     ),
                   ),
                 ],
@@ -241,25 +268,30 @@ class _ProjectPlanView extends HookConsumerWidget {
   }
 
   Widget _buildProjectDetailsHeader(BuildContext context, WidgetRef ref,
-      bool isDark, ThemeData theme, bool isProjectRejected) {
+      bool isDark, ThemeData theme, bool isProjectRejected, bool isClosureRejection, ValueNotifier<bool> isBannerDismissed, ValueNotifier<bool> isBannerMinimized) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (isProjectRejected) ...[
-          _buildRejectionBanner(context, isDark),
+        if (isProjectRejected && !isBannerDismissed.value) ...[
+          _buildRejectionBanner(context, isDark, isClosureRejection, isBannerDismissed, isBannerMinimized),
           const SizedBox(height: 16),
         ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              "Tasks & Plan",
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : Colors.black87,
-                letterSpacing: -0.5,
-              ),
+            Row(
+              children: [
+                Text(
+                  "Tasks & Plan",
+                  style: GoogleFonts.outfit( // Outfit for section titles
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
             ),
             FilledButton.icon(
               onPressed: () => showDialog(
@@ -273,13 +305,16 @@ class _ProjectPlanView extends HookConsumerWidget {
                       usedHours: project.tasks.fold(0.0, (sum, t) => sum + t.task.plannedHours),
                     ),
               ),
-              icon: const Icon(Icons.add, size: 20),
-              label: const Text('Add Task'),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text('Add Task', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
               style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF05263E),
+                foregroundColor: Colors.white,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
               ),
             ),
           ],
@@ -288,40 +323,111 @@ class _ProjectPlanView extends HookConsumerWidget {
     );
   }
 
-  Widget _buildRejectionBanner(BuildContext context, bool isDark) {
+  Widget _buildRejectionBanner(BuildContext context, bool isDark, bool isClosureRejection, ValueNotifier<bool> isBannerDismissed, ValueNotifier<bool> isBannerMinimized) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: isClosureRejection
+            ? Colors.blue.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        border: Border.all(
+            color: isClosureRejection
+                ? Colors.blue.withOpacity(0.3)
+                : Colors.red.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 20),
+              Icon(
+                  isClosureRejection ? Icons.info_outline : Icons.error_outline,
+                  color: isClosureRejection ? Colors.blue : Colors.red,
+                  size: 20),
               const SizedBox(width: 8),
-              Text(
-                "Project Resubmission Required",
-                style: GoogleFonts.inter(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16),
+              Flexible(
+                child: Text(
+                  isClosureRejection
+                      ? "Project Closure Rejected"
+                      : "Project Resubmission Required",
+                  style: GoogleFonts.inter(
+                      color: isClosureRejection ? Colors.blue : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => isBannerMinimized.value = !isBannerMinimized.value,
+                icon: Icon(isBannerMinimized.value ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded, color: isClosureRejection ? Colors.blue : Colors.red, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: isBannerMinimized.value ? "Expand" : "Minimize",
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => isBannerDismissed.value = true,
+                icon: Icon(Icons.close_rounded, color: isClosureRejection ? Colors.blue : Colors.red, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                splashRadius: 20,
               ),
             ],
           ),
-          if (project.project.rejectionReason != null &&
-              project.project.rejectionReason!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              "Reason: ${project.project.rejectionReason}",
-              style: GoogleFonts.inter(
-                  color: isDark ? Colors.red.shade200 : Colors.red.shade800,
-                  height: 1.4),
-            ),
+          if (!isBannerMinimized.value) ...[
+            if (project.project.rejectionReason != null &&
+                project.project.rejectionReason!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                "Reason: ${project.project.rejectionReason}",
+                style: GoogleFonts.inter(
+                    color: isDark ? (isClosureRejection ? Colors.blue.shade200 : Colors.red.shade200) : (isClosureRejection ? Colors.blue.shade800 : Colors.red.shade800),
+                    height: 1.4),
+              ),
+            ],
+            const SizedBox(height: 12),
+            if (!isClosureRejection)
+              SizedBox(
+                height: 36,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) =>
+                          CreateNewWorkspaceModal(projectToEdit: project),
+                    );
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: Text(
+                    'Edit & Resubmit',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade400),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Text(
+                'The tasks have been returned to the bucket. Please finish the work and request closure again.',
+                style: GoogleFonts.inter(
+                  color: isDark ? Colors.blue.shade300 : Colors.blue.shade900,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
           ],
         ],
       ),
@@ -329,13 +435,14 @@ class _ProjectPlanView extends HookConsumerWidget {
   }
 
   void _handleBucketTransition(BuildContext context, WidgetRef ref,
-      TaskWithAssignees taskItem, String targetBucket, bool isAdmin) async {
+      TaskWithAssignees taskItem, String targetBucket, bool isAdmin, 
+      ValueNotifier<Map<String, int>> updatedProgressMap) async {
     final task = taskItem.task;
     final status = task.approvalStatus?.toLowerCase();
 
     if (targetBucket == 'approval') {
       if (status == 'approved') {
-        _showError(context, 'Task already completed!');
+        if (context.mounted) _showError(context, 'Task already completed!');
         return;
       }
       if (status == 'pending_completion') return;
@@ -356,8 +463,10 @@ class _ProjectPlanView extends HookConsumerWidget {
       
       // STRICT BLOCK: If milestones are present but not COMPLETED, block ALL roles
       if (hasMilestones && !allChecked) {
-        _showError(context,
-            'Please complete all milestones for "${task.name}" before moving to Approval!');
+        if (context.mounted) {
+          _showError(context,
+              'Please complete all milestones for "${task.name}" before moving to Approval!');
+        }
         return;
       }
 
@@ -366,48 +475,82 @@ class _ProjectPlanView extends HookConsumerWidget {
         try {
           await ref.read(projectRepositoryProvider).adminCompleteTask(task.id);
           _refreshProject(ref);
-          _showSuccess(context,
-              'Admin: Task (no milestones) successfully bypassed and completed.');
+          if (context.mounted) {
+            _showSuccess(context,
+                'Admin: Task (no milestones) successfully bypassed and completed.');
+          }
           return;
         } catch (e) {
-          _showError(context, 'Failed: $e');
+          if (context.mounted) _showError(context, 'Failed: $e');
           return;
         }
       }
 
       // Move to Approval for Employees OR for Admin with COMPLETED milestones
       try {
+        if (!hasMilestones) {
+          // Task without milestones when dragged to Approvals bucket then progress bar shld get updated to 100%.
+          final currentMap = Map<String, int>.from(updatedProgressMap.value);
+          currentMap[task.id.toString()] = 100;
+          updatedProgressMap.value = currentMap;
+        }
+
         await ref
             .read(projectRepositoryProvider)
             .requestTaskCompletion(task.id);
         _refreshProject(ref);
-        _showSuccess(context, 'Completion request sent!');
+        if (context.mounted) _showSuccess(context, 'Completion request sent!');
       } catch (e) {
-        _showError(context, 'Failed: $e');
+        if (context.mounted) _showError(context, 'Failed: $e');
       }
     } else if (targetBucket == 'completed') {
       if (!isAdmin) {
-        _showError(context, 'Only Admins can approve tasks.');
+        if (context.mounted) _showError(context, 'Only Admins can approve tasks.');
         return;
       }
       if (status == 'approved') return;
+
+      // Check milestones completion if they exist
+      List<Milestone> milestones = [];
+      try {
+        final decoded = jsonDecode(task.milestonesJson);
+        if (decoded is List) {
+          milestones = decoded
+              .map((j) => Milestone.fromJson(j as Map<String, dynamic>))
+              .toList();
+        }
+      } catch (_) {}
+
+      final hasMilestones = milestones.isNotEmpty;
+      final allChecked = milestones.every((m) => m.completed);
+
+      if (hasMilestones && !allChecked) {
+        if (context.mounted) {
+          _showError(context,
+              'Cannot complete task. Please finish all milestones for "${task.name}" first!');
+        }
+        return;
+      }
 
       // Move to Completed: trigger approve
       try {
         await ref
             .read(projectRepositoryProvider)
-            .approveTaskCompletion(task.id);
+            .approveTaskByTaskId(task.id);
         _refreshProject(ref);
-        _showSuccess(context, 'Task approved and completed!');
+        if (context.mounted) _showSuccess(context, 'Task approved and completed!');
       } catch (e) {
-        _showError(context, 'Failed: $e');
+        if (context.mounted) _showError(context, 'Failed: $e');
       }
     } else if (targetBucket == 'todo') {
       // Reopen or Reject logic
+      // Progress Guard: Any task with < 100% progress dropped in Todo bucket is treated as 'work in progress', no admin logic needed.
+      if (task.progress < 100) return; 
+      if (status == 'pending_creation' || status == 'pending_approval') return;
       if (status != 'pending_completion' && status != 'approved') return;
       
       if (!isAdmin) {
-        _showError(context, 'Only Admins can reject or reopen tasks.');
+        if (context.mounted) _showError(context, 'Only Admins can reject or reopen tasks.');
         return;
       }
 
@@ -423,7 +566,7 @@ class _ProjectPlanView extends HookConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.3),
+          color: Colors.orange.withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -457,8 +600,10 @@ class _ProjectPlanView extends HookConsumerWidget {
     return FloatingActionButton.extended(
       onPressed: () async {
         if (hasPendingTasks) {
-          _showError(context,
-              'Cannot complete project. Some tasks are still pending.');
+          if (context.mounted) {
+            _showError(context,
+                'Cannot complete project. Some tasks are still pending.');
+          }
           return;
         }
 
@@ -468,9 +613,9 @@ class _ProjectPlanView extends HookConsumerWidget {
                 .read(projectRepositoryProvider)
                 .adminCompleteProject(project.project.id);
             _refreshProject(ref);
-            _showSuccess(context, 'Project marked as Completed');
+            if (context.mounted) _showSuccess(context, 'Project marked as Completed');
           } catch (e) {
-            _showError(context, 'Failed: $e');
+            if (context.mounted) _showError(context, 'Failed: $e');
           }
           return;
         }
@@ -497,14 +642,16 @@ class _ProjectPlanView extends HookConsumerWidget {
                     await ref
                         .read(projectRepositoryProvider)
                         .requestProjectCompletion(project.project.id);
-                    _showSuccess(
-                        context,
-                        isProjectRejected
-                            ? 'Project closure resubmitted.'
-                            : 'Project closure requested.');
+                    if (context.mounted) {
+                      _showSuccess(
+                          context,
+                          isProjectRejected
+                              ? 'Project closure resubmitted.'
+                              : 'Project closure requested.');
+                    }
                     _refreshProject(ref);
                   } catch (e) {
-                    _showError(context, 'Failed: $e');
+                    if (context.mounted) _showError(context, 'Failed: $e');
                   }
                 },
                 child: Text(isProjectRejected ? 'Resubmit' : 'Request Closure'),
@@ -513,9 +660,9 @@ class _ProjectPlanView extends HookConsumerWidget {
           ),
         );
       },
-      icon: Icon(isProjectRejected ? Icons.replay : Icons.check_circle_outline),
+      icon: const Icon(Icons.check_circle_outline),
       label: Text(
-        isProjectRejected ? 'Resubmit Closure' : 'Request Closure',
+        'Request Closure',
         style: GoogleFonts.inter(fontWeight: FontWeight.bold),
       ),
     );
@@ -542,24 +689,29 @@ class _TaskBucket extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color baseColor;
+    Color accentColor;
     switch (bucketType) {
       case 'todo':
         baseColor = isDark
-            ? Colors.blue.shade900.withOpacity(0.3)
-            : Colors.blue.shade50;
+            ? Colors.blue.shade900.withOpacity(0.15)
+            : Colors.blue.shade50.withOpacity(0.5);
+        accentColor = const Color(0xFF05263E);
         break;
       case 'approval':
         baseColor = isDark
-            ? Colors.orange.shade900.withOpacity(0.3)
-            : Colors.orange.shade50;
+            ? Colors.orange.shade900.withOpacity(0.15)
+            : Colors.orange.shade50.withOpacity(0.5);
+        accentColor = Colors.orange.shade700;
         break;
       case 'completed':
         baseColor = isDark
-            ? Colors.green.shade900.withOpacity(0.3)
-            : Colors.green.shade50;
+            ? Colors.green.shade900.withOpacity(0.15)
+            : Colors.green.shade50.withOpacity(0.5);
+        accentColor = Colors.green.shade700;
         break;
       default:
-        baseColor = isDark ? const Color(0xFF111827) : Colors.grey.shade100;
+        baseColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+        accentColor = Colors.grey.shade600;
     }
 
     return Expanded(
@@ -574,56 +726,80 @@ class _TaskBucket extends StatelessWidget {
             height: double.infinity,
             decoration: BoxDecoration(
               color: isOver
-                  ? baseColor.withOpacity(isDark ? 0.6 : 0.8)
+                  ? (isDark ? accentColor.withOpacity(0.25) : accentColor.withOpacity(0.12)) // Slightly richer over state
                   : baseColor,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24), // Smoother corners for premium look
               border: Border.all(
                   color: isOver
-                      ? Colors.blue.withOpacity(0.8)
+                      ? accentColor
                       : (isDark
-                          ? Colors.white10
-                          : Colors.black.withOpacity(0.05)),
-                  width: 2),
+                          ? Colors.white.withOpacity(0.08)
+                          : const Color(0xFFE2E8F0)), // Slate-200 border in light mode
+                  width: isOver ? 1.5 : 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.03),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                   child: Row(
                     children: [
+                      Container(
+                        width: 4,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: accentColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       Text(
                         title,
-                        style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white70 : Colors.black54),
+                        style: GoogleFonts.outfit( // Switched to Outfit for modern feel
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white.withOpacity(0.9) : const Color(0xFF0F172A), // Deep Slate
+                            letterSpacing: -0.1),
                       ),
-                      const SizedBox(width: 8),
+                      const Spacer(),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                            horizontal: 10, vertical: 2),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.grey.shade800
-                              : Colors.grey.shade200,
+                          color: isDark ? Colors.black26 : Colors.white.withOpacity(0.8),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: accentColor.withOpacity(0.1)),
                         ),
                         child: Text(
                           "${tasks.length}",
-                          style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white70 : Colors.black54),
+                          style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: accentColor),
                         ),
                       ),
                     ],
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(
+                      height: 1, 
+                      thickness: 0.5,
+                      color: isDark ? Colors.white.withOpacity(0.06) : accentColor.withOpacity(0.08)
+                  ),
+                ),
                 Expanded(
                   child: ListView.builder(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     itemCount: tasks.length,
                     itemBuilder: (context, index) => child(tasks[index]),
                   ),
@@ -708,10 +884,10 @@ class _MilestonesSectionState extends State<_MilestonesSection> {
                   const SizedBox(width: 6),
                   Text(
                     'Milestones (${widget.milestones.length})',
-                    style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade600),
+                    style: GoogleFonts.outfit( // Outfit for sub-sections
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isDark ? Colors.white70 : const Color(0xFF475569)), // Slate-600
                   ),
                 ],
               ),
@@ -728,30 +904,42 @@ class _MilestonesSectionState extends State<_MilestonesSection> {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Row(
                       children: [
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: Checkbox(
-                            value: isMCompleted,
-                            activeColor: Colors.blue.shade600,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4)),
-                            side: BorderSide(
-                                color: widget.isDark
-                                    ? Colors.white24
-                                    : Colors.grey.shade400,
-                                width: 1.5),
-                            onChanged: widget.isInteractive
-                                ? (val) => widget.toggleMilestone(
-                                    context,
-                                    widget.ref,
-                                    widget.task,
-                                    widget.milestones,
-                                    m,
-                                    widget.updatedProgressMap,
-                                    widget.updatedMilestoneMap,
-                                    widget.updatedMilestoneAssigneeMap)
-                                : null,
+                        IgnorePointer(
+                          ignoring: !widget.isInteractive,
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: Checkbox(
+                              value: isMCompleted,
+                              activeColor: widget.isInteractive
+                                  ? Colors.blue.shade600
+                                  : (widget.isDark
+                                      ? Colors.grey.shade600
+                                      : Colors.grey.shade400),
+                              checkColor: widget.isInteractive
+                                  ? Colors.white
+                                  : (widget.isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.white70),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4)),
+                              side: BorderSide(
+                                  color: widget.isDark
+                                      ? Colors.white24
+                                      : Colors.grey.shade400,
+                                  width: 1.5),
+                              onChanged: widget.isInteractive
+                                  ? (val) => widget.toggleMilestone(
+                                      context,
+                                      widget.ref,
+                                      widget.task,
+                                      widget.milestones,
+                                      m,
+                                      widget.updatedProgressMap,
+                                      widget.updatedMilestoneMap,
+                                      widget.updatedMilestoneAssigneeMap)
+                                  : null,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -845,23 +1033,29 @@ class _BoardTaskCard extends StatelessWidget {
   final TaskWithAssignees taskItem;
   final bool isDark;
   final bool isAdmin;
+  final String bucketType;
   final ValueNotifier<Map<String, int>> updatedProgressMap;
   final ValueNotifier<Map<String, bool>> updatedMilestoneMap;
   final ValueNotifier<Map<String, Map<String, String?>>> updatedMilestoneAssigneeMap;
   final ValueNotifier<Set<String>> loadingTaskIds;
   final bool isProjectRejected;
+  final bool isClosureRejection;
   final WidgetRef ref;
+  final ProjectWithTasks project;
 
   const _BoardTaskCard({
     required this.taskItem,
     required this.isDark,
     required this.isAdmin,
+    required this.bucketType,
     required this.updatedProgressMap,
     required this.updatedMilestoneMap,
     required this.updatedMilestoneAssigneeMap,
     required this.loadingTaskIds,
     required this.isProjectRejected,
+    this.isClosureRejection = false,
     required this.ref,
+    required this.project,
   });
 
   @override
@@ -880,8 +1074,12 @@ class _BoardTaskCard extends StatelessWidget {
 
     final currentProgress =
         updatedProgressMap.value[task.id.toString()] ?? task.progress;
-    final isRejected = status == 'rejected';
+    // isRejected on a task means it was individually rejected by Admin (creation/completion rejection)
+    // Suppress this flag when the project is in closure-rejection state — all tasks are reset
+    // to 'rejected' bucket but that is a project-level action, not a per-task rejection.
+    final isRejected = status == 'rejected' && !isClosureRejection;
     final isApproval = status == 'pending_completion';
+    final isPendingCreation = status == 'pending_creation';
     final isCompleted = status == 'approved';
 
     Color statusColor;
@@ -891,7 +1089,7 @@ class _BoardTaskCard extends StatelessWidget {
       statusColor = Colors.red.shade600;
     } else if (isApproval) {
       statusColor = Colors.orange.shade500;
-    } else if (status == 'pending_approval') {
+    } else if (status == 'pending_approval' || isPendingCreation) {
       statusColor = Colors.purple.shade500;
     } else if (task.priority == "High" &&
         task.endDate.isBefore(DateTime.now())) {
@@ -1037,16 +1235,20 @@ class _BoardTaskCard extends StatelessWidget {
     }
 
     final card = Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -1085,17 +1287,17 @@ class _BoardTaskCard extends StatelessWidget {
                             children: [
                               Text(
                                 task.name,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.outfit( // Outfit for task titles
                                   fontSize: 15,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                   color: isDark
-                                      ? Colors.white.withOpacity(0.95)
-                                      : Colors.grey.shade900,
-                                  height: 1.4,
-                                  letterSpacing: -0.2,
+                                        ? Colors.white.withOpacity(0.9)
+                                      : const Color(0xFF1E293B), // Slate-800
+                                  height: 1.3,
+                                  letterSpacing: -0.1,
                                 ),
                               ),
-                              if (status == 'pending_approval')
+                              if (status == 'pending_approval' || status == 'pending_creation')
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4.0),
                                   child: Container(
@@ -1130,6 +1332,28 @@ class _BoardTaskCard extends StatelessWidget {
                             ],
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        if (bucketType == 'todo' && status != 'approved')
+                          IconButton(
+                            icon: Icon(Icons.edit_outlined, size: 16, color: isDark ? Colors.white54 : Colors.grey.shade500),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Edit Task',
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AddProjectTaskModal(
+                                  projectId: project.project.id,
+                                  projectStartDate: project.startDate,
+                                  projectDueDate: project.dueDate,
+                                  projectBudgetHours: project.project.plannedHours,
+                                  usedHours: project.tasks.fold(
+                                      0.0, (sum, t) => sum + t.task.plannedHours),
+                                  existingTask: taskItem,
+                                ),
+                              );
+                            },
+                          ),
                         const SizedBox(width: 8),
                         if (isRejected)
                           const Icon(Icons.error_outline,
@@ -1185,24 +1409,24 @@ class _BoardTaskCard extends StatelessWidget {
                         Row(
                           children: [
                             Icon(Icons.calendar_today_rounded,
-                                size: 14, color: Colors.grey.shade500),
+                                size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
                             const SizedBox(width: 6),
                             Text(
                               _formatDate(task.endDate),
                               style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Colors.grey.shade500,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                                   fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(width: 12),
                             Icon(Icons.timer_outlined,
-                                size: 14, color: Colors.grey.shade500),
+                                size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
                             const SizedBox(width: 4),
                             Text(
-                              "${task.plannedHours}h",
+                              "${task.plannedHours % 1 == 0 ? task.plannedHours.toInt() : task.plannedHours}h",
                               style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Colors.grey.shade500,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                                   fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -1218,10 +1442,10 @@ class _BoardTaskCard extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 6, right: 2),
                           child: Text(
                             "$currentProgress%",
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: statusColor.withOpacity(0.9),
+                            style: GoogleFonts.outfit( // Outfit for progress numbers
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor.withOpacity(0.95),
                             ),
                           ),
                         ),
@@ -1229,10 +1453,10 @@ class _BoardTaskCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                           child: LinearProgressIndicator(
                             value: currentProgress / 100.0,
-                            minHeight: 6,
+                            minHeight: 8, // More substantial bar
                             backgroundColor: isDark
-                                ? Colors.white.withOpacity(0.05)
-                                : Colors.grey.shade100,
+                                ? Colors.white.withOpacity(0.08)
+                                : const Color(0xFFF1F5F9), // Slate-100
                             valueColor:
                                 AlwaysStoppedAnimation<Color>(statusColor),
                           ),
@@ -1247,8 +1471,10 @@ class _BoardTaskCard extends StatelessWidget {
                   task: task,
                   milestones: milestones,
                   isDark: isDark,
-                  isInitiallyExpanded: !isCompleted && !isApproval,
-                  isInteractive: !isCompleted && !isApproval,
+                  isInitiallyExpanded: !isApproval,
+                  isInteractive: bucketType == 'todo' && 
+                                 project.project.status == 'active' && 
+                                 project.project.approvalStatus?.toLowerCase() != 'pending_completion',
                   ref: ref,
                   updatedProgressMap: updatedProgressMap,
                   updatedMilestoneMap: updatedMilestoneMap,
@@ -1265,7 +1491,7 @@ class _BoardTaskCard extends StatelessWidget {
                     border: Border(
                         top: BorderSide(
                             color: isDark
-                                ? Colors.orange.withOpacity(0.2)
+                        ? Colors.orange.withOpacity(0.2)
                                 : Colors.orange.shade100)),
                   ),
                   child: InkWell(
@@ -1345,7 +1571,35 @@ class _BoardTaskCard extends StatelessWidget {
       ValueNotifier<Map<String, int>> updatedProgressMap,
       ValueNotifier<Map<String, bool>> updatedMilestoneMap,
       ValueNotifier<Map<String, Map<String, String?>>>
-          updatedMilestoneAssigneeMap) async {
+      updatedMilestoneAssigneeMap) async {
+    // --- SWEET REMINDER FOR PENDING LOGIC ---
+    final status = task.approvalStatus?.toLowerCase();
+    if (status == 'pending_creation' || status == 'pending_approval') {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.white, size: 20),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Task approval pending. You can continue working normally!',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.purple.shade600,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+            width: 400,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+
     try {
       final currentIsCompleted = updatedMilestoneMap.value[m.id] ?? m.completed;
       final newIsCompleted = !currentIsCompleted;
@@ -1408,8 +1662,10 @@ class _BoardTaskCard extends StatelessWidget {
       ref.invalidate(apiTasksProvider);
       ref.invalidate(projectsWithTasksProvider);
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 }
@@ -1418,6 +1674,9 @@ void _refreshProject(WidgetRef ref) {
   ref.invalidate(apiTasksProvider);
   ref.invalidate(projectsWithTasksProvider);
   ref.invalidate(currentProjectProvider);
+  // ADDED: Refresh dashboard stats for consistency
+  ref.invalidate(filteredDashboardStatsProvider);
+  ref.invalidate(dashboardProjectsProvider);
 }
 
 void _showSuccess(BuildContext context, String msg) {
@@ -1460,10 +1719,13 @@ void _showReopenDialog(BuildContext context, WidgetRef ref, dynamic task) {
         FilledButton(
           onPressed: () async {
             if (controller.text.trim().isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a reason')));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a reason')));
+              }
               return;
             }
+            
             Navigator.pop(context);
             try {
               await ref
@@ -1479,7 +1741,7 @@ void _showReopenDialog(BuildContext context, WidgetRef ref, dynamic task) {
                 ));
               }
             } catch (e) {
-              _showError(context, 'Failed: $e');
+              if (context.mounted) _showError(context, 'Failed: $e');
             }
           },
           style: FilledButton.styleFrom(backgroundColor: Colors.orange),
@@ -1513,58 +1775,142 @@ void _showRejectionDialog(BuildContext context, WidgetRef ref, dynamic task) {
           ),
         ],
       ),
-    actions: [
-      TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel')),
-      FilledButton(
-        onPressed: () async {
-          final reason = controller.text.trim();
-          if (reason.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Please enter a reason')));
-            return;
-          }
-          Navigator.pop(context);
-          
-          final status = task.approvalStatus?.toLowerCase();
-          final isCompleted = status == 'approved';
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () async {
+            final reason = controller.text.trim();
+            if (reason.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a reason')));
+              return;
+            }
+            Navigator.pop(context);
 
-          try {
-            if (isCompleted) {
-              await ref
-                  .read(projectRepositoryProvider)
-                  .reopenTask(task.id, reason);
-            } else {
-              await ref
-                  .read(projectRepositoryProvider)
-                  .rejectTaskCompletion(task.id, reason);
+            final status = task.approvalStatus?.toLowerCase();
+            final isCompleted = status == 'approved';
+
+            try {
+              if (isCompleted) {
+                await ref
+                    .read(projectRepositoryProvider)
+                    .reopenTask(task.id, reason);
+              } else {
+                await ref
+                    .read(projectRepositoryProvider)
+                    .rejectTaskByTaskId(task.id, reason);
+              }
+
+              _refreshProject(ref);
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(isCompleted
+                      ? 'Task reopened and moved to Task Bucket'
+                      : 'Task rejected and moved to Task Bucket'),
+                  backgroundColor: isCompleted ? Colors.orange : Colors.red,
+                ));
+              }
+            } catch (e) {
+              if (context.mounted) _showError(context, 'Failed: $e');
             }
-            
-            _refreshProject(ref);
-            
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(isCompleted 
-                  ? 'Task reopened and moved to Task Bucket' 
-                  : 'Task rejected and moved to Task Bucket'),
-                backgroundColor: isCompleted ? Colors.orange : Colors.red,
-              ));
-            }
-          } catch (e) {
-            _showError(context, 'Failed: $e');
-          }
-        },
-        style: FilledButton.styleFrom(
-          backgroundColor: (task.approvalStatus?.toLowerCase() == 'approved') 
-            ? Colors.orange 
-            : Colors.red
+          },
+          style: FilledButton.styleFrom(
+              backgroundColor: (task.approvalStatus?.toLowerCase() == 'approved')
+                  ? Colors.orange
+                  : Colors.red),
+          child: Text((task.approvalStatus?.toLowerCase() == 'approved')
+              ? 'Reopen Task'
+              : 'Reject Task'),
         ),
-        child: Text((task.approvalStatus?.toLowerCase() == 'approved') 
-          ? 'Reopen Task' 
-          : 'Reject Task'),
+      ],
+    ),
+  );
+}
+
+Widget _buildAdminReopenFab(BuildContext context, WidgetRef ref) {
+  return FloatingActionButton.extended(
+    onPressed: () => _showGlobalReopenDialog(context, ref),
+    label: const Text('Reopen Project'),
+    icon: const Icon(Icons.refresh),
+    backgroundColor: Colors.blue.shade700,
+    foregroundColor: Colors.white,
+  );
+}
+
+void _showGlobalReopenDialog(BuildContext context, WidgetRef ref) {
+  final reasonController = TextEditingController();
+  final project = ref.read(currentProjectProvider).value;
+  if (project == null) return;
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Reopen Project',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Why are you reopening this completed project?',
+              style: GoogleFonts.inter(fontSize: 14)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: reasonController,
+            autofocus: true,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Enter reason...',
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              filled: true,
+            ),
+          ),
+        ],
       ),
-    ],
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey)),
+        ),
+        FilledButton(
+          onPressed: () async {
+            if (reasonController.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Reason is mandatory'),
+                    backgroundColor: Colors.red),
+              );
+              return;
+            }
+
+            Navigator.pop(context);
+
+            try {
+              await ref
+                  .read(projectRepositoryProvider)
+                  .reopenProject(project.project.id, reasonController.text.trim());
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Project Reopened'),
+                      backgroundColor: Colors.green),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                );
+              }
+            }
+          },
+          child: const Text('Confirm Reopen'),
+        ),
+      ],
     ),
   );
 }

@@ -114,7 +114,7 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
       params: {'filter': filter},
       startDate: dateRange?.start.toIso8601String().split('T')[0],
       endDate: dateRange?.end.toIso8601String().split('T')[0],
-      allProjects: false, // Dashboard stats should only fetch allowed data
+      allProjects: true, // Fetch all authorized projects to ensure correct stats
     );
 
     return projectModels.map((projectModel) {
@@ -176,6 +176,9 @@ final workingReportYearProvider = StateProvider<int>((ref) => DateTime.now().yea
 /// Selected month string for drill-down project detail (e.g., 'March 2026')
 /// If null, the chart is shown. If not null, the project list is shown.
 final workingReportDetailMonthProvider = StateProvider<String?>((ref) => null);
+
+/// Type of drill-down content: 'Projects', 'Tasks', or 'Hours'
+final workingReportDrillDownTypeProvider = StateProvider<String>((ref) => 'Projects');
 
 
 /// Provider for fetching users list for stats dropdown
@@ -272,15 +275,17 @@ Future<List<dynamic>> statsProjects(StatsProjectsRef ref) async {
 class ProjectChartParams {
   final int year;
   final String filter;
-  ProjectChartParams({required this.year, required this.filter});
+  final int? userId;
+  ProjectChartParams({required this.year, required this.filter, this.userId});
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ProjectChartParams &&
           year == other.year &&
-          filter == other.filter;
+          filter == other.filter &&
+          userId == other.userId;
   @override
-  int get hashCode => year.hashCode ^ filter.hashCode;
+  int get hashCode => year.hashCode ^ filter.hashCode ^ userId.hashCode;
 }
 
 @riverpod
@@ -288,7 +293,7 @@ Future<Map<String, dynamic>> projectCompletionChart(
     ProjectCompletionChartRef ref, ProjectChartParams params) async {
   try {
     final repo = ref.watch(dashboardRepositoryProvider);
-    return await repo.fetchProjectCompletionChart(params.year, params.filter);
+    return await repo.fetchProjectCompletionChart(params.year, params.filter, params.userId);
   } catch (e) {
     debugPrint('❌ Error in projectCompletionChart: $e');
     return {'data': []};
@@ -299,9 +304,10 @@ class TaskChartParams {
   final String startDate;
   final String endDate;
   final String filter;
+  final int? userId;
 
   TaskChartParams(
-      {required this.startDate, required this.endDate, required this.filter});
+      {required this.startDate, required this.endDate, required this.filter, this.userId});
 
   @override
   bool operator ==(Object other) =>
@@ -310,10 +316,11 @@ class TaskChartParams {
           runtimeType == other.runtimeType &&
           startDate == other.startDate &&
           endDate == other.endDate &&
-          filter == other.filter;
+          filter == other.filter &&
+          userId == other.userId;
 
   @override
-  int get hashCode => startDate.hashCode ^ endDate.hashCode ^ filter.hashCode;
+  int get hashCode => startDate.hashCode ^ endDate.hashCode ^ filter.hashCode ^ userId.hashCode;
 }
 
 @riverpod
@@ -322,7 +329,7 @@ Future<Map<String, dynamic>> taskCompletionChart(
   try {
     final repo = ref.watch(dashboardRepositoryProvider);
     return await repo.fetchTaskCompletionChart(
-        params.startDate, params.endDate, params.filter);
+        params.startDate, params.endDate, params.filter, params.userId);
   } catch (e) {
     debugPrint('❌ Error in taskCompletionChart: $e');
     return {'data': []};
@@ -334,7 +341,7 @@ Future<List<dynamic>> hoursCompletionChart(
     HoursCompletionChartRef ref, ProjectChartParams params) async {
   try {
     final repo = ref.watch(dashboardRepositoryProvider);
-    return await repo.fetchHoursCompletionChart(params.year, params.filter);
+    return await repo.fetchHoursCompletionChart(params.year, params.filter, params.userId);
   } catch (e) {
     debugPrint('❌ Error in hoursCompletionChart: $e');
     return [];

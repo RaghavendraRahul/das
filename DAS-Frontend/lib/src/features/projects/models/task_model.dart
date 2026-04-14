@@ -176,12 +176,13 @@ class TaskModel {
 
     String? displayApprovalStatus = approvalStatus?.toLowerCase();
 
-    // Fallback logic or overrides based on status
+    // Fallback logic for tasks awaiting approval
     if (status == 'DONE' || status == 'COMPLETED') {
       displayApprovalStatus = 'approved';
     } else if (displayApprovalStatus == null) {
       if (status == 'PENDING_APPROVAL') {
-        displayApprovalStatus = 'pending_completion';
+        // Default to pending_creation for brand new tasks to show in Task Bucket
+        displayApprovalStatus = 'pending_creation';
       } else if (status == 'REJECTED') {
         displayApprovalStatus = 'rejected';
       }

@@ -37,7 +37,7 @@ class UserColorService {
 
   /// Get a lighter version of the user color (good for backgrounds)
   static Color getLightColorForUser(dynamic userId, {double opacity = 0.1}) {
-    return getColorForUser(userId).withValues(alpha: opacity);
+    return getColorForUser(userId).withOpacity(opacity);
   }
 
   /// Get the hex code (without #) for the user's color.

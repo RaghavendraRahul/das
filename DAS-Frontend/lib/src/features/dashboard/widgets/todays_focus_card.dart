@@ -29,7 +29,7 @@ class TodaysFocusCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
+                    color: Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.bolt, color: Colors.blue, size: 20),
@@ -39,8 +39,8 @@ class TodaysFocusCard extends StatelessWidget {
                   "Today's Focus",
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0F518B),
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF05263E),
                   ),
                 ),
               ],
@@ -110,7 +110,7 @@ class TodaysFocusCard extends StatelessWidget {
                                                       vertical: 4),
                                               decoration: BoxDecoration(
                                                 color: item.color
-                                                    .withValues(alpha: 0.1),
+                                                    .withOpacity(0.1),
                                                 borderRadius:
                                                     BorderRadius.circular(4),
                                               ),
@@ -228,13 +228,12 @@ class TodaysFocusCard extends StatelessWidget {
                                                       vertical: 8),
                                               decoration: BoxDecoration(
                                                 color: Colors.blue
-                                                    .withValues(alpha: 0.1),
+                                                    .withOpacity(0.1),
                                                 borderRadius:
                                                     BorderRadius.circular(8),
                                                 border: Border.all(
                                                     color: Colors.blue
-                                                        .withValues(
-                                                            alpha: 0.3)),
+                                                        .withOpacity(0.3)),
                                               ),
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
@@ -371,7 +370,7 @@ class TodaysFocusCard extends StatelessWidget {
                                                 horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: item.color
-                                                  .withValues(alpha: 0.1),
+                                                  .withOpacity(0.1),
                                               borderRadius:
                                                   BorderRadius.circular(4),
                                             ),

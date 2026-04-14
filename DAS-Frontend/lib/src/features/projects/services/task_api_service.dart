@@ -395,6 +395,14 @@ class TaskApiService {
     }
   }
 
+  Future<void> reopenProject(int id, String reason) async {
+    try {
+      await _dio.post('/projects/$id/reopen/', data: {'reason': reason});
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    }
+  }
+
   /// Admin bypass: directly mark project as COMPLETED without approval
   Future<void> adminCompleteProject({required int projectId}) async {
     try {
@@ -718,6 +726,29 @@ class TaskApiService {
     }
   }
 
+  /// Admin only: Approve task completion by Task ID (not approval request ID)
+  /// This endpoint handles status update and also cleans up associated approval requests.
+  Future<void> approveTaskCompletion(int taskId) async {
+    try {
+      await _dio.post('/tasks/$taskId/approve_completion/');
+    } on DioException catch (e) {
+      throw Exception(
+          'Failed to approve task: ${e.response?.data['error'] ?? e.message}');
+    }
+  }
+
+  /// Admin only: Reject task completion by Task ID (not approval request ID)
+  /// This endpoint handles status update and also cleans up associated approval requests.
+  Future<void> rejectTaskCompletion(int taskId, {String? reason}) async {
+    try {
+      final data = reason != null ? {'reason': reason} : null;
+      await _dio.post('/tasks/$taskId/reject_completion/', data: data);
+    } on DioException catch (e) {
+      throw Exception(
+          'Failed to reject task: ${e.response?.data['error'] ?? e.message}');
+    }
+  }
+
   Future<List<dynamic>> getMyPendingItems(
       {String? date, String? userId}) async {
     try {
@@ -809,7 +840,7 @@ class TaskApiService {
   }
 
   Future<Map<String, dynamic>> getProjectCompletionChart(
-      int year, String filter) async {
+      int year, String filter, [int? userId]) async {
     try {
       final startDate = '$year-01-01';
       final endDate = '$year-12-31';
@@ -818,6 +849,7 @@ class TaskApiService {
         'start_date': startDate,
         'end_date': endDate,
         'filter': filter,
+        if (userId != null) 'user_id': userId,
       });
       if (response.statusCode == 200) {
         return response.data;
@@ -830,13 +862,14 @@ class TaskApiService {
   }
 
   Future<Map<String, dynamic>> getTaskCompletionChart(
-      String startDate, String endDate, String filter) async {
+      String startDate, String endDate, String filter, [int? userId]) async {
     try {
       final response =
           await _dio.get('/task-completion-chart/', queryParameters: {
         'start_date': startDate,
         'end_date': endDate,
         'filter': filter,
+        if (userId != null) 'user_id': userId,
       });
       if (response.statusCode == 200) {
         return response.data;
@@ -848,13 +881,14 @@ class TaskApiService {
     }
   }
 
-  Future<List<dynamic>> getHoursCompletionChart(int year, String filter) async {
+  Future<List<dynamic>> getHoursCompletionChart(int year, String filter, [int? userId]) async {
     try {
       final response = await _dio.get(
         '/hours-completion-chart/',
         queryParameters: {
           'year': year,
           'filter': filter,
+          if (userId != null) 'user_id': userId,
         },
       );
       if (response.statusCode == 200) {

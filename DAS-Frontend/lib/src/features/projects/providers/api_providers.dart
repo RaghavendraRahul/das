@@ -76,7 +76,7 @@ Future<List<ProjectModel>> apiProjects(ApiProjectsRef ref) async {
 Future<List<ProjectModel>> dashboardApiProjects(DashboardApiProjectsRef ref) async {
   final apiService = ref.watch(taskApiServiceProvider);
   try {
-    return await apiService.getProjects(allProjects: false);
+    return await apiService.getProjects(allProjects: true);
   } catch (e) {
     throw Exception('Failed to fetch dashboard projects: $e');
   }
@@ -814,4 +814,42 @@ Future<List<ProjectModel>> monthlyCompletedProjects(
     return [];
   }
 }
+
+@riverpod
+Future<List<TaskModel>> monthlyCompletedTasks(
+    MonthlyCompletedTasksRef ref, String monthYear) async {
+  final apiService = ref.watch(taskApiServiceProvider);
+
+  // Parse "March 2026"
+  final parts = monthYear.split(' ');
+  if (parts.length != 2) return [];
+
+  final monthName = parts[0];
+  final year = int.tryParse(parts[1]) ?? DateTime.now().year;
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  final month = monthNames.indexOf(monthName) + 1;
+  if (month == 0) return [];
+
+  final startDate = DateTime(year, month, 1);
+  final endDate = month == 12 ? DateTime(year + 1, 1, 0) : DateTime(year, month + 1, 0);
+
+  final startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
+  final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+
+  try {
+    // Fetch tasks completed in this month
+    return await apiService.getTasks(
+      startDate: startDateStr,
+      endDate: endDateStr,
+    );
+  } catch (e) {
+    debugPrint('Error in monthlyCompletedTasksProvider: $e');
+    return [];
+  }
+}
+
 

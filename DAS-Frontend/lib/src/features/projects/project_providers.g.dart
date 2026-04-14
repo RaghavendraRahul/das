@@ -6,7 +6,7 @@ part of 'project_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$projectRepositoryHash() => r'f7f019cec3564ab7c9fdcdaa57dda471e9a6759c';
+String _$projectRepositoryHash() => r'720fa6e881df487cdc4b2b7bada7ec2684eb2283';
 
 /// See also [projectRepository].
 @ProviderFor(projectRepository)
@@ -38,7 +38,7 @@ final currentProjectProvider =
 );
 
 typedef CurrentProjectRef = AutoDisposeFutureProviderRef<ProjectWithTasks?>;
-String _$projectsWithTasksHash() => r'8377f58bc36a19524407a34bd73e854a562d45d7';
+String _$projectsWithTasksHash() => r'896ba85ef71ba8f5fdcf374f3b00fcb6a4977666';
 
 /// All projects with tasks for Activity Catalog
 /// Uses apiTasksProvider which already returns tasks WITH subtasks (via TaskSerializer)

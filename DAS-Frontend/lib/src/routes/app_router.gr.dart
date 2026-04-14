@@ -11,7 +11,7 @@ part of 'app_router.dart';
 
 abstract class _$AppRouter extends RootStackRouter {
   // ignore: unused_element
-  _$AppRouter();
+  _$AppRouter({super.navigatorKey});
 
   @override
   final Map<String, PageFactory> pagesMap = {
@@ -102,12 +102,6 @@ abstract class _$AppRouter extends RootStackRouter {
       return AutoRoutePage<dynamic>(
         routeData: routeData,
         child: const ProjectReportsPage(),
-      );
-    },
-    ProjectSettingsRoute.name: (routeData) {
-      return AutoRoutePage<dynamic>(
-        routeData: routeData,
-        child: const ProjectSettingsPage(),
       );
     },
     ProjectsRoute.name: (routeData) {
@@ -417,20 +411,6 @@ class ProjectReportsRoute extends PageRouteInfo<void> {
         );
 
   static const String name = 'ProjectReportsRoute';
-
-  static const PageInfo<void> page = PageInfo<void>(name);
-}
-
-/// generated route for
-/// [ProjectSettingsPage]
-class ProjectSettingsRoute extends PageRouteInfo<void> {
-  const ProjectSettingsRoute({List<PageRouteInfo>? children})
-      : super(
-          ProjectSettingsRoute.name,
-          initialChildren: children,
-        );
-
-  static const String name = 'ProjectSettingsRoute';
 
   static const PageInfo<void> page = PageInfo<void>(name);
 }

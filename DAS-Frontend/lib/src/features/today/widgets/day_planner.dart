@@ -74,12 +74,21 @@ class DayPlanner extends HookConsumerWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0.02),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -97,7 +106,7 @@ class DayPlanner extends HookConsumerWidget {
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
-                      color: isDark ? Colors.white : const Color(0xFF1F2937),
+                      color: isDark ? Colors.white : const Color(0xFF05263E),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -113,19 +122,19 @@ class DayPlanner extends HookConsumerWidget {
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade500,
+                          color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
                         ),
                       );
                     },
                     loading: () => Text(
                       "Total Hour's : --",
                       style: GoogleFonts.inter(
-                          fontSize: 11, color: Colors.grey.shade500),
+                          fontSize: 11, color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316), fontWeight: FontWeight.w600),
                     ),
                     error: (_, __) => Text(
                       "Total Hour's : --",
                       style: GoogleFonts.inter(
-                          fontSize: 11, color: Colors.grey.shade500),
+                          fontSize: 11, color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316), fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -198,7 +207,7 @@ class DayPlanner extends HookConsumerWidget {
           const SizedBox(height: 12),
 
           // Fixed Pending Box with Overflow Protection
-          if (isPendingBoxVisible.value)
+          if (ref.watch(apiPendingItemsProvider(selectedDateStr)).maybeWhen(data: (items) => items.isNotEmpty, orElse: () => false)) ...[ if (isPendingBoxVisible.value)
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 280),
@@ -364,7 +373,7 @@ class DayPlanner extends HookConsumerWidget {
                   onPressed: () => isPendingBoxVisible.value = true,
                 ),
               ],
-            ),
+            ), ],
 
           const SizedBox(height: 8),
 

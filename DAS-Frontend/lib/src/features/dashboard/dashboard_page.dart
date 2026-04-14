@@ -4,20 +4,52 @@ import 'package:intl/intl.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
 import 'package:project_pm/src/features/dashboard/widgets/project_overview_stats.dart';
 import 'package:project_pm/src/features/dashboard/widgets/work_statistics_chart.dart';
 import 'package:project_pm/src/features/dashboard/widgets/project_working_report.dart';
 import 'package:project_pm/src/features/dashboard/widgets/daily_execution_rings_card.dart';
 
-
 import 'package:project_pm/src/routes/app_router.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/features/auth/auth_state_providers.dart';
-// Notification imports
 import '../notifications/services/notification_polling_service.dart';
 import '../notifications/widgets/notification_popup_overlay.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sidebar-Matched Theme Colors  (base: #05263E)
+// ─────────────────────────────────────────────────────────────────────────────
+const _kSidebarBlue = Color(0xFF05263E);
+
+/// All section backgrounds directly matched to sidebar palette.
+/// No borders — just clean, distinct background colors per zone.
+class _C {
+  // ── Page / Shell background ─────────────────────────────────────────────────
+  //    Light: very soft blue-white  |  Dark: deepest navy
+  static const pageBgLight  = Color(0xFFE8F0FA);
+  static const pageBgDark   = Color(0xFF050E1C);
+
+  // ── Section: Work Statistics Chart ─────────────────────────────────────────
+  //    Light: light sky tint        |  Dark: navy-steel
+  static const workStatLight = Color(0xFFEBF3FB);
+  static const workStatDark  = Color(0xFF091625);
+
+  // ── Section: Daily Execution Rings ─────────────────────────────────────────
+  //    Light: icy periwinkle        |  Dark: deep ocean
+  static const ringsLight   = Color(0xFFEEF5FC);
+  static const ringsDark    = Color(0xFF0B1B2F);
+
+  // ── Section: Project Working Report ────────────────────────────────────────
+  //    Light: slate blue            |  Dark: darkest midnight
+  static const reportLight  = Color(0xFFE5EEF8);
+  static const reportDark   = Color(0xFF070F1C);
+
+  // ── Filter bar / toggle container background ────────────────────────────────
+  static const controlLight = Color(0xFFDCEAF7);   // cool blue-grey
+  static const controlDark  = Color(0xFF0C1C30);
+}
 
 @RoutePage()
 class DashboardPage extends HookConsumerWidget {
@@ -27,34 +59,32 @@ class DashboardPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentPage = useState(1);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedProjectType = useState<String>('my'); // 'my' or 'team'
+    final selectedProjectType = useState<String>('my');
     final projectsAsync = ref.watch(paginatedDashboardProjectsProvider(
         page: currentPage.value, filter: selectedProjectType.value));
-
-    // NEW: Watch all projects for stats (global data)
     final allProjectsAsync = ref.watch(
         filteredDashboardStatsProvider(filter: selectedProjectType.value));
-
     final selectedStatusFilter = useState<String?>(null);
     final dashboardDateRange = ref.watch(dashboardDateRangeProvider);
-
-    // Get current user role to hide team section for employees
     final currentUserAsync = ref.watch(currentUserProvider);
     final isEmployee = currentUserAsync.value?.role == 'EMPLOYEE';
-
-    // Listen to notification service to trigger overlays
     final notifications = ref.watch(notificationPollingProvider);
     final notificationService = ref.read(notificationPollingProvider.notifier);
 
+    final pageBg = isDark ? _C.pageBgDark : _C.pageBgLight;
+
     return Stack(
       children: [
+        // ── Full-page solid background ─────────────────────────────────────
+        Container(color: pageBg),
+
+        // ── Main Scaffold (transparent) ────────────────────────────────────
         Scaffold(
-          backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+          backgroundColor: Colors.transparent,
           body: projectsAsync.when(
             skipLoadingOnReload: true,
             skipLoadingOnRefresh: true,
             data: (paginatedResponse) {
-              // Get aggregated projects for stats
               final statsProjects = allProjectsAsync.valueOrNull ?? [];
 
               return SingleChildScrollView(
@@ -62,34 +92,20 @@ class DashboardPage extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 2. Header Actions - Responsive
+                    // ── Filter Row ─────────────────────────────────────────
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final isNarrow = constraints.maxWidth < 600;
-
                         return Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             if (!isNarrow) const Spacer(),
+                            // Project Type Toggle
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: isDark
-                                    ? const Color(0xFF1E293B)
-                                    : Colors.white,
+                                color: isDark ? _C.controlDark : _C.controlLight,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isDark ? Colors.white10 : const Color(0xFF0F518B).withValues(alpha: 0.1),
-                                  width: 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: isDark ? Colors.black.withValues(alpha: 0.2) : const Color(0xFF0F518B).withValues(alpha: 0.05),
-                                    blurRadius: 15,
-                                    spreadRadius: 1,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -97,19 +113,15 @@ class DashboardPage extends HookConsumerWidget {
                                   _ProjectTypeButton(
                                     label: isNarrow ? 'My' : 'My Projects',
                                     icon: Icons.person_outline,
-                                    isSelected:
-                                        selectedProjectType.value == 'my',
-                                    onTap: () =>
-                                        selectedProjectType.value = 'my',
+                                    isSelected: selectedProjectType.value == 'my',
+                                    onTap: () => selectedProjectType.value = 'my',
                                   ),
                                   if (!isEmployee)
                                     _ProjectTypeButton(
                                       label: isNarrow ? 'Team' : 'Team Projects',
                                       icon: Icons.groups_outlined,
-                                      isSelected:
-                                          selectedProjectType.value == 'team',
-                                      onTap: () =>
-                                          selectedProjectType.value = 'team',
+                                      isSelected: selectedProjectType.value == 'team',
+                                      onTap: () => selectedProjectType.value = 'team',
                                     ),
                                 ],
                               ),
@@ -125,9 +137,7 @@ class DashboardPage extends HookConsumerWidget {
                                   initialDateRange: dashboardDateRange,
                                 );
                                 if (picked != null) {
-                                  ref
-                                      .read(dashboardDateRangeProvider.notifier)
-                                      .state = picked;
+                                  ref.read(dashboardDateRangeProvider.notifier).state = picked;
                                 }
                               },
                             ),
@@ -138,7 +148,7 @@ class DashboardPage extends HookConsumerWidget {
 
                     const SizedBox(height: 16),
 
-                    // Active Filter Chip
+                    // ── Active Filter Chips ────────────────────────────────
                     if (selectedStatusFilter.value != null || dashboardDateRange != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
@@ -148,90 +158,76 @@ class DashboardPage extends HookConsumerWidget {
                           children: [
                             if (selectedStatusFilter.value != null)
                               InputChip(
-                                label: Text(
-                                    'Filter: ${selectedStatusFilter.value}'),
-                                onDeleted: () =>
-                                    selectedStatusFilter.value = null,
+                                label: Text('Filter: ${selectedStatusFilter.value}'),
+                                onDeleted: () => selectedStatusFilter.value = null,
                                 deleteIcon: const Icon(Icons.close, size: 18),
-                                backgroundColor: Theme.of(context)
-                                    .primaryColor
-                                    .withValues(alpha: 0.1),
-                                labelStyle: TextStyle(
-                                    color: Theme.of(context).primaryColor,
-                                    fontWeight: FontWeight.bold),
+                                backgroundColor: _kSidebarBlue.withOpacity(0.1),
+                                labelStyle: const TextStyle(
+                                    color: _kSidebarBlue, fontWeight: FontWeight.bold),
                               ),
                             if (dashboardDateRange != null)
                               InputChip(
                                 label: Text(
-                                  'Period: ${DateFormat('MMM d').format(dashboardDateRange.start)} - ${DateFormat('MMM d').format(dashboardDateRange.end)}',
+                                  'Period: ${DateFormat('MMM d').format(dashboardDateRange.start)} – ${DateFormat('MMM d').format(dashboardDateRange.end)}',
                                 ),
-                                onDeleted: () => ref
-                                    .read(dashboardDateRangeProvider.notifier)
-                                    .state = null,
+                                onDeleted: () =>
+                                    ref.read(dashboardDateRangeProvider.notifier).state = null,
                                 deleteIcon: const Icon(Icons.close, size: 18),
-                                backgroundColor: Colors.amber.withValues(alpha: 0.1),
+                                backgroundColor: Colors.amber.withOpacity(0.1),
                                 labelStyle: const TextStyle(
-                                    color: Colors.orange,
-                                    fontWeight: FontWeight.bold),
+                                    color: Colors.orange, fontWeight: FontWeight.bold),
                               ),
                           ],
                         ),
                       ),
 
-                    // 3. Overview Stats
-                    ProjectOverviewStats(
-                      projects: statsProjects,
-                    ),
+                    // ── Overview Stat Cards ────────────────────────────────
+                    ProjectOverviewStats(projects: statsProjects),
 
                     const SizedBox(height: 24),
 
-                    // 6. Analytics Row - Expanded (Full Width)
+                    // ── Work Statistics Chart ──────────────────────────────
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final isNarrow = constraints.maxWidth < 700;
-
                         return SizedBox(
                           height: isNarrow ? null : 440,
                           width: double.infinity,
-                          child: Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(
-                                color: isDark ? Colors.white10 : Colors.grey.shade100,
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(isNarrow ? 16.0 : 20.0),
-                              child: WorkStatisticsChart(
-                                selectedStatus: selectedStatusFilter.value,
-                                onStatusSelected: (status) {
-                                  selectedStatusFilter.value = status;
-                                },
-                                onNavigateToProject: (_) {
-                                  context.navigateTo(const ProjectPlanRoute());
-                                },
-                              ),
+                          child: _SectionCard(
+                            bg: isDark ? _C.workStatDark : _C.workStatLight,
+                            child: WorkStatisticsChart(
+                              selectedStatus: selectedStatusFilter.value,
+                              onStatusSelected: (status) {
+                                selectedStatusFilter.value = status;
+                              },
+                              onNavigateToProject: (_) {
+                                context.navigateTo(const ProjectPlanRoute());
+                              },
                             ),
                           ),
                         );
                       },
                     ),
 
-                    const SizedBox(height: 24),
-                    
-                    // NEW: Activity Rings Execution Flow Segment
-                    const DailyExecutionRingsCard(),
+                    const SizedBox(height: 20),
 
-                    const SizedBox(height: 24),
-
-                    // 7. Project Working Report
-                    ProjectWorkingReport(
-                      filter: selectedProjectType.value,
+                    // ── Daily Execution Rings ──────────────────────────────
+                    _SectionCard(
+                      bg: isDark ? _C.ringsDark : _C.ringsLight,
+                      child: const DailyExecutionRingsCard(),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+
+                    // ── Project Working Report ─────────────────────────────
+                    _SectionCard(
+                      bg: isDark ? _C.reportDark : _C.reportLight,
+                      child: ProjectWorkingReport(
+                        filter: selectedProjectType.value,
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
                   ],
                 ),
               );
@@ -244,15 +240,8 @@ class DashboardPage extends HookConsumerWidget {
                     height: 120,
                     width: 200,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? _C.workStatDark : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
@@ -270,7 +259,7 @@ class DashboardPage extends HookConsumerWidget {
                   Text(
                     'Loading Dashboard...',
                     style: TextStyle(
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
+                      color: isDark ? Colors.white70 : _kSidebarBlue,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.5,
                     ),
@@ -287,31 +276,27 @@ class DashboardPage extends HookConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(is401Error ? Icons.lock_outline : Icons.error_outline,
-                        size: 64,
-                        color: is401Error
-                            ? Colors.orange.shade300
-                            : Colors.red.shade300),
+                    Icon(
+                      is401Error ? Icons.lock_outline : Icons.error_outline,
+                      size: 64,
+                      color: is401Error ? Colors.orange.shade300 : Colors.red.shade300,
+                    ),
                     const SizedBox(height: 16),
                     Text(
-                      is401Error
-                          ? 'Authentication Required'
-                          : 'Error loading dashboard',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
+                      is401Error ? 'Authentication Required' : 'Error loading dashboard',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Text(
                         is401Error
-                            ? 'Your session has expired or is invalid. Please log in again from the HRM portal.'
+                            ? 'Your session has expired. Please log in again from the HRM portal.'
                             : '$err',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                            color: is401Error
-                                ? Colors.orange.shade300
-                                : Colors.red.shade300),
+                          color: is401Error ? Colors.orange.shade300 : Colors.red.shade300,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -340,6 +325,8 @@ class DashboardPage extends HookConsumerWidget {
             },
           ),
         ),
+
+        // ── Notification Popup ─────────────────────────────────────────────
         if (notifications.isNotEmpty && !notifications.last.isRead) ...[
           NotificationPopupOverlay(
             notification: notifications.last,
@@ -353,6 +340,31 @@ class DashboardPage extends HookConsumerWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Section Card — clean background, no borders, gentle rounding
+// ─────────────────────────────────────────────────────────────────────────────
+class _SectionCard extends StatelessWidget {
+  final Widget child;
+  final Color bg;
+
+  const _SectionCard({required this.child, required this.bg});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: child,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Date Range Filter Button
+// ─────────────────────────────────────────────────────────────────────────────
 class _DateRangeFilterButton extends StatelessWidget {
   final DateTimeRange? selectedRange;
   final VoidCallback onTap;
@@ -365,43 +377,49 @@ class _DateRangeFilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasRange = selectedRange != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: hasRange
-              ? Colors.amber.withValues(alpha: 0.1)
-              : Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF374151)
-                  : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(8),
-          border: hasRange ? Border.all(color: Colors.orange.shade300) : null,
+          gradient: hasRange
+              ? const LinearGradient(
+                  colors: [_kSidebarBlue, Color(0xFF1A6CB8)],
+                )
+              : null,
+          color: hasRange ? null : (isDark ? _C.controlDark : _C.controlLight),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.calendar_month_outlined,
-              size: 18,
-              color: hasRange ? Colors.orange : Colors.grey.shade600,
+              size: 16,
+              color: hasRange
+                  ? Colors.white
+                  : (isDark ? Colors.white60 : const Color(0xFF05263E)),
             ),
             const SizedBox(width: 8),
             Text(
               hasRange
-                  ? '${DateFormat('MMM d').format(selectedRange!.start)} - ${DateFormat('MMM d').format(selectedRange!.end)}'
+                  ? '${DateFormat('MMM d').format(selectedRange!.start)} – ${DateFormat('MMM d').format(selectedRange!.end)}'
                   : 'Overall data',
-              style: TextStyle(
-                color: hasRange ? Colors.orange : Colors.grey.shade700,
-                fontWeight: hasRange ? FontWeight.bold : FontWeight.normal,
-                fontSize: 13,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: hasRange
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : const Color(0xFF05263E)),
               ),
             ),
             if (hasRange) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.arrow_drop_down, size: 18, color: Colors.orange),
+              const Icon(Icons.arrow_drop_down, size: 16, color: Colors.white),
             ],
           ],
         ),
@@ -410,6 +428,9 @@ class _DateRangeFilterButton extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Project Type Toggle Button
+// ─────────────────────────────────────────────────────────────────────────────
 class _ProjectTypeButton extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -426,10 +447,7 @@ class _ProjectTypeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final activeBgColor = const Color(0xFF0F518B);
-    final activeTextColor = Colors.white;
-    final inactiveTextColor = isDark ? Colors.grey.shade400 : const Color(0xFF6B7280);
+    final inactiveColor = isDark ? Colors.white60 : const Color(0xFF05263E);
 
     return GestureDetector(
       onTap: onTap,
@@ -437,26 +455,30 @@ class _ProjectTypeButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? activeBgColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [_kSidebarBlue, Color(0xFF1A6CB8)],
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 16,
-              color: isSelected ? activeTextColor : inactiveTextColor,
+              size: 15,
+              color: isSelected ? Colors.white : inactiveColor,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 7),
             Text(
               label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? activeTextColor : inactiveTextColor,
-                letterSpacing: 0.3,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.white : inactiveColor,
+                letterSpacing: 0.2,
               ),
             ),
           ],
@@ -465,4 +487,3 @@ class _ProjectTypeButton extends StatelessWidget {
     );
   }
 }
-

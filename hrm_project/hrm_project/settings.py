@@ -205,7 +205,8 @@ EMAIL_USE_TLS = False
 
 
 # DAS_URL = 'https://das.meridahr.com/'  # Production
-DAS_URL = 'http://192.168.18.40:63105/'  # Localhost
+DAS_URL = 'http://localhost:63105/'  # Localhost
+# DAS_URL = 'http://192.168.18.40:63105/'  # IP
 
 # Simple JWT Configuration for SSO
 SIMPLE_JWT = {

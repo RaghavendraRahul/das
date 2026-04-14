@@ -9,7 +9,7 @@ import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
 // Colour palette shared across charts
 // ─────────────────────────────────────────────────────────────────────────────
 const _palette = [
-  [Color(0xFF0F518B), Color(0xFF1E88E5)], // Brand Blue
+  [Color(0xFF05263E), Color(0xFF1E88E5)], // Brand Blue
   [Color(0xFF2563EB), Color(0xFF60A5FA)], // Royal Blue
   [Color(0xFF3B82F6), Color(0xFF93C5FD)], // Sky Blue
   [Color(0xFF64748B), Color(0xFF94A3B8)], // Slate Blue
@@ -19,12 +19,12 @@ const _palette = [
 
 final List<BoxShadow> _premiumShadow = [
   BoxShadow(
-    color: Colors.black.withValues(alpha: 0.12),
+    color: Colors.black.withOpacity(0.12),
     blurRadius: 32,
     offset: const Offset(0, 16),
   ),
   BoxShadow(
-    color: Colors.black.withValues(alpha: 0.04),
+    color: Colors.black.withOpacity(0.04),
     blurRadius: 8,
     offset: const Offset(0, 2),
   ),
@@ -32,12 +32,12 @@ final List<BoxShadow> _premiumShadow = [
 
 final List<BoxShadow> _softShadow = [
   BoxShadow(
-    color: Colors.black.withValues(alpha: 0.04),
+    color: Colors.black.withOpacity(0.04),
     blurRadius: 10,
     offset: const Offset(0, 4),
   ),
   BoxShadow(
-    color: Colors.black.withValues(alpha: 0.02),
+    color: Colors.black.withOpacity(0.02),
     blurRadius: 4,
     offset: const Offset(0, 1),
   ),
@@ -190,8 +190,8 @@ class _Header extends ConsumerWidget {
               'Project Work Status',
               style: GoogleFonts.inter(
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : const Color(0xFF0F518B),
+                fontWeight: FontWeight.w800,
+                color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
                 letterSpacing: -0.2,
               ),
             ),
@@ -215,10 +215,10 @@ class _Header extends ConsumerWidget {
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1F2937) : Colors.white,
+                color: isDark ? const Color(0xFF0B1A2E) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isDark ? Colors.white10 : Colors.grey.shade200,
+                  color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
                 ),
               ),
               child: DropdownButtonHideUnderline(
@@ -228,16 +228,18 @@ class _Header extends ConsumerWidget {
                       : null,
                   hint: Text('Select User',
                       style: GoogleFonts.inter(
-                          fontSize: 11, fontWeight: FontWeight.w500)),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A))),
                   icon: Icon(Icons.keyboard_arrow_down_rounded,
-                      size: 16, color: Colors.grey.shade500),
+                      size: 16, color: isDark ? const Color(0xFF7EC8F4) : Colors.grey.shade500),
                   isDense: true,
                   dropdownColor:
-                      isDark ? const Color(0xFF1F2937) : Colors.white,
+                      isDark ? const Color(0xFF0B1A2E) : Colors.white,
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white : const Color(0xFF1F2937),
+                    color: isDark ? Colors.white : const Color(0xFF0D1B2A),
                   ),
                   items: users
                       .map((u) => DropdownMenuItem<int>(
@@ -372,19 +374,19 @@ class _StatCard extends HookWidget {
         transform: Matrix4.diagonal3Values(
             isHovered.value ? 1.02 : 1.0, isHovered.value ? 1.02 : 1.0, 1.0),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1F2937) : Colors.white,
+          color: isDark ? const Color(0xFF0B1A2E) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: isHovered.value ? _premiumShadow : [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: const Color(0xFF05263E).withOpacity(isDark ? 0.15 : 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(
             color: isHovered.value
-                ? color.withValues(alpha: 0.4)
-                : (isDark ? Colors.white10 : Colors.grey.shade100),
+                ? color.withOpacity(0.4)
+                : (isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0)),
             width: 1,
           ),
         ),
@@ -396,7 +398,7 @@ class _StatCard extends HookWidget {
               child: Icon(
                 icon,
                 size: 60,
-                color: color.withValues(alpha: 0.04),
+                color: color.withOpacity(0.04),
               ),
             ),
             Row(
@@ -405,7 +407,7 @@ class _StatCard extends HookWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
+                    color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, size: 16, color: color),
@@ -516,7 +518,7 @@ class _DonutSection extends StatelessWidget {
       _Slice(value: achieved, color: const Color(0xFF6366F1), label: 'Achieved'),
       _Slice(
         value: remaining,
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF3F4F6),
+        color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF3F4F6),
         label: 'Remaining',
       ),
     ];
@@ -532,8 +534,8 @@ class _DonutSection extends StatelessWidget {
                 'Work Distribution & Progress',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : const Color(0xFF0F518B),
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
                 ),
               ),
             ],
@@ -606,7 +608,7 @@ class _DonutSection extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Single donut chart with legend
 // ─────────────────────────────────────────────────────────────────────────────
-class _DonutChart extends StatelessWidget {
+class _DonutChart extends HookWidget {
   final String title;
   final String centerText;
   final String subLabel;
@@ -627,13 +629,15 @@ class _DonutChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hoveredIndex = useState<int>(-1);
+    
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937).withValues(alpha: 0.5) : Colors.grey.shade50.withValues(alpha: 0.5),
+        color: isDark ? Colors.white.withOpacity(0.03) : const Color(0xFFF5F8FC),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+          color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
         ),
       ),
       child: LayoutBuilder(builder: (context, constraints) {
@@ -654,7 +658,7 @@ class _DonutChart extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: accentColor.withValues(alpha: 0.4),
+                        color: accentColor.withOpacity(0.4),
                         blurRadius: 4,
                       )
                     ],
@@ -666,7 +670,7 @@ class _DonutChart extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A),
                     letterSpacing: 1.5,
                   ),
                 ),
@@ -683,7 +687,7 @@ class _DonutChart extends StatelessWidget {
                     height: chartSize + (radius * 2.5),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isDark ? Colors.white.withValues(alpha: 0.01) : Colors.black.withValues(alpha: 0.01),
+                      color: isDark ? Colors.white.withOpacity(0.01) : Colors.black.withOpacity(0.01),
                     ),
                   ),
                   // Smarter Background Track
@@ -698,7 +702,7 @@ class _DonutChart extends StatelessWidget {
                           PieChartSectionData(
                             value: 1,
                             title: '',
-                            color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.01),
+                            color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.01),
                             radius: radius,
                           ),
                         ],
@@ -710,17 +714,29 @@ class _DonutChart extends StatelessWidget {
                     width: chartSize,
                     child: PieChart(
                       PieChartData(
+                        pieTouchData: PieTouchData(
+                          touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                            if (!event.isInterestedForInteractions ||
+                                pieTouchResponse == null ||
+                                pieTouchResponse.touchedSection == null) {
+                              hoveredIndex.value = -1;
+                              return;
+                            }
+                            hoveredIndex.value = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                          },
+                        ),
                         sectionsSpace: 4,
                         centerSpaceRadius: innerRadius,
                         startDegreeOffset: -90,
                         sections: hasData
                             ? slices.asMap().entries.map((e) {
                                 final s = e.value;
+                                final isHovered = e.key == hoveredIndex.value;
                                 final colors = _palette[e.key % _palette.length];
                                 return PieChartSectionData(
                                   value: s.value,
                                   title: '',
-                                  radius: radius,
+                                  radius: isHovered ? radius * 1.2 : radius,
                                   gradient: LinearGradient(
                                     colors: colors,
                                     begin: Alignment.topLeft,
@@ -737,7 +753,7 @@ class _DonutChart extends StatelessWidget {
                                   value: 100,
                                   title: '',
                                   color: isDark
-                                      ? Colors.white.withValues(alpha: 0.05)
+                                      ? Colors.white.withOpacity(0.05)
                                       : Colors.grey.shade100,
                                   radius: radius,
                                 ),
@@ -746,43 +762,92 @@ class _DonutChart extends StatelessWidget {
                     ),
                   ),
                   // Center Content Glass
-                  Container(
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     width: innerRadius * 1.8,
                     height: innerRadius * 1.8,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isDark ? Colors.black12 : Colors.white,
+                      border: hoveredIndex.value != -1 && hasData && hoveredIndex.value < slices.length
+                          ? Border.all(
+                              color: _palette[hoveredIndex.value % _palette.length][0].withOpacity(0.3),
+                              width: 2,
+                            )
+                          : null,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
+                          color: hoveredIndex.value != -1 && hasData && hoveredIndex.value < slices.length
+                              ? _palette[hoveredIndex.value % _palette.length][0].withOpacity(0.15)
+                              : Colors.black.withOpacity(0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
                       ],
                     ),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(12),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        FittedBox(
-                          child: Text(
-                            centerText,
-                            style: GoogleFonts.outfit(
-                              fontSize: chartSize / 5,
-                              fontWeight: FontWeight.w900,
-                              color: isDark ? Colors.white : const Color(0xFF111824),
-                              letterSpacing: -1,
+                        if (hoveredIndex.value != -1 && hasData && hoveredIndex.value < slices.length) ...[
+                          Flexible(
+                            flex: 2,
+                            child: Text(
+                              slices[hoveredIndex.value].label,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: chartSize / 15,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : const Color(0xFF0D1B2A),
+                                height: 1.1,
+                              ),
                             ),
                           ),
-                        ),
-                        Text(
-                          'TOTAL',
-                          style: GoogleFonts.inter(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.grey.shade500,
-                            letterSpacing: 1.0,
+                          const SizedBox(height: 4),
+                          Flexible(
+                            flex: 1,
+                            child: Text(
+                              '${slices[hoveredIndex.value].value.toStringAsFixed(1)}h',
+                              style: GoogleFonts.outfit(
+                                fontSize: chartSize / 6,
+                                fontWeight: FontWeight.w900,
+                                color: _palette[hoveredIndex.value % _palette.length][0],
+                                letterSpacing: -0.5,
+                              ),
+                            ),
                           ),
-                        ),
+                        ] else ...[
+                          Flexible(
+                            flex: 2,
+                            child: FittedBox(
+                              child: Text(
+                                centerText,
+                                style: GoogleFonts.outfit(
+                                  fontSize: chartSize / 5,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? Colors.white : const Color(0xFF0D1B2A),
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Flexible(
+                            flex: 1,
+                            child: Text(
+                              'TOTAL',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A),
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -793,10 +858,10 @@ class _DonutChart extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.08),
+                color: accentColor.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: accentColor.withValues(alpha: 0.1),
+                  color: accentColor.withOpacity(0.1),
                 ),
               ),
               child: Row(
@@ -851,7 +916,7 @@ class _ProjectPickerSheet extends HookWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withOpacity(0.2),
             blurRadius: 20,
             offset: const Offset(0, -5),
           )
@@ -957,7 +1022,7 @@ class _PickerTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.blue.withValues(alpha: 0.1),
+          color: Colors.blue.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 18, color: Colors.blue.shade600),
@@ -1074,7 +1139,7 @@ class _ShellBox extends StatelessWidget {
           child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50.withValues(alpha: 0.5),
+                color: Colors.grey.shade50.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: child)),

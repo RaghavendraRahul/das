@@ -30,9 +30,9 @@ class DashboardDayPlanner extends ConsumerWidget {
                   Text(
                     'Daily Planner',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                           color:
-                              isDark ? Colors.white : const Color(0xFF0F518B),
+                              isDark ? Colors.white : const Color(0xFF05263E),
                         ),
                   ),
                   Icon(
@@ -70,7 +70,9 @@ class DashboardDayPlanner extends ConsumerWidget {
                               Expanded(
                                 child: _DashboardQuadrantBox(
                                   title: 'Schedule',
-                                  color: Colors.blue,
+                                  color: isDark
+                                      ? Colors.blue.shade400
+                                      : const Color(0xFF05263E),
                                   items: items
                                       .where((i) => i.quadrant == 'q2')
                                       .toList(),
@@ -136,10 +138,10 @@ class _DashboardQuadrantBox extends StatelessWidget {
     return Container(
       height: 140, // Fixed height for square-ish look
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
+        color: color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withValues(alpha: 0.2),
+          color: color.withOpacity(0.2),
         ),
       ),
       padding: const EdgeInsets.all(12),
@@ -182,7 +184,7 @@ class _DashboardQuadrantBox extends StatelessWidget {
                         width: 6,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.5),
+                          color: color.withOpacity(0.5),
                           shape: BoxShape.circle,
                         ),
                       ),

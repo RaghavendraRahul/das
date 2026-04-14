@@ -25,22 +25,8 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
     ));
 
     return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.shade100,
-          width: 1.0,
-        ),
-        boxShadow: isDark 
-          ? [] 
-          : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 15,
-                offset: const Offset(0, 4),
-              )
-            ],
+      decoration: const BoxDecoration(
+        color: Colors.transparent, // Background managed by _SectionCard wrapper
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -53,8 +39,8 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                 'Daily Execution Analytics',
                 style: GoogleFonts.inter(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : const Color(0xFF0F518B),
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
                   letterSpacing: -0.2,
                 ),
               ),
@@ -87,12 +73,12 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                   decoration: BoxDecoration(
                     color: isToday 
                         ? Colors.transparent 
-                        : Colors.blue.withValues(alpha: 0.1),
+                        : Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isToday 
                           ? (isDark ? Colors.white12 : Colors.grey.shade200)
-                          : Colors.blue.withValues(alpha: 0.3),
+                          : Colors.blue.withOpacity(0.3),
                     ),
                   ),
                   child: Row(
@@ -213,7 +199,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                       message: 'Completed (Completion Rate)',
                       child: _AnimatedRing(
                         radius: 170,
-                        color: const Color(0xFF0F518B), // Brand Blue
+                        color: const Color(0xFF05263E), // Brand Blue
                         value: completionRatio,
                         strokeWidth: 15,
                       ),
@@ -253,7 +239,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _LegendRow(
-                      color: const Color(0xFF0F518B),
+                      color: const Color(0xFF05263E),
                       title: 'Completed',
                       subtitle: 'vs Planned Daily Goal',
                       value: '$completedTasks / $plannedTasks',
@@ -286,7 +272,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF374151) : Colors.grey.shade50,
+                        color: isDark ? const Color(0xFF0F1E35) : const Color(0xFFF0F5FB),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isDark ? Colors.white10 : Colors.grey.shade200,
@@ -310,7 +296,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white70 : Colors.black87,
+                              color: isDark ? Colors.white : const Color(0xFF0D1B2A),
                             ),
                           )
                         ],
@@ -327,7 +313,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
             flex: 5,
             child: Container(
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
+                color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.02),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isDark ? Colors.white10 : Colors.black12,
@@ -434,7 +420,7 @@ class _AnimatedRing extends StatelessWidget {
             CircularProgressIndicator(
               value: 1.0,
               strokeWidth: strokeWidth,
-              color: isDark ? color.withValues(alpha: 0.15) : color.withValues(alpha: 0.1),
+              color: isDark ? color.withOpacity(0.15) : color.withOpacity(0.1),
             ),
             // Foreground animated fill
             TweenAnimationBuilder<double>(
@@ -485,11 +471,11 @@ class _LegendRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected 
-              ? color.withValues(alpha: isDark ? 0.2 : 0.1) 
+              ? color.withOpacity(isDark ? 0.2 : 0.1) 
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? color.withValues(alpha: 0.5) : Colors.transparent,
+            color: isSelected ? color.withOpacity(0.5) : Colors.transparent,
           ),
         ),
         child: Row(
@@ -504,7 +490,7 @@ class _LegendRow extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: color.withValues(alpha: 0.4),
+                    color: color.withOpacity(0.4),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   )
@@ -523,8 +509,8 @@ class _LegendRow extends StatelessWidget {
                         title,
                         style: GoogleFonts.inter(
                           fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : const Color(0xFF0F518B),
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF0D1B2A),
                         ),
                       ),
                       Text(
@@ -532,7 +518,7 @@ class _LegendRow extends StatelessWidget {
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                          color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF374151),
                         ),
                       ),
                     ],
@@ -542,7 +528,7 @@ class _LegendRow extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+                      color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF6B7280),
                     ),
                   ),
                 ],

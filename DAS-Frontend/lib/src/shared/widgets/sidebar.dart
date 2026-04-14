@@ -34,38 +34,40 @@ class Sidebar extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isCollapsed = ref.watch(sidebarCollapsedProvider);
+    // FIXED MINIMIZED: Hardcode isCollapsed to true
+    const isCollapsed = true; 
+    const isEffectivelyExpanded = false;
 
     // Parse role from string to enum for logic
     final userRole = UserRole.fromString(currentUser.role);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Themed Sidebar Color: #0F518B
-    const sidebarThemeColor = Color(0xFF0F518B);
+    // Themed Sidebar Color: #05263E
+    const sidebarThemeColor = Color(0xFF05263E);
 
     final borderColor =
-        isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.2);
+        isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.2);
 
     // Backgrounds - Consistent blue theme as requested
-    final sidebarBg = sidebarThemeColor;
+    const sidebarBg = sidebarThemeColor;
     final spotlightGradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
         sidebarThemeColor,
-        sidebarThemeColor.withValues(alpha: 0.8),
+        sidebarThemeColor.withOpacity(0.8),
       ],
     );
 
-    final textColor = Colors.white;
-    final mutedColor = Colors.white.withValues(alpha: 0.7);
-    final sectionColor = Colors.white.withValues(alpha: 0.5);
+    const textColor = Colors.white;
+    final mutedColor = Colors.white.withOpacity(0.7);
+    final sectionColor = Colors.white.withOpacity(0.5);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOutExpo,
-      width: isCollapsed ? 80 : 256,
+      width: 80, // FIXED MINIMIZED: Always 80px
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: sidebarBg,
@@ -74,25 +76,18 @@ class Sidebar extends HookConsumerWidget {
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(2, 0),
             ),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // Use constraints to determine if we have enough space to show expanded content
-          // Threshold of 200 seems safe (collapsed is 80, expanded is 256)
-          // This prevents overflow errors during animation
-          final isEffectivelyExpanded = constraints.maxWidth > 200;
-
-          return Column(
-            children: [
+      child: Column(
+        children: [
               // Logo Area
               Container(
                 height: 88,
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                     horizontal: isEffectivelyExpanded ? 16 : 8),
                 decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: borderColor)),
@@ -110,9 +105,9 @@ class Sidebar extends HookConsumerWidget {
                         onViewModeChange(ViewMode.dashboard);
                       },
                       borderRadius: BorderRadius.circular(8),
-                      hoverColor: Colors.white.withValues(alpha: 0.05),
+                      hoverColor: Colors.white.withOpacity(0.05),
                       child: Padding(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                             horizontal: isEffectivelyExpanded ? 8.0 : 0.0,
                             vertical: 8.0),
                         child: Row(
@@ -139,7 +134,7 @@ class Sidebar extends HookConsumerWidget {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: isDark ? Colors.blue.withValues(alpha: 0.4) : Colors.blue.withValues(alpha: 0.2),
+                                    color: isDark ? Colors.blue.withOpacity(0.4) : Colors.blue.withOpacity(0.2),
                                     blurRadius: 12,
                                     spreadRadius: -1,
                                   ),
@@ -157,7 +152,7 @@ class Sidebar extends HookConsumerWidget {
                                   child: ClipOval(
                                     child: Container(
                                       color: Colors.white,
-                                      padding: EdgeInsets.all(isEffectivelyExpanded
+                                      padding: const EdgeInsets.all(isEffectivelyExpanded
                                           ? 12.0
                                           : 4.0), // Smaller padding when collapsed
                                       child: Center(
@@ -175,7 +170,7 @@ class Sidebar extends HookConsumerWidget {
                               ),
                             ).animate(onPlay: (c) => c.repeat()).shimmer(
                                   duration: 4.seconds,
-                                  color: Colors.white.withValues(alpha: 0.2),
+                                  color: Colors.white.withOpacity(0.2),
                                 ),
                             if (isEffectivelyExpanded) ...[
                               const SizedBox(width: 14),
@@ -193,7 +188,7 @@ class Sidebar extends HookConsumerWidget {
                                       shadows: [
                                         Shadow(
                                           color: Colors.blue.shade400
-                                              .withValues(alpha: 0.8),
+                                              .withOpacity(0.8),
                                           blurRadius: 10,
                                         ),
                                         const Shadow(
@@ -205,7 +200,7 @@ class Sidebar extends HookConsumerWidget {
                                     ),
                                   ).animate(onPlay: (c) => c.repeat()).shimmer(
                                       duration: 2.seconds,
-                                      color: isDark ? Colors.blue.shade100 : Colors.blue.shade600.withValues(alpha: 0.3)),
+                                      color: isDark ? Colors.blue.shade100 : Colors.blue.shade600.withOpacity(0.3)),
                                 ],
                               ),
                             ],
@@ -228,18 +223,7 @@ class Sidebar extends HookConsumerWidget {
                 ),
               ),
 
-              // Toggle button if collapsed
-              if (!isEffectivelyExpanded)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: IconButton(
-                    icon: const Icon(Icons.chevron_right, size: 20),
-                    onPressed: () => ref
-                        .read(sidebarCollapsedProvider.notifier)
-                        .state = false,
-                    color: mutedColor,
-                  ),
-                ),
+              // Toggle button removed (FIXED MINIMIZED)
 
               // Nav Links
               Expanded(
@@ -291,12 +275,12 @@ class Sidebar extends HookConsumerWidget {
                             },
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              padding: EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                 vertical: 12,
                                 horizontal: !isEffectivelyExpanded ? 0 : 16,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
+                                color: Colors.white.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(color: borderColor),
                               ),
@@ -426,9 +410,9 @@ class Sidebar extends HookConsumerWidget {
 
               // User Profile
               Container(
-                padding: EdgeInsets.all(isEffectivelyExpanded ? 16 : 12),
+                padding: const EdgeInsets.all(isEffectivelyExpanded ? 16 : 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Colors.white.withOpacity(0.05),
                   border: Border(top: BorderSide(color: borderColor)),
                 ),
                 child: Row(
@@ -463,7 +447,7 @@ class Sidebar extends HookConsumerWidget {
                           children: [
                             Text(
                               currentUser.name,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                                 color: textColor,
@@ -472,58 +456,16 @@ class Sidebar extends HookConsumerWidget {
                               maxLines: 1,
                               softWrap: false,
                             ),
-                            Row(
-                              children: [
-                                Text(
-                                  userRole.label,
-                                  style: TextStyle(
-                                    color: mutedColor,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.clip,
-                                  maxLines: 1,
-                                  softWrap: false,
-                                ),
-                                // Mandatory Project Lead Badge
-                                Consumer(
-                                  builder: (context, ref, child) {
-                                    final currentProjectAsync =
-                                        ref.watch(currentProjectProvider);
-                                    return currentProjectAsync.when(
-                                      data: (p) {
-                                        if (p == null) return const SizedBox.shrink();
-                                        final isLead = p.projectLeadId?.toString() ==
-                                            currentUser.id.toString();
-                                        if (!isLead) return const SizedBox.shrink();
-                                        return Container(
-                                          margin: const EdgeInsets.only(left: 6),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 4, vertical: 1),
-                                          decoration: BoxDecoration(
-                                            color: Colors.amber.withValues(alpha: 0.2),
-                                            borderRadius: BorderRadius.circular(4),
-                                            border: Border.all(
-                                                color: Colors.amber.withValues(alpha: 0.5),
-                                                width: 0.5),
-                                          ),
-                                          child: const Text(
-                                            'PL',
-                                            style: TextStyle(
-                                              color: Colors.amber,
-                                              fontSize: 8,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      loading: () => const SizedBox.shrink(),
-                                      error: (_, __) => const SizedBox.shrink(),
-                                    );
-                                  },
-                                ),
-                              ],
+                            Text(
+                              userRole.label,
+                              style: TextStyle(
+                                color: mutedColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.clip,
+                              maxLines: 1,
+                              softWrap: false,
                             ),
                           ],
                         ),
@@ -535,7 +477,7 @@ class Sidebar extends HookConsumerWidget {
 
               // Logout Button
               Container(
-                padding: EdgeInsets.fromLTRB(isEffectivelyExpanded ? 16 : 12, 0,
+                padding: const EdgeInsets.fromLTRB(isEffectivelyExpanded ? 16 : 12, 0,
                     isEffectivelyExpanded ? 16 : 12, 16),
                 child: Tooltip(
                   message: !isEffectivelyExpanded ? 'Logout' : '',
@@ -597,15 +539,15 @@ class Sidebar extends HookConsumerWidget {
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         vertical: 14,
                         horizontal: !isEffectivelyExpanded ? 0 : 16,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: Colors.red.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.red.withValues(alpha: 0.1),
+                          color: Colors.red.withOpacity(0.1),
                         ),
                       ),
                       child: Row(
@@ -621,7 +563,7 @@ class Sidebar extends HookConsumerWidget {
                               .animate(onPlay: (c) => c.repeat(reverse: true))
                               .shimmer(
                                   duration: 3.seconds,
-                                  color: Colors.white.withValues(alpha: 0.3)),
+                                  color: Colors.white.withOpacity(0.3)),
                           if (isEffectivelyExpanded) ...[
                             const SizedBox(width: 12),
                             Expanded(
@@ -646,9 +588,7 @@ class Sidebar extends HookConsumerWidget {
                 ),
               ),
             ],
-          );
-        },
-      ),
+          ),
     );
   }
 
@@ -659,13 +599,13 @@ class Sidebar extends HookConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Selected item background: White-alpha for glass effect on the blue theme
-    final selectedBg = Colors.white.withValues(alpha: 0.15);
+    final selectedBg = Colors.white.withOpacity(0.15);
 
     final iconColor =
-        isSelected ? Colors.white : Colors.white.withValues(alpha: 0.5);
+        isSelected ? Colors.white : Colors.white.withOpacity(0.5);
 
     final labelColor =
-        isSelected ? Colors.white : Colors.white.withValues(alpha: 0.6);
+        isSelected ? Colors.white : Colors.white.withOpacity(0.6);
 
     return Tooltip(
       message:
@@ -687,14 +627,14 @@ class Sidebar extends HookConsumerWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected && isDark
-                  ? Colors.white.withValues(alpha: 0.1)
+                  ? Colors.white.withOpacity(0.1)
                   : Colors.transparent,
               width: 1,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withOpacity(0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     )
@@ -717,7 +657,7 @@ class Sidebar extends HookConsumerWidget {
                       borderRadius: BorderRadius.circular(4),
                       boxShadow: isDark ? [
                         BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: Colors.white.withOpacity(0.8),
                           blurRadius: 10,
                           spreadRadius: 2,
                         ),
@@ -744,7 +684,7 @@ class Sidebar extends HookConsumerWidget {
                           .shimmer(
                               duration: 1.seconds,
                               color:
-                                  Colors.blue.shade200.withValues(alpha: 0.5)),
+                                  Colors.blue.shade200.withOpacity(0.5)),
                       if (badge > 0 && !isEffectivelyExpanded)
                         Positioned(
                           right: -4,
@@ -791,7 +731,7 @@ class Sidebar extends HookConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(

@@ -477,7 +477,7 @@ class _QuadrantCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: isSelected
-                    ? (textColor?.withValues(alpha: 0.8) ??
+                    ? (textColor?.withOpacity(0.8) ??
                         Colors.grey.shade700)
                     : Colors.grey.shade500,
               ),

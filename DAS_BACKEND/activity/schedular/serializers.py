@@ -148,6 +148,12 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Projects
         fields = '__all__'
 
+    def to_internal_value(self, data):
+        # Handle field aliases from frontend
+        if 'deadline' in data and 'due_date' not in data:
+            data['due_date'] = data.pop('deadline')
+        return super().to_internal_value(data)
+
     def get_project_assignees(self, obj):
         # Gather all related users at the project level
         users = set(obj.assignees.all())
@@ -182,16 +188,40 @@ class ApprovalResponseSerializer(serializers.ModelSerializer):
         model = ApprovalResponse
         fields = '__all__'
         read_only_fields = ('reviewed_by', 'reviewed_at')
+
+    def validate(self, data):
+        if data.get('action') == 'REJECTED' and not data.get('rejection_reason'):
+            raise serializers.ValidationError({"rejection_reason": "A reason is required when rejecting a request."})
+        return data
 class TaskSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source='project.name', read_only=True)
     assignees_list = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
     subtasks = serializers.SerializerMethodField()
     
+    assignees = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False
+    )
+    milestones = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True, 
+        required=False
+    )
+    
     class Meta:
         model = Task
         fields = '__all__'
         read_only_fields = ('created_at',)
+
+    def to_internal_value(self, data):
+        # Handle field aliases from frontend
+        if 'name' in data and 'title' not in data:
+            data['title'] = data.pop('name')
+        if 'end_date' in data and 'due_date' not in data:
+            data['due_date'] = data.pop('end_date')
+        return super().to_internal_value(data)
     
     def get_assignees_list(self, obj):
         assignees = TaskAssignee.objects.filter(task=obj)
@@ -204,6 +234,42 @@ class TaskSerializer(serializers.ModelSerializer):
         from .serializers import SubTaskSerializer
         subtasks = obj.subtasks.all()
         return SubTaskSerializer(subtasks, many=True).data
+
+    def update(self, instance, validated_data):
+        assignees_data = validated_data.pop('assignees', None)
+        milestones_data = validated_data.pop('milestones', None)
+        
+        # Standard update
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        try:
+            instance.save()
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
+        
+        # Update assignees if provided
+        if assignees_data is not None:
+            TaskAssignee.objects.filter(task=instance).delete()
+            for user_id in assignees_data:
+                try:
+                    user = User.objects.get(id=user_id)
+                    TaskAssignee.objects.create(task=instance, user=user, role='DEV')
+                except User.DoesNotExist:
+                    continue
+                    
+        # Update milestones if provided
+        if milestones_data is not None:
+            SubTask.objects.filter(task=instance).delete()
+            for milestone in milestones_data:
+                if 'title' in milestone:
+                    SubTask.objects.create(
+                        task=instance,
+                        title=milestone['title'],
+                        progress_weight=milestone.get('progress_weight', 25),
+                        due_date=instance.due_date
+                    )
+                    
+        return instance
 
 class TaskAssigneeSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
@@ -289,6 +355,9 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     
     def get_overall_progress(self, obj):
         """Calculate overall project progress based on all tasks"""
+        if obj.approval_status == 'pending_completion':
+            return 100
+            
         tasks = obj.tasks.all()
         if not tasks.exists():
             return 0
@@ -582,9 +651,17 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'priority', 'start_date', 'due_date', 
+            'title', 'priority', 'start_date', 'due_date', 'planned_hours',
             'github_link', 'figma_link', 'assignees', 'milestones'
         ]
+
+    def to_internal_value(self, data):
+        # Handle field aliases from frontend
+        if 'name' in data and 'title' not in data:
+            data['title'] = data.pop('name')
+        if 'end_date' in data and 'due_date' not in data:
+            data['due_date'] = data.pop('end_date')
+        return super().to_internal_value(data)
     
     def create(self, validated_data):
         assignees_data = validated_data.pop('assignees', [])
@@ -634,7 +711,7 @@ class RecurringTaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'priority', 'start_date', 'next_occurrence', 
+            'title', 'priority', 'start_date', 'next_occurrence', 'planned_hours',
             'recurrence_pattern', 'assignees', 'milestones'
         ]
     
@@ -680,7 +757,7 @@ class RoutineTaskCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Task
-        fields = ['title', 'priority', 'start_date', 'due_date', 'assignees']
+        fields = ['title', 'priority', 'start_date', 'due_date', 'planned_hours', 'assignees']
     
     def create(self, validated_data):
         assignees_data = validated_data.pop('assignees', [])

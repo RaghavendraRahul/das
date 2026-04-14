@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (ProjectWorkingHoursViewSet, TeamActivityStatusViewSet, SyncHRMEmployeesViewSet,
                     CatalogProjectViewSet, CatalogTaskViewSet, ProjectCompletionLineChartViewSet, 
                     TaskCompletionLineChartViewSet, HoursCompletionLineChartViewSet, ProjectAnalyticsViewSet)
@@ -70,6 +71,7 @@ router.register(r'project-analytics', ProjectAnalyticsViewSet, basename='project
 urlpatterns = [
     # SSO Routes
     path('sso-login/', SSOLoginView.as_view(), name='sso-login'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('inactive-user/', InactiveUserView.as_view(), name='inactive-user'),
     
     # Performance & Analytics APIs

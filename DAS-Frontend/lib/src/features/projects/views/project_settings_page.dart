@@ -7,7 +7,6 @@ import 'package:project_pm/src/core/database/database.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
 
-@RoutePage()
 class ProjectSettingsPage extends HookConsumerWidget {
   const ProjectSettingsPage({super.key});
 
@@ -39,23 +38,44 @@ class _SettingsView extends HookConsumerWidget {
     final nameController = useTextEditingController(text: project.project.name);
     final contextController =
         useTextEditingController(text: project.project.context);
-    final status = useState(project.project.status);
+    final status = useState<String>(project.project.status.toLowerCase());
+    final isLoading = useState(false);
 
     // Derived state for dirty check could be added here
 
     Future<void> save() async {
-      final updatedProject = ProjectsCompanion(
-        id: drift.Value(project.project.id),
-        name: drift.Value(nameController.text),
-        context: drift.Value(contextController.text),
-        status: drift.Value(status.value),
-      );
+      isLoading.value = true;
+      try {
+        final updatedProject = ProjectsCompanion(
+          id: drift.Value(project.project.id),
+          name: drift.Value(nameController.text),
+          context: drift.Value(contextController.text),
+          status: drift.Value(status.value),
+        );
 
-      await ref.read(projectRepositoryProvider).updateProject(updatedProject);
+        await ref.read(projectRepositoryProvider).updateProject(updatedProject);
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Project settings saved")));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Project settings updated successfully!"),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to update project: $e"),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        isLoading.value = false;
       }
     }
 
@@ -174,9 +194,11 @@ class _SettingsView extends HookConsumerWidget {
           Row(
             children: [
               FilledButton.icon(
-                onPressed: save,
-                icon: const Icon(Icons.save),
-                label: const Text("Save Changes"),
+                onPressed: isLoading.value ? null : save,
+                icon: isLoading.value 
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.save),
+                label: Text(isLoading.value ? "Saving..." : "Save Changes"),
               ),
               const SizedBox(width: 16),
               OutlinedButton(
@@ -217,7 +239,7 @@ class _SettingsView extends HookConsumerWidget {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: isLoading.value ? null : () {
                     // Archive logic
                     status.value = 'archived';
                     save();
@@ -226,7 +248,7 @@ class _SettingsView extends HookConsumerWidget {
                       backgroundColor: Colors.red.shade100,
                       foregroundColor: Colors.red.shade900,
                       elevation: 0),
-                  child: const Text("Archive"),
+                  child: Text(isLoading.value && status.value == 'archived' ? "Archiving..." : "Archive"),
                 )
               ],
             ),

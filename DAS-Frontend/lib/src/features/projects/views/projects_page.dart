@@ -65,16 +65,26 @@ class ProjectsPage extends HookConsumerWidget {
             : selectedProjectType.value,
         search: searchQuery.value));
 
+    // Watch page-1 counts for BOTH tabs in parallel — no extra API calls,
+    // Riverpod caches these; they resolve from the same provider family.
+    final myCountAsync = ref.watch(
+        projectsPageProjectsProvider(page: 1, filter: 'my', search: ''));
+    final teamCountAsync = ref.watch(
+        projectsPageProjectsProvider(page: 1, filter: null, search: ''));
+
+    final myCount = myCountAsync.valueOrNull?.count;
+    final teamCount = teamCountAsync.valueOrNull?.count;
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF111827) : Colors.grey.shade50,
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 20, 28, 0),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Hero toolbar — filters, search, and primary action in one row
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1F2937) : Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -112,7 +122,11 @@ class ProjectsPage extends HookConsumerWidget {
                           label: 'My Projects',
                           icon: Icons.person_outline,
                           isSelected: selectedProjectType.value == 'my',
-                          onTap: () => selectedProjectType.value = 'my',
+                          count: myCount,
+                          onTap: () {
+                            selectedProjectType.value = 'my';
+                            currentPage.value = 1;
+                          },
                           isDark: isDark,
                         ),
                         if (!isEmployee) ...[
@@ -126,7 +140,11 @@ class ProjectsPage extends HookConsumerWidget {
                             label: 'Team Projects',
                             icon: Icons.group_outlined,
                             isSelected: selectedProjectType.value == 'team',
-                            onTap: () => selectedProjectType.value = 'team',
+                            count: teamCount,
+                            onTap: () {
+                              selectedProjectType.value = 'team';
+                              currentPage.value = 1;
+                            },
                             isDark: isDark,
                           ),
                         ],
@@ -157,6 +175,8 @@ class ProjectsPage extends HookConsumerWidget {
                                         color: isDark
                                             ? Colors.grey.shade400
                                             : Colors.grey.shade600),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
                                     onPressed: () {
                                       searchController.clear();
                                     },
@@ -180,7 +200,8 @@ class ProjectsPage extends HookConsumerWidget {
                                   : Colors.grey.shade300),
                         ),
                         contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 16),
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        isDense: true,
                       ),
                     ),
                   ),
@@ -200,23 +221,25 @@ class ProjectsPage extends HookConsumerWidget {
                               : selectedProjectType.value,
                           search: searchQuery.value));
                     },
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('New Project'),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('New Project',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 14),
-                      backgroundColor: const Color(0xFF4F46E5),
+                          horizontal: 16, vertical: 10),
+                      backgroundColor: const Color(0xFF05263E),
                       foregroundColor: Colors.white,
-                      elevation: 3,
-                      shadowColor: const Color(0xFF4F46E5).withAlpha(100),
+                      elevation: 2,
+                      shadowColor: const Color(0xFF05263E).withAlpha(100),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                 ],
-              ), // Row
-            ), // Container
+              ),
+            ),
             const SizedBox(height: 20),
 
             // Grid Content
@@ -225,16 +248,34 @@ class ProjectsPage extends HookConsumerWidget {
                 data: (paginatedProjects) {
                   final projects = paginatedProjects.results;
                   final totalCount = paginatedProjects.count;
-                  final totalPages =
-                      (totalCount / 8).ceil(); // Assuming page size is 8
+                  final totalPages = (totalCount / 8).ceil();
 
                   if (projects.isEmpty) {
                     return Center(
-                      child: Text(
-                        "No projects found",
-                        style: TextStyle(
-                          color: isDark ? Colors.grey : Colors.grey.shade600,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.folder_open_rounded,
+                              size: 64,
+                              color: isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade300),
+                          const SizedBox(height: 16),
+                          Text(
+                            searchQuery.value.isNotEmpty
+                                ? 'No results for "${searchQuery.value}"'
+                                : selectedProjectType.value == 'my'
+                                    ? 'You have no projects yet'
+                                    : 'No team projects found',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? Colors.grey.shade500
+                                  : Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }
@@ -245,10 +286,10 @@ class ProjectsPage extends HookConsumerWidget {
                         child: GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 380,
-                            mainAxisSpacing: 20,
-                            crossAxisSpacing: 20,
-                            childAspectRatio: 0.85,
+                            maxCrossAxisExtent: 360,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            childAspectRatio: 1.05,
                           ),
                           itemCount: projects.length,
                           itemBuilder: (context, index) {
@@ -270,7 +311,6 @@ class ProjectsPage extends HookConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // Pagination Controls
                       if (totalPages > 1)
                         PaginationControls(
                           currentPage: currentPage.value,
@@ -286,7 +326,8 @@ class ProjectsPage extends HookConsumerWidget {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
                 error: (err, stack) => Center(child: Text('Error: $err')),
               ),
             ),
@@ -301,6 +342,7 @@ class _ProjectTypeButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool isSelected;
+  final int? count;
   final VoidCallback onTap;
   final bool isDark;
 
@@ -310,42 +352,76 @@ class _ProjectTypeButton extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     required this.isDark,
+    this.count,
   });
 
   @override
   Widget build(BuildContext context) {
+    const activeColor = Color(0xFF05263E);
+    final textColor = isSelected
+        ? Colors.white
+        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? const Color(0xFF4F46E5) : const Color(0xFFEEF2FF))
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected
-                  ? (isDark ? Colors.white : const Color(0xFF4F46E5))
-                  : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-            ),
-            const SizedBox(width: 8),
+            Icon(icon, size: 14, color: textColor),
+            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? (isDark ? Colors.white : const Color(0xFF4F46E5))
-                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: textColor,
               ),
             ),
+            // Count badge — fades/scales in when available
+            if (count != null) ...[
+              const SizedBox(width: 6),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) => ScaleTransition(
+                  scale: anim,
+                  child: FadeTransition(opacity: anim, child: child),
+                ),
+                child: Container(
+                  key: ValueKey(count),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.white.withAlpha(50)
+                        : (isDark
+                            ? const Color(0xFF4B5563)
+                            : Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected
+                          ? Colors.white
+                          : (isDark
+                              ? Colors.grey.shade300
+                              : Colors.grey.shade700),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

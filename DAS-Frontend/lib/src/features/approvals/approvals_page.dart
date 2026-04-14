@@ -7,6 +7,7 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
 import 'dart:ui';
 
 part 'approvals_page.g.dart';
@@ -68,7 +69,16 @@ class ApprovalsPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tabController = useTabController(initialLength: 4);
+    // Listen to tabController to rebuild for badge color synchronization
+    useListenable(tabController);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Brand Colors
+    const brandNavy = Color(0xFF05263E);
+    const brandAccent = Color(0xFF7EC8F4);
+    final activeColor = isDark ? brandAccent : brandNavy;
+    final selectedLabelColor = isDark ? brandNavy : Colors.white;
+    final unselectedLabelColor = activeColor;
 
     // Watch providers at the top level for a stable build cycle
     final projects = ref.watch(apiNewProjectsProvider);
@@ -87,38 +97,44 @@ class ApprovalsPage extends HookConsumerWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark
-                      ? const Color(0xFF1F2937).withValues(alpha: 0.7)
-                      : Colors.white.withValues(alpha: 0.7),
+                      ? const Color(0xFF1F2937).withOpacity(0.7)
+                      : Colors.white.withOpacity(0.7),
                   border: Border(
                     bottom: BorderSide(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.1)
+                            ? Colors.white.withOpacity(0.1)
                             : Colors.grey.shade200),
                   ),
                 ),
                 child: Column(
                   children: [
-                    const SizedBox(
-                        height: 12), // Added spacing instead of badge
-                    TabBar(
-                      controller: tabController,
-                      isScrollable: true,
-                      labelColor: Colors.blue.shade600,
-                      dividerColor: Colors.transparent,
-                      unselectedLabelColor:
-                          isDark ? Colors.grey.shade400 : Colors.grey.shade500,
-                      indicatorColor: Colors.blue.shade600,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      labelStyle: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold, fontSize: 13),
-                      unselectedLabelStyle: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w500, fontSize: 13),
-                      tabs: [
-                        _buildApiTab(projects, 'New Projects'),
-                        _buildApiTab(closures, 'Project Closures'),
-                        _buildApiTab(tasks, 'New Tasks'),
-                        _buildApiTab(completions, 'Task Completions'),
-                      ],
+                    const SizedBox(height: 12),
+                    Container(
+                      height: 44,
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: TabBar(
+                        controller: tabController,
+                        isScrollable: true,
+                        labelColor: selectedLabelColor,
+                        unselectedLabelColor: unselectedLabelColor,
+                        dividerColor: Colors.transparent,
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicator: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          color: activeColor,
+                        ),
+                        labelPadding: const EdgeInsets.symmetric(horizontal: 20),
+                        labelStyle: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold, fontSize: 13.5, letterSpacing: 0.3),
+                        unselectedLabelStyle: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w600, fontSize: 13.5),
+                        tabs: [
+                          _buildApiTab(projects, 'New Projects', isDark, tabController.index == 0),
+                          _buildApiTab(closures, 'Project Closures', isDark, tabController.index == 1),
+                          _buildApiTab(tasks, 'New Tasks', isDark, tabController.index == 2),
+                          _buildApiTab(completions, 'Task Completions', isDark, tabController.index == 3),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -143,8 +159,15 @@ class ApprovalsPage extends HookConsumerWidget {
     );
   }
 
-  Widget _buildApiTab(
-      AsyncValue<List<Map<String, dynamic>>> asyncValue, String label) {
+  Widget _buildApiTab(AsyncValue<List<Map<String, dynamic>>> asyncValue,
+      String label, bool isDark, bool isSelected) {
+    const brandNavy = Color(0xFF05263E);
+    const brandAccent = Color(0xFF7EC8F4);
+    final baseActiveColor = isDark ? brandAccent : brandNavy;
+    final badgeBgColor = isSelected
+        ? (isDark ? brandNavy : Colors.white)
+        : baseActiveColor.withOpacity(0.12);
+    final badgeTextColor = isSelected ? baseActiveColor : baseActiveColor;
     final count = asyncValue.when(
       data: (list) => list.length,
       loading: () => 0,
@@ -160,12 +183,16 @@ class ApprovalsPage extends HookConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.blue.shade100,
+                color: badgeBgColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '$count',
-                style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: badgeTextColor,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5),
               ),
             ),
           ],
@@ -216,10 +243,58 @@ class _ApiNewProjectsTab extends ConsumerWidget {
                 ref.invalidate(apiNewProjectsProvider);
                 ref.invalidate(apiProjectsProvider);
                 ref.invalidate(paginatedDashboardProjectsProvider);
+                ref.invalidate(filteredDashboardStatsProvider);
+                ref.invalidate(dashboardProjectsProvider);
               },
               onReject: () async {
-                await apiService.rejectRequest(project['approval_id']);
-                ref.invalidate(apiNewProjectsProvider);
+                final reasonController = TextEditingController();
+                final reason = await showDialog<String>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(
+                      'Reject Project',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    ),
+                    content: TextField(
+                      controller: reasonController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter reason for rejection',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      maxLines: 3,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (reasonController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(content: Text('Please enter a rejection reason.')),
+                            );
+                            return;
+                          }
+                          Navigator.pop(ctx, reasonController.text.trim());
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFB7185)),
+                        child: Text('Reject', style: GoogleFonts.outfit(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (reason != null && reason.isNotEmpty) {
+                  await apiService.rejectRequest(project['approval_id'], reason: reason);
+                  ref.invalidate(apiNewProjectsProvider);
+                  ref.invalidate(apiProjectsProvider);
+                  ref.invalidate(paginatedDashboardProjectsProvider);
+                  ref.invalidate(filteredDashboardStatsProvider);
+                  ref.invalidate(dashboardProjectsProvider);
+                }
               },
               approveLabel: 'Approve',
               rejectLabel: 'Reject',
@@ -272,6 +347,8 @@ class _ProjectClosuresTab extends ConsumerWidget {
                 ref.invalidate(paginatedDashboardProjectsProvider);
                 ref.invalidate(currentProjectProvider);
                 ref.invalidate(projectsWithTasksProvider);
+                ref.invalidate(filteredDashboardStatsProvider);
+                ref.invalidate(dashboardProjectsProvider);
               },
               onReject: () async {
                 await apiService.rejectRequest(closure['approval_id']);
@@ -280,6 +357,8 @@ class _ProjectClosuresTab extends ConsumerWidget {
                 ref.invalidate(paginatedDashboardProjectsProvider);
                 ref.invalidate(currentProjectProvider);
                 ref.invalidate(projectsWithTasksProvider);
+                ref.invalidate(filteredDashboardStatsProvider);
+                ref.invalidate(dashboardProjectsProvider);
               },
             );
           },
@@ -328,10 +407,62 @@ class _ApiNewTasksTab extends ConsumerWidget {
                 ref.invalidate(apiTasksProvider);
                 ref.invalidate(projectsWithTasksProvider);
                 ref.invalidate(currentProjectProvider);
+                ref.invalidate(filteredDashboardStatsProvider);
+                ref.invalidate(dashboardProjectsProvider);
               },
               onReject: () async {
-                await apiService.rejectRequest(item['approval_id']);
-                ref.invalidate(apiNewTasksProvider);
+                final reasonController = TextEditingController();
+                final reason = await showDialog<String>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(
+                      'Reject Task Creation',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    ),
+                    content: TextField(
+                      controller: reasonController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter reason for rejection',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      maxLines: 3,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text('Cancel',
+                            style: GoogleFonts.outfit(color: Colors.grey)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (reasonController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text('Please enter a rejection reason.')),
+                            );
+                            return;
+                          }
+                          Navigator.pop(ctx, reasonController.text.trim());
+                        },
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFB7185)),
+                        child: Text('Reject',
+                            style: GoogleFonts.outfit(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (reason != null && reason.isNotEmpty) {
+                  await apiService.rejectRequest(item['approval_id'],
+                      reason: reason);
+                  ref.invalidate(apiNewTasksProvider);
+                  ref.invalidate(filteredDashboardStatsProvider);
+                  ref.invalidate(dashboardProjectsProvider);
+                }
               },
             );
           },
@@ -380,13 +511,65 @@ class _ApiTaskCompletionsTab extends ConsumerWidget {
                 ref.invalidate(apiTasksProvider);
                 ref.invalidate(projectsWithTasksProvider);
                 ref.invalidate(currentProjectProvider);
+                ref.invalidate(filteredDashboardStatsProvider);
+                ref.invalidate(dashboardProjectsProvider);
               },
               onReject: () async {
-                await apiService.rejectRequest(item['approval_id']);
-                ref.invalidate(apiTaskCompletionsProvider);
-                ref.invalidate(apiTasksProvider);
-                ref.invalidate(projectsWithTasksProvider);
-                ref.invalidate(currentProjectProvider);
+                final reasonController = TextEditingController();
+                final reason = await showDialog<String>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(
+                      'Reject Task Completion',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    ),
+                    content: TextField(
+                      controller: reasonController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter reason for rejection',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      maxLines: 3,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text('Cancel',
+                            style: GoogleFonts.outfit(color: Colors.grey)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (reasonController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text('Please enter a rejection reason.')),
+                            );
+                            return;
+                          }
+                          Navigator.pop(ctx, reasonController.text.trim());
+                        },
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFB7185)),
+                        child: Text('Reject',
+                            style: GoogleFonts.outfit(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (reason != null && reason.isNotEmpty) {
+                  await apiService.rejectRequest(item['approval_id'],
+                      reason: reason);
+                  ref.invalidate(apiTaskCompletionsProvider);
+                  ref.invalidate(apiTasksProvider);
+                  ref.invalidate(projectsWithTasksProvider);
+                  ref.invalidate(currentProjectProvider);
+                  ref.invalidate(filteredDashboardStatsProvider);
+                  ref.invalidate(dashboardProjectsProvider);
+                }
               },
             );
           },
@@ -452,8 +635,8 @@ class _ApiProjectCard extends HookWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.05),
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
@@ -476,7 +659,7 @@ class _ApiProjectCard extends HookWidget {
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black
-                        .withValues(alpha: isHovered.value ? 0.2 : 0.1),
+                        .withOpacity(isHovered.value ? 0.2 : 0.1),
                     blurRadius: isHovered.value ? 20 : 10,
                     offset: Offset(0, isHovered.value ? 10 : 4),
                   ),
@@ -493,7 +676,7 @@ class _ApiProjectCard extends HookWidget {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: iconColor.withValues(alpha: 0.1),
+                            color: iconColor.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(icon, size: 24, color: iconColor),
@@ -644,7 +827,7 @@ class _ApiTaskCard extends HookWidget {
             boxShadow: [
               BoxShadow(
                 color: Colors.black
-                    .withValues(alpha: isHovered.value ? 0.2 : 0.05),
+                    .withOpacity(isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 15 : 5,
                 offset: Offset(0, isHovered.value ? 8 : 2),
               ),
@@ -804,7 +987,7 @@ class _ApiTaskCompletionCard extends HookWidget {
             boxShadow: [
               BoxShadow(
                 color: Colors.black
-                    .withValues(alpha: isHovered.value ? 0.2 : 0.05),
+                    .withOpacity(isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 15 : 5,
                 offset: Offset(0, isHovered.value ? 8 : 2),
               ),
@@ -940,7 +1123,7 @@ class _ProjectClosureCard extends HookWidget {
             boxShadow: [
               BoxShadow(
                 color: Colors.purple
-                    .withValues(alpha: isHovered.value ? 0.2 : 0.05),
+                    .withOpacity(isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 25 : 10,
                 offset: Offset(0, isHovered.value ? 12 : 4),
               ),
@@ -960,7 +1143,7 @@ class _ProjectClosureCard extends HookWidget {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.purple.withValues(alpha: 0.1),
+                              color: Colors.purple.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(Icons.archive_outlined,
@@ -1082,10 +1265,10 @@ class _ExecutiveStatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.15 : 0.1),
+        color: color.withOpacity(isDark ? 0.15 : 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: color.withValues(alpha: 0.3),
+          color: color.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -1147,21 +1330,21 @@ class _ExecutiveActionButtonState extends State<_ExecutiveActionButton> {
           decoration: BoxDecoration(
             color: widget.isPrimary
                 ? (_isHovered
-                    ? widget.color.withValues(alpha: 0.8)
+                    ? widget.color.withOpacity(0.8)
                     : widget.color)
                 : (_isHovered
-                    ? widget.color.withValues(alpha: 0.1)
+                    ? widget.color.withOpacity(0.1)
                     : Colors.transparent),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color:
-                  widget.color.withValues(alpha: widget.isPrimary ? 1.0 : 0.5),
+                  widget.color.withOpacity(widget.isPrimary ? 1.0 : 0.5),
               width: 1.5,
             ),
             boxShadow: (widget.isPrimary && _isHovered)
                 ? [
                     BoxShadow(
-                      color: widget.color.withValues(alpha: 0.4),
+                      color: widget.color.withOpacity(0.4),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     )

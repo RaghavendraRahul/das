@@ -4293,8 +4293,8 @@ class GenerateDASCodeView(APIView):
             print(f"[HRM GenerateDASCode] Code created: {code[:10]}..., user_email={user_email}, expires in 5 min")
             
             # Build DAS redirect URL
-            # das_url = settings.DAS_URL if hasattr(settings, 'DAS_URL') else 'http://localhost:63105'
-            das_url = settings.DAS_URL if hasattr(settings, 'DAS_URL') else 'http://das.merida.com/'
+            # Bypass settings loading issues to explicitly resolve to local frontend
+            das_url = 'http://localhost:63105/'
             redirect_url = f"{das_url}?code={code}&email={user_email}"
             
             print(f"[HRM GenerateDASCode] Redirecting to: {redirect_url[:60]}...")

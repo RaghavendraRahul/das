@@ -12,6 +12,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../core/utils/user_color_service.dart';
 import 'dart:convert';
 import '../../../core/models/milestone.dart';
+import '../../dashboard/dashboard_providers.dart';
 
 class AddItemModal extends HookConsumerWidget {
   final String projectId;
@@ -56,7 +57,7 @@ class AddItemModal extends HookConsumerWidget {
                         borderRadius: BorderRadius.circular(6),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
+                              color: Colors.black.withOpacity(0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2))
                         ],
@@ -157,6 +158,8 @@ class _StandardTab extends HookConsumerWidget {
         ref.invalidate(apiTasksProvider);
         ref.invalidate(projectsWithTasksProvider);
         ref.invalidate(currentProjectProvider);
+        ref.invalidate(filteredDashboardStatsProvider);
+        ref.invalidate(dashboardProjectsProvider);
         if (context.mounted) Navigator.pop(context);
       },
       createLabel: "Create Standard",
@@ -269,6 +272,8 @@ class _RecurringTab extends HookConsumerWidget {
         ref.invalidate(apiTasksProvider);
         ref.invalidate(projectsWithTasksProvider);
         ref.invalidate(currentProjectProvider);
+        ref.invalidate(filteredDashboardStatsProvider);
+        ref.invalidate(dashboardProjectsProvider);
         if (context.mounted) Navigator.pop(context);
       },
       createLabel: "Create Recurring",
@@ -303,7 +308,7 @@ class _RecurringTab extends HookConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50.withValues(alpha: 0.3),
+              color: Colors.blue.shade50.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.blue.shade100),
             ),
@@ -406,6 +411,8 @@ class _RoutineTab extends HookConsumerWidget {
         ref.invalidate(apiTasksProvider);
         ref.invalidate(projectsWithTasksProvider);
         ref.invalidate(currentProjectProvider);
+        ref.invalidate(filteredDashboardStatsProvider);
+        ref.invalidate(dashboardProjectsProvider);
         if (context.mounted) Navigator.pop(context);
       },
       createLabel: "Create Routine",

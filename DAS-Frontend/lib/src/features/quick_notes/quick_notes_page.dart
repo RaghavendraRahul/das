@@ -133,7 +133,7 @@ class QuickNotesPage extends HookConsumerWidget {
                           child: CustomPaint(
                             painter: _DottedBackgroundPainter(
                               color: isDark
-                                  ? Colors.white.withValues(alpha: 0.05)
+                                  ? Colors.white.withOpacity(0.05)
                                   : Colors.grey.shade300,
                               mousePosition: mousePos.value,
                             ),
@@ -481,10 +481,11 @@ class _SidebarNoteItem extends HookWidget {
                         width: 60,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: Colors.white.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
+                              color: Colors.black.withOpacity(0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -503,7 +504,7 @@ class _SidebarNoteItem extends HookWidget {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
+                        color: Colors.blue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.blue, width: 2)),
                   ),
@@ -525,7 +526,7 @@ class _SidebarNoteItem extends HookWidget {
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.kalam(
                           fontSize: 12,
-                          color: Colors.black.withValues(alpha: 0.8),
+                          color: Colors.black.withOpacity(0.8),
                           height: 1.1,
                           fontWeight: FontWeight.w600),
                     ),
@@ -557,7 +558,7 @@ class _SidebarNoteItem extends HookWidget {
                     decoration: BoxDecoration(
                         color: isMultiSelected
                             ? Colors.blue
-                            : Colors.white.withValues(alpha: 0.8),
+                            : Colors.white.withOpacity(0.8),
                         shape: BoxShape.circle,
                         border: Border.all(
                             color: isMultiSelected
@@ -669,7 +670,7 @@ class _TapeTexturePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.2)
+      ..color = Colors.white.withOpacity(0.2)
       ..strokeWidth = 1;
 
     // Draw some subtle "fiber" lines for tape texture
@@ -679,7 +680,7 @@ class _TapeTexturePainter extends CustomPainter {
 
     // Rough edges
     final roughPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3)
+      ..color = Colors.white.withOpacity(0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
 
@@ -711,11 +712,11 @@ class _QuickActionButton extends StatelessWidget {
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: Colors.white.withOpacity(0.9),
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -769,7 +770,7 @@ class _EditableStickyNote extends HookWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
+                      color: Colors.black.withOpacity(0.15),
                       blurRadius: 30,
                       spreadRadius: 2,
                       offset: const Offset(10, 20),
@@ -810,14 +811,14 @@ class _EditableStickyNote extends HookWidget {
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black.withValues(alpha: 0.7),
+                                color: Colors.black.withOpacity(0.7),
                               ),
                             ),
                             const Spacer(),
                             IconButton(
                               onPressed: onDelete,
                               icon: const Icon(Icons.delete_outline, size: 20),
-                              color: Colors.red.shade700.withValues(alpha: 0.7),
+                              color: Colors.red.shade700.withOpacity(0.7),
                               tooltip: "Delete Note",
                             ),
                           ],
@@ -887,8 +888,7 @@ class _DottedBackgroundPainter extends CustomPainter {
           final scale = 1.0 + (1.5 * (1.0 - (distance / maxInteractionRadius)));
           radius = baseRadius * scale;
 
-          final interactionColor = color.withValues(
-              alpha: (color.opacity +
+          final interactionColor = color.withOpacity((color.opacity +
                       (0.3 * (1.0 - (distance / maxInteractionRadius))))
                   .clamp(0.0, 1.0));
           paint.color = interactionColor;

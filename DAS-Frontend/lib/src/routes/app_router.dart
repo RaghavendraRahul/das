@@ -22,7 +22,7 @@ import 'package:project_pm/src/features/projects/views/project_gantt_page.dart';
 import 'package:project_pm/src/features/projects/views/project_grid_page.dart';
 import 'package:project_pm/src/features/projects/views/project_context_page.dart';
 import 'package:project_pm/src/features/projects/views/project_reports_page.dart';
-import 'package:project_pm/src/features/projects/views/project_settings_page.dart';
+// import 'package:project_pm/src/features/projects/views/project_settings_page.dart'; // Removed - settings page eliminated
 import 'package:project_pm/src/features/projects/views/project_overview_page.dart';
 import 'package:project_pm/src/features/auth/pages/login_page.dart';
 import 'package:project_pm/src/features/auth/pages/signup_page.dart';
@@ -83,7 +83,7 @@ class AppRouter extends _$AppRouter {
           AutoRoute(path: 'projects/grid', page: ProjectGridRoute.page),
           AutoRoute(path: 'projects/context', page: ProjectContextRoute.page),
           AutoRoute(path: 'projects/reports', page: ProjectReportsRoute.page),
-          AutoRoute(path: 'projects/settings', page: ProjectSettingsRoute.page),
+          // AutoRoute(path: 'projects/settings', page: ProjectSettingsRoute.page), // Removed
 
           AutoRoute(path: 'quick-notes', page: QuickNotesRoute.page),
 

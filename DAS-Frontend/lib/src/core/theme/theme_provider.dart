@@ -110,6 +110,7 @@ class DarkColors {
   static const text = Color(0xFFF9FAFB); // gray-50
   static const textMuted = Color(0xFF9CA3AF); // gray-400
   static const textSecondary = Color(0xFF6B7280); // gray-500
+  static const brandColor = Color(0xFF05263E); // Navy Blue
 }
 
 /// Light theme colors
@@ -121,6 +122,7 @@ class LightColors {
   static const text = Color(0xFF1E293B); // slate-800
   static const textMuted = Color(0xFF64748B); // slate-500
   static const textSecondary = Color(0xFF94A3B8); // slate-400
+  static const brandColor = Color(0xFF05263E); // Navy Blue
 }
 
 /// Light theme
@@ -137,12 +139,15 @@ ThemeData _buildTheme(Brightness brightness) {
     isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
   );
 
+  final brandColor = isDark ? DarkColors.brandColor : LightColors.brandColor;
+
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
+      seedColor: brandColor,
       brightness: brightness,
+      primary: brandColor,
       surface: isDark ? DarkColors.surface : LightColors.surface,
       onSurface: isDark ? DarkColors.text : LightColors.text,
       outline: isDark ? DarkColors.border : LightColors.border,
@@ -152,13 +157,13 @@ ThemeData _buildTheme(Brightness brightness) {
     cardColor: isDark ? DarkColors.surface : LightColors.surface,
     dividerColor: isDark ? DarkColors.border : LightColors.border,
     appBarTheme: AppBarTheme(
-      backgroundColor: isDark ? DarkColors.surface : LightColors.surface,
-      foregroundColor: isDark ? DarkColors.text : LightColors.text,
+      backgroundColor: isDark ? DarkColors.brandColor : LightColors.brandColor,
+      foregroundColor: Colors.white,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       centerTitle: false,
       titleTextStyle: GoogleFonts.outfit(
-        color: isDark ? DarkColors.text : LightColors.text,
+        color: Colors.white,
         fontSize: 18,
         fontWeight: FontWeight.w600,
       ),
@@ -184,25 +189,25 @@ ThemeData _buildTheme(Brightness brightness) {
       headlineLarge: GoogleFonts.outfit(
         textStyle: baseTextTheme.headlineLarge,
         fontWeight: FontWeight.w600,
-        color: isDark ? DarkColors.text : LightColors.text,
+        color: isDark ? DarkColors.text : LightColors.brandColor,
       ),
       headlineMedium: GoogleFonts.outfit(
         textStyle: baseTextTheme.headlineMedium,
         fontWeight: FontWeight.w600,
-        color: isDark ? DarkColors.text : LightColors.text,
+        color: isDark ? DarkColors.text : LightColors.brandColor,
       ),
       headlineSmall: GoogleFonts.outfit(
         textStyle: baseTextTheme.headlineSmall,
         fontWeight: FontWeight.w600,
-        color: isDark ? DarkColors.text : LightColors.text,
+        color: isDark ? DarkColors.text : LightColors.brandColor,
       ),
       titleLarge: GoogleFonts.outfit(
         textStyle: baseTextTheme.titleLarge,
         fontWeight: FontWeight.w600,
-        color: isDark ? DarkColors.text : LightColors.text,
+        color: isDark ? DarkColors.text : LightColors.brandColor,
       ),
       titleMedium: baseTextTheme.titleMedium?.copyWith(
-        color: isDark ? DarkColors.text : LightColors.text,
+        color: isDark ? DarkColors.text : LightColors.brandColor,
         fontWeight: FontWeight.w600,
       ),
       bodyLarge: baseTextTheme.bodyLarge?.copyWith(

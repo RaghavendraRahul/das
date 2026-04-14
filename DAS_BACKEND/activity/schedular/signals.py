@@ -11,7 +11,20 @@ from .models import (
     StickyNote, Catalog, TodayPlan, ActivityLog, Department, Pending, DaySession
 )
 from .utils import send_team_instruction_email
+from django.core.cache import cache
 
+def should_throttle_notification(notification_type, reference_id, timeout=300):
+    """
+    Prevents repeated spam notifications for the same object within the timeout window.
+    Returns True if throttled (skip notification), False if it should proceed.
+    """
+    cache_key = f"throttle_notif_{notification_type}_{reference_id}"
+    if cache.get(cache_key):
+        return True
+    
+    # Store the throttle lock
+    cache.set(cache_key, True, timeout)
+    return False
 
 def send_websocket_notification(user_id, notification_data):
     """Helper function to send notification via WebSocket"""
@@ -103,6 +116,10 @@ def project_notification(sender, instance, created, **kwargs):
         except Exception as e:
             print(f"WebSocket broadcast error in signal: {e}")
     else:
+        # Smart throttling: Avoid spamming notifications for rapid back-to-back edits (5 minutes)
+        if should_throttle_notification('project_update', instance.id, timeout=300):
+            return
+
         # Notify relevants on update
         notif_data = {
             'id': f"proj_upd_{instance.id}",
@@ -148,15 +165,17 @@ def task_status_notification(sender, instance, created, **kwargs):
                         reference_id=task.id
                     )
                     
-                    send_websocket_notification(task.project.project_lead.id, {
-                        'id': notification.id,
-                        'title': notification.title,
-                        'message': notification.message,
-                        'type': notification.notification_type,
-                        'reference_type': notification.reference_type,
-                        'reference_id': notification.reference_id,
-                        'created_at': str(notification.created_at),
-                    })
+                    # Suppress WebSocket popup for unapproved tasks to reduce noise
+                    if task.approval_status != 'pending_creation' and task.approval_status != 'pending_approval':
+                        send_websocket_notification(task.project.project_lead.id, {
+                            'id': notification.id,
+                            'title': notification.title,
+                            'message': notification.message,
+                            'type': notification.notification_type,
+                            'reference_type': notification.reference_type,
+                            'reference_id': notification.reference_id,
+                            'created_at': str(notification.created_at),
+                        })
             except Task.DoesNotExist:
                 pass
             except Exception as e:
@@ -168,8 +187,14 @@ def task_status_notification(sender, instance, created, **kwargs):
         # Check if significant fields changed (status, priority, due_date)
         # We can't easily check 'old' values in post_save without a trick, 
         # but we can at least avoid notifying on EVERY save if we wanted to.
-        # For now, let's just make the message more concise.
-        
+        # Suppress notifications if task is awaiting initial creation approval
+        if instance.approval_status == 'pending_creation':
+            return
+            
+        # Smart throttling: Avoid spamming notifications for rapid back-to-back edits (5 minutes)
+        if should_throttle_notification('task_update', instance.id, timeout=300):
+            return
+
         notif_data = {
             'id': f"task_upd_{instance.id}",
             'title': 'Task Updated',
@@ -260,15 +285,20 @@ def approval_request_notification(sender, instance, created, **kwargs):
             )
             
             try:
-                send_websocket_notification(admin.id, {
-                    'id': notification.id,
-                    'title': notification.title,
-                    'message': notification.message,
-                    'type': notification.notification_type,
-                    'reference_type': notification.reference_type,
-                    'reference_id': notification.reference_id,
-                    'created_at': str(notification.created_at),
-                })
+                # Suppress WebSocket popup for 'Task Creation' approval requests to avoid immediate admin annoyance
+                # The notification is still created in DB and visible on dashboard
+                is_creation_request = instance.approval_type == 'CREATION' and instance.reference_type == 'TASK'
+                
+                if not is_creation_request:
+                    send_websocket_notification(admin.id, {
+                        'id': notification.id,
+                        'title': notification.title,
+                        'message': notification.message,
+                        'type': notification.notification_type,
+                        'reference_type': notification.reference_type,
+                        'reference_id': notification.reference_id,
+                        'created_at': str(notification.created_at),
+                    })
             except Exception as e:
                 print(f"WebSocket notification error in signal: {e}")
 
@@ -378,6 +408,10 @@ def subtask_notification(sender, instance, created, **kwargs):
         for assignee in instance.task.assignees.all():
             send_websocket_notification(assignee.user.id, notif_data)
     else:
+        # Suppress notifications if parent task is awaiting initial creation approval
+        if instance.task.approval_status == 'pending_creation':
+            return
+            
         try:
             old_instance = SubTask.objects.get(pk=instance.pk)
             if old_instance.status != 'DONE' and instance.status == 'DONE':

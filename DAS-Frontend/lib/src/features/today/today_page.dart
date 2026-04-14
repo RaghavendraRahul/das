@@ -99,15 +99,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Planner",
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                // Removed dual "Planner" text to save vertical space and improve premium layout.
                 Consumer(
                   builder: (context, ref, _) {
                   final user = ref.watch(currentUserProvider).valueOrNull;
@@ -120,7 +112,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
+                          color: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -159,7 +151,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                         isSelected: _isCatalogOpen,
                         onTap: () => setState(() => _isCatalogOpen = !_isCatalogOpen),
                         showShadow: false,
-                        backgroundColor: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                        backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
                       ),
                       const SizedBox(width: 12),
 
@@ -176,7 +168,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                             );
                           },
                           showShadow: false,
-                          backgroundColor: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                          backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
                         ),
                         const SizedBox(width: 12),
                       ],
@@ -198,7 +190,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                               });
                             },
                             showShadow: false,
-                            backgroundColor: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                            backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
                           ),
                           if (badgeCount > 0)
                             Positioned(
@@ -384,15 +376,15 @@ class _PillButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isDark ? const Color(0xFF374151) : Colors.white)
+              ? const Color(0xFF05263E)
               : (backgroundColor ?? Colors.transparent),
           borderRadius: BorderRadius.circular(10),
           boxShadow: showShadow && !isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   )
                 ]
               : null,
@@ -404,8 +396,8 @@ class _PillButton extends StatelessWidget {
               icon,
               size: 16,
               color: isSelected
-                  ? (isDark ? Colors.blue.shade400 : Colors.blue.shade600)
-                  : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  ? Colors.white
+                  : (isDark ? Colors.white70 : const Color(0xFF05263E).withOpacity(0.8)),
             ),
             const SizedBox(width: 8),
             Text(
@@ -414,8 +406,8 @@ class _PillButton extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
-                    ? (isDark ? Colors.white : const Color(0xFF1F2937))
-                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : const Color(0xFF05263E).withOpacity(0.8)),
               ),
             ),
           ],
@@ -440,20 +432,20 @@ class _IconButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1F2937) : Colors.white,
+          color: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             )
           ],
         ),
         child: Icon(
           icon,
           size: 20,
-          color: isDark ? Colors.blue.shade400 : Colors.blue.shade600,
+          color: isDark ? Colors.white : const Color(0xFF05263E),
         ),
       ),
     );

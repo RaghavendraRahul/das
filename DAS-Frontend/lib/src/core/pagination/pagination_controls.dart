@@ -33,16 +33,19 @@ class PaginationControls extends StatelessWidget {
     if (totalPages <= 1) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Previous Button
           IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            iconSize: 18,
             onPressed: (hasPrevious && !isLoading) ? onPrevious : null,
             icon: const Icon(Icons.chevron_left),
             tooltip: 'Previous Page',
-            color: Theme.of(context).primaryColor,
+            color: const Color(0xFF05263E),
             disabledColor: Colors.grey.shade400,
           ),
 
@@ -62,10 +65,13 @@ class PaginationControls extends StatelessWidget {
 
           // Next Button
           IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            iconSize: 18,
             onPressed: (hasNext && !isLoading) ? onNext : null,
             icon: const Icon(Icons.chevron_right),
             tooltip: 'Next Page',
-            color: Theme.of(context).primaryColor,
+            color: const Color(0xFF05263E),
             disabledColor: Colors.grey.shade400,
           ),
         ],
@@ -130,11 +136,11 @@ class PaginationControls extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: isActive
           ? Container(
-              width: 32,
-              height: 32,
+              width: 24,
+              height: 24,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
+                color: const Color(0xFF05263E),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -142,6 +148,7 @@ class PaginationControls extends StatelessWidget {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
               ),
             )
@@ -149,14 +156,14 @@ class PaginationControls extends StatelessWidget {
               onTap: () => onPageSelected?.call(page),
               borderRadius: BorderRadius.circular(4),
               child: Container(
-                width: 32,
-                height: 32,
+                width: 24,
+                height: 24,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text('$page'),
+                child: Text('$page', style: const TextStyle(fontSize: 12)),
               ),
             ),
     );

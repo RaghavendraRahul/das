@@ -2,16 +2,20 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/database/database.dart';
 import '../../core/models/project_with_tasks.dart';
 import '../../core/models/milestone.dart';
 import 'services/task_api_service.dart';
+import '../approval/providers/approval_provider.dart';
+import 'providers/api_providers.dart';
 
 class ProjectRepository {
   final AppDatabase _db;
   final TaskApiService? _apiService;
+  final Ref? _ref;
 
-  ProjectRepository(this._db, [this._apiService]);
+  ProjectRepository(this._db, [this._apiService, this._ref]);
 
   Stream<ProjectWithTasks?> watchProject(String projectId) {
     // Start watching the local database immediately.
@@ -84,12 +88,43 @@ class ProjectRepository {
   }
 
   Future<void> updateProject(ProjectsCompanion project) async {
+    if (_apiService != null) {
+      final projectIdStr = project.id.value;
+      final id = int.tryParse(projectIdStr.replaceFirst('api_project_', '')) ??
+          int.tryParse(projectIdStr) ??
+          0;
+
+      if (id > 0) {
+        final Map<String, dynamic> data = {};
+        if (project.name.present) data['name'] = project.name.value;
+        if (project.context.present) data['description'] = project.context.value;
+        if (project.status.present) {
+          data['status'] = project.status.value.toUpperCase();
+        }
+        if (project.dueDate.present && project.dueDate.value != null) {
+          data['deadline'] =
+              "${project.dueDate.value!.year}-${project.dueDate.value!.month.toString().padLeft(2, '0')}-${project.dueDate.value!.day.toString().padLeft(2, '0')}";
+        }
+
+        if (data.isNotEmpty) {
+          await _apiService!.updateProject(id, data);
+        }
+      }
+    }
     await (_db.update(_db.projects)
           ..where((p) => p.id.equals(project.id.value)))
         .write(project);
   }
 
   Future<void> updateProjectContext(String projectId, String context) async {
+    if (_apiService != null) {
+      final id = int.tryParse(projectId.replaceFirst('api_project_', '')) ??
+          int.tryParse(projectId) ??
+          0;
+      if (id > 0) {
+        await _apiService!.updateProject(id, {'description': context});
+      }
+    }
     await (_db.update(_db.projects)..where((p) => p.id.equals(projectId)))
         .write(
       ProjectsCompanion(context: Value(context)),
@@ -358,6 +393,8 @@ class ProjectRepository {
           : int.tryParse(projectOrId.toString());
       if (id != null) {
         await _apiService!.approveRequest(id);
+        _ref?.invalidate(apiProjectsProvider);
+        _ref?.invalidate(apiTasksProvider);
         return;
       }
     }
@@ -374,6 +411,8 @@ class ProjectRepository {
           : int.tryParse(projectOrId.toString());
       if (id != null) {
         await _apiService!.rejectRequest(id);
+        _ref?.invalidate(apiProjectsProvider);
+        _ref?.invalidate(apiTasksProvider);
         return;
       }
     }
@@ -389,6 +428,8 @@ class ProjectRepository {
           : int.tryParse(projectOrId.toString());
       if (id != null) {
         await _apiService!.approveRequest(id);
+        _ref?.invalidate(apiProjectsProvider);
+        _ref?.invalidate(apiTasksProvider);
         return;
       }
     }
@@ -406,15 +447,43 @@ class ProjectRepository {
           : int.tryParse(projectOrId.toString());
       if (id != null) {
         await _apiService!.rejectRequest(id, reason: reason);
+        _ref?.invalidate(apiProjectsProvider);
+        _ref?.invalidate(apiTasksProvider);
         return;
       }
     }
-    // Keep it open - mark as rejected for UI to show resubmit option
+    // Keep it open - mark as rejected_closure so the UI shows the correct closure-rejection banner
     final projectId = projectOrId.toString();
     await (_db.update(_db.projects)..where((p) => p.id.equals(projectId)))
         .write(ProjectsCompanion(
-            approvalStatus: const Value('rejected'),
+            approvalStatus: const Value('rejected_closure'),
             rejectionReason: Value(reason)));
+
+    // Reset all tasks in this project to Task Bucket and uncheck all milestones
+    if (!kIsWeb) {
+      final projectTasks = await (_db.select(_db.tasks)
+            ..where((t) => t.projectId.equals(projectId)))
+          .get();
+      for (final task in projectTasks) {
+        List<dynamic> resetMilestones = [];
+        try {
+          final decoded = jsonDecode(task.milestonesJson);
+          if (decoded is List) {
+            resetMilestones = decoded.map((m) {
+              final map = Map<String, dynamic>.from(m as Map);
+              map['completed'] = false;
+              return map;
+            }).toList();
+          }
+        } catch (_) {}
+        await (_db.update(_db.tasks)..where((t) => t.id.equals(task.id)))
+            .write(TasksCompanion(
+              approvalStatus: const Value('rejected'),
+              progress: const Value(0),
+              milestonesJson: Value(jsonEncode(resetMilestones)),
+            ));
+      }
+    }
   }
 
   Future<void> approveTask(dynamic taskOrId) async {
@@ -479,6 +548,55 @@ class ProjectRepository {
         .write(TasksCompanion(
             approvalStatus: const Value('rejected'),
             rejectionReason: Value(reason)));
+  }
+
+  /// Admin only: Approve task by its Task ID (cleans up any pending approval request)
+  Future<void> approveTaskByTaskId(String taskId) async {
+    if (_apiService != null) {
+      final id = int.tryParse(taskId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      if (id > 0) await _apiService!.approveTaskCompletion(id);
+    }
+
+    // NEW: Trigger dashboard and task list refresh if ref is available
+    if (_ref != null) {
+      _ref!.read(approvalProvider.notifier).fetchAllApprovals();
+      _ref!.invalidate(apiTasksProvider);
+    }
+
+    // Refresh local DB after approval
+    if (!kIsWeb) {
+      await (_db.update(_db.tasks)..where((t) => t.id.equals(taskId))).write(
+        const TasksCompanion(
+          progress: Value(100),
+          approvalStatus: Value('approved'),
+        ),
+      );
+    }
+  }
+
+  /// Admin only: Reject task completion by its Task ID (cleans up any pending approval request)
+  Future<void> rejectTaskByTaskId(String taskId, String reason) async {
+    if (_apiService != null) {
+      final id = int.tryParse(taskId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      if (id > 0) await _apiService!.rejectTaskCompletion(id, reason: reason);
+    }
+
+    // NEW: Trigger dashboard and task list refresh if ref is available
+    if (_ref != null) {
+      _ref!.read(approvalProvider.notifier).fetchAllApprovals();
+      _ref!.invalidate(apiTasksProvider);
+    }
+
+    // Refresh local DB
+    if (!kIsWeb) {
+      await (_db.update(_db.tasks)..where((t) => t.id.equals(taskId))).write(
+        TasksCompanion(
+          progress: const Value(0), // Reset progress on rejection
+          approvalStatus: const Value('rejected'),
+          rejectionReason: Value(reason),
+        ),
+      );
+    }
   }
 
   Future<void> reopenTask(dynamic taskOrId, String reason) async {
@@ -549,9 +667,48 @@ class ProjectRepository {
     }
   }
 
+  Future<void> reopenProject(dynamic projectOrId, String reason) async {
+    final projectIdStr = projectOrId.toString();
+    final id = int.tryParse(projectIdStr.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+    // 1. Optimistic Update (local DB)
+    if (!kIsWeb) {
+      await (_db.update(_db.projects)..where((p) => p.id.equals(projectIdStr) | p.id.like('%_$id')))
+          .write(ProjectsCompanion(
+        status: const Value('active'),
+        approvalStatus: const Value('rejected'), // Reuse rejected state for resubmission flow
+        rejectionReason: Value(reason), // Store reopen reason in rejectionReason
+      ));
+    }
+
+    // 2. API Call
+    if (_apiService != null && id > 0) {
+      try {
+        await _apiService!.reopenProject(id, reason);
+        
+        // 3. Global Reactivity
+        if (_ref != null) {
+          _ref!.invalidate(apiProjectsProvider);
+          _ref!.invalidate(dashboardApiProjectsProvider);
+          _ref!.invalidate(paginatedDashboardProjectsProvider);
+          _ref!.invalidate(projectsPageProjectsProvider);
+        }
+      } catch (e) {
+        print("Backend project reopen failed: $e");
+        rethrow;
+      }
+    }
+  }
+
 
   /// Request project completion - sets approval status to pending_completion
   Future<void> requestProjectCompletion(String projectId) async {
+    // NEW: Block completion for rejected projects
+    final project = await (_db.select(_db.projects)..where((p) => p.id.equals(projectId))).getSingleOrNull();
+    if (project?.approvalStatus?.toLowerCase() == 'rejected') {
+      throw Exception('Cannot complete a rejected project. Please edit and resubmit it first.');
+    }
+
     if (_apiService != null) {
       try {
         final id = int.tryParse(projectId) ??
@@ -579,6 +736,12 @@ class ProjectRepository {
 
   /// Admin bypass: directly complete project (no approval needed)
   Future<void> adminCompleteProject(String projectId) async {
+    // NEW: Block admin completion for rejected projects
+    final project = await (_db.select(_db.projects)..where((p) => p.id.equals(projectId))).getSingleOrNull();
+    if (project?.approvalStatus?.toLowerCase() == 'rejected') {
+      throw Exception('Cannot complete a rejected project. Please edit and resubmit it first.');
+    }
+
     if (_apiService != null) {
       final id = int.tryParse(projectId) ??
           int.tryParse(projectId.replaceFirst('api_project_', '')) ??

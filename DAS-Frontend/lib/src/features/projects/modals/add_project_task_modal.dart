@@ -7,8 +7,11 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
 import '../providers/api_providers.dart';
+import 'package:project_pm/src/core/models/project_with_tasks.dart';
+import 'dart:convert';
 import '../../../core/utils/user_color_service.dart';
 import 'package:uuid/uuid.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // ─── Data Model ──────────────────────────────────────────────────────────────
 
@@ -63,6 +66,7 @@ class AddProjectTaskModal extends HookConsumerWidget {
   final DateTime? projectDueDate;
   final double projectBudgetHours; // project's total planned_hours budget
   final double usedHours;          // sum of plannedHours of existing tasks
+  final TaskWithAssignees? existingTask;
 
   const AddProjectTaskModal({
     super.key,
@@ -71,23 +75,40 @@ class AddProjectTaskModal extends HookConsumerWidget {
     this.projectDueDate,
     this.projectBudgetHours = 0.0,
     this.usedHours = 0.0,
+    this.existingTask,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final titleController = useTextEditingController();
-    final plannedHoursController = useTextEditingController(text: '0.0');
-    final priority = useState<String>('MEDIUM');
+    final task = existingTask?.task;
+    final titleController = useTextEditingController(text: task?.name ?? '');
+    final plannedHoursController = useTextEditingController(text: task?.plannedHours.toString() ?? '0.0');
+    final priority = useState<String>(task?.priority.toUpperCase() ?? 'MEDIUM');
     // Constrain initial dates within project range
     final projectStart = projectStartDate ?? DateTime(2024);
     final projectEnd = projectDueDate ?? DateTime(2035);
     final now = DateTime.now();
-    final initialStart = now.isBefore(projectStart) ? projectStart : (now.isAfter(projectEnd) ? projectStart : now);
-    final initialDue = initialStart.add(const Duration(days: 7)).isAfter(projectEnd) ? projectEnd : initialStart.add(const Duration(days: 7));
+    final initialStart = task?.startDate ?? (now.isBefore(projectStart) ? projectStart : (now.isAfter(projectEnd) ? projectStart : now));
+    final initialDue = task?.endDate ?? (initialStart.add(const Duration(days: 7)).isAfter(projectEnd) ? projectEnd : initialStart.add(const Duration(days: 7)));
     final startDate = useState<DateTime>(initialStart);
     final dueDate = useState<DateTime>(initialDue);
-    final selectedAssignees = useState<List<User>>([]);
-    final milestones = useState<List<_Milestone>>([]);
+    final selectedAssignees = useState<List<User>>(existingTask?.assignees ?? []);
+    
+    // Load existing milestones
+    List<_Milestone> initialMilestones = [];
+    if (task?.milestonesJson != null && task!.milestonesJson.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(task.milestonesJson);
+        if (decoded is List) {
+          initialMilestones = decoded.map((m) => _Milestone(
+            id: m['id']?.toString() ?? const Uuid().v4(),
+            title: m['title']?.toString() ?? m['name']?.toString() ?? '',
+            progressWeight: m['progress_weight'] ?? 0,
+          )).toList();
+        }
+      } catch (_) {}
+    }
+    final milestones = useState<List<_Milestone>>(initialMilestones);
     final isLoading = useState(false);
 
     // Effect to clear Due Date if it's before Start Date
@@ -115,7 +136,7 @@ class AddProjectTaskModal extends HookConsumerWidget {
 
     // Total milestone weight - REMOVED manual calculation
 
-    Future<void> createTask() async {
+    Future<void> saveTask() async {
       if (titleController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -133,10 +154,43 @@ class AddProjectTaskModal extends HookConsumerWidget {
         return;
       }
 
-      // Planned hours budget check
       final enteredHours = double.tryParse(plannedHoursController.text.trim()) ?? 0.0;
+      if (enteredHours <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(children: [
+              Icon(Icons.timer_off, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Planned hours is required and must be greater than 0.'),
+            ]),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return;
+      }
+
+      if (selectedAssignees.value.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(children: [
+              Icon(Icons.person_off, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Please select at least one assignee.'),
+            ]),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return;
+      }
+
+      // Planned hours budget check
       if (projectBudgetHours > 0) {
-        final remaining = projectBudgetHours - usedHours;
+        final existingTaskHours = task?.plannedHours ?? 0.0;
+        final remaining = (projectBudgetHours - usedHours) + existingTaskHours;
         if (enteredHours > remaining) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -191,20 +245,32 @@ class AddProjectTaskModal extends HookConsumerWidget {
           'milestones': distributedMilestones,
         };
 
-        final cleanProjectId = int.tryParse(projectId) ??
-            int.tryParse(projectId.replaceFirst('api_project_', '')) ??
-            0;
+        // If it was rejected, reset status so it goes back to admin for approval
+        if (existingTask?.task.approvalStatus == 'rejected') {
+          taskData['approval_status'] = 'pending_creation';
+        }
 
-        await apiService.createTask(cleanProjectId, taskData);
+        if (existingTask != null) {
+          final cleanTaskId = int.tryParse(existingTask!.task.id) ??
+              int.tryParse(existingTask!.task.id.replaceFirst('api_project_task_', '')) ??
+              int.tryParse(existingTask!.task.id.replaceFirst('api_task_', '')) ??
+              0;
+          await apiService.updateTask(cleanTaskId, taskData);
+        } else {
+          final cleanProjectId = int.tryParse(projectId) ??
+              int.tryParse(projectId.replaceFirst('api_project_', '')) ??
+              0;
+          await apiService.createTask(cleanProjectId, taskData);
+        }
 
         if (context.mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text('Task created successfully!'),
+              content: Row(children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(existingTask != null ? 'Task updated successfully!' : 'Task created successfully!'),
               ]),
               backgroundColor: Colors.green.shade600,
               behavior: SnackBarBehavior.floating,
@@ -215,8 +281,11 @@ class AddProjectTaskModal extends HookConsumerWidget {
         }
 
         ref.invalidate(apiTasksProvider);
-        ref.invalidate(apiProjectProvider(cleanProjectId));
-        ref.invalidate(projectsWithTasksProvider);
+        if (existingTask == null) {
+          final cleanProjectId = int.tryParse(projectId) ??
+              int.tryParse(projectId.replaceFirst('api_project_', '')) ?? 0;
+          ref.invalidate(apiProjectProvider(cleanProjectId));
+        }
         ref.invalidate(currentProjectProvider);
         ref.invalidate(paginatedDashboardProjectsProvider);
         ref.invalidate(projectsPageProjectsProvider);
@@ -244,9 +313,6 @@ class AddProjectTaskModal extends HookConsumerWidget {
       }
     }
 
-    final selectedPriority =
-        _priorities.firstWhere((p) => p['value'] == priority.value);
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: bgColor,
@@ -257,48 +323,91 @@ class AddProjectTaskModal extends HookConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Gradient Header ──────────────────────────────────────────────
+            // ── Premium Header ──────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+              padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.blue.shade700, Colors.indigo.shade600],
+                  colors: isDark
+                      ? [const Color(0xFF1E40AF), const Color(0xFF1E1B4B)]
+                      : [const Color(0xFF1D4ED8), const Color(0xFF05263E)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.task_alt,
-                        color: Colors.white, size: 20),
+                    child: Icon(
+                      existingTask != null ? Icons.edit_document : Icons.add_task,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
+                  const SizedBox(width: 18),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Add New Task',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold)),
-                        SizedBox(height: 2),
-                        Text('Fill in the details below to create a task',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 12)),
+                        Text(
+                          existingTask != null ? 'Edit Task' : 'Add New Task',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          existingTask != null 
+                            ? 'Update details for this task' 
+                            : 'Fill in details below to create a task',
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (projectBudgetHours > 0) ...[
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _HeaderBadge(
+                                icon: Icons.analytics_outlined,
+                                label: 'Total: ${projectBudgetHours % 1 == 0 ? projectBudgetHours.toInt() : projectBudgetHours.toStringAsFixed(1)}h',
+                              ),
+                              _HeaderBadge(
+                                icon: Icons.history_toggle_off,
+                                label: 'Used: ${usedHours % 1 == 0 ? usedHours.toInt() : usedHours.toStringAsFixed(1)}h',
+                              ),
+                              _HeaderBadge(
+                                icon: Icons.hourglass_empty_rounded,
+                                label: 'Remaining: ${(projectBudgetHours - usedHours) % 1 == 0 ? (projectBudgetHours - usedHours).toInt() : (projectBudgetHours - usedHours).toStringAsFixed(1)}h',
+                                highlight: true,
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70),
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, color: Colors.white, size: 20),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -312,38 +421,111 @@ class AddProjectTaskModal extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Rejection Reason Banner
+                    if (existingTask?.task.approvalStatus == 'rejected' &&
+                        existingTask?.task.rejectionReason != null &&
+                        existingTask!.task.rejectionReason!.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 24),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Colors.red.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Color(0xFFEF4444), size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'TASK REJECTED BY ADMIN',
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFFEF4444),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    existingTask!.task.rejectionReason!,
+                                    style: GoogleFonts.inter(
+                                      color: isDark
+                                          ? Colors.red.shade200
+                                          : Colors.red.shade900,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Please modify the task details and resubmit for approval.',
+                                    style: GoogleFonts.inter(
+                                      color: isDark
+                                          ? Colors.red.shade300.withOpacity(0.7)
+                                          : Colors.red.shade700,
+                                      fontSize: 11,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Task Title
                     _SectionLabel('Task Title', labelColor),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: titleController,
-                      style: TextStyle(color: textColor, fontSize: 15),
+                      style: GoogleFonts.inter(
+                        color: textColor, 
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                       decoration: _inputDeco(
                         hint: 'e.g. Design the login screen',
                         borderColor: borderColor,
                         surfaceColor: surfaceColor,
                         prefixIcon:
-                            Icon(Icons.title, size: 18, color: labelColor),
+                            Icon(Icons.title_rounded, size: 20, color: labelColor),
                       ),
                     ),
                     const SizedBox(height: 16),
 
                     _SectionLabel('Planned Hours', labelColor),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: plannedHoursController,
-                      style: TextStyle(color: textColor, fontSize: 15),
+                      style: GoogleFonts.inter(
+                        color: textColor, 
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: _inputDeco(
                         hint: 'e.g. 8.0',
                         borderColor: borderColor,
                         surfaceColor: surfaceColor,
                         prefixIcon:
-                            Icon(Icons.timer, size: 18, color: labelColor),
+                            Icon(Icons.timer_outlined, size: 20, color: labelColor),
                       ),
                     ),
                     const SizedBox(height: 20),
 
                     // Priority
                     _SectionLabel('Priority', labelColor),
+                    const SizedBox(height: 12),
                     Row(
                       children: _priorities.map((p) {
                         final isSelected = priority.value == p['value'];
@@ -352,32 +534,34 @@ class AddProjectTaskModal extends HookConsumerWidget {
                           child: GestureDetector(
                             onTap: () => priority.value = p['value'] as String,
                             child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeOutCirc,
                               margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? color.withOpacity(0.15)
+                                    ? color.withOpacity(0.12)
                                     : surfaceColor,
                                 border: Border.all(
                                   color: isSelected ? color : borderColor,
                                   width: isSelected ? 2 : 1,
                                 ),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               child: Column(
                                 children: [
                                   Icon(p['icon'] as IconData,
-                                      color: color, size: 18),
-                                  const SizedBox(height: 4),
+                                      color: color, size: 20),
+                                  const SizedBox(height: 6),
                                   Text(
                                     p['label'] as String,
-                                    style: TextStyle(
+                                    style: GoogleFonts.inter(
                                       color: isSelected ? color : labelColor,
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                      letterSpacing: 0.2,
                                     ),
                                   ),
                                 ],
@@ -437,12 +621,9 @@ class AddProjectTaskModal extends HookConsumerWidget {
                       children: [
                         _SectionLabel('Milestones', labelColor),
                         const Spacer(),
-                        if (milestones.value.isNotEmpty)
-                          // Removed weight badge as per request
-                          Container(),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     _MilestoneList(
                       milestones: milestones,
                       nameCtrl: milestoneNameController,
@@ -451,70 +632,83 @@ class AddProjectTaskModal extends HookConsumerWidget {
                       labelColor: labelColor,
                       textColor: textColor,
                     ),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
             ),
 
-            // ── Footer ───────────────────────────────────────────────────────
+            // ── Premium Footer ───────────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+              padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: borderColor)),
+                color: isDark ? const Color(0xFF111827) : Colors.white,
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100,
+                  ),
+                ),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
               ),
               child: Row(
                 children: [
-                  // Priority badge
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Color((selectedPriority['color'] as int))
-                          .withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                  // Cancel Button
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.inter(
+                        color: labelColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  // Submit Button
+                  ElevatedButton(
+                    onPressed: isLoading.value ? null : saveTask,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFF3B82F6) : const Color(0xFF05263E),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(selectedPriority['icon'] as IconData,
-                            size: 14,
-                            color: Color(selectedPriority['color'] as int)),
-                        const SizedBox(width: 4),
+                        if (isLoading.value) ...[
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ] else ...[
+                          Icon(existingTask != null ? Icons.save_as_rounded : Icons.add_rounded, size: 20),
+                          const SizedBox(width: 10),
+                        ],
                         Text(
-                          selectedPriority['label'] as String,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(selectedPriority['color'] as int),
+                          isLoading.value 
+                            ? 'Saving...' 
+                            : (existingTask != null ? 'Update Task' : 'Create Task'),
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel', style: TextStyle(color: labelColor)),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: isLoading.value ? null : createTask,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    icon: isLoading.value
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.check_rounded, size: 18),
-                    label: Text(isLoading.value ? 'Creating...' : 'Create Task',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -536,22 +730,23 @@ InputDecoration _inputDeco({
 }) {
   return InputDecoration(
     hintText: hint,
-    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+    hintStyle: GoogleFonts.inter(
+        color: Colors.grey.shade400, fontSize: 13, fontWeight: FontWeight.w500),
     prefixIcon: prefixIcon,
     filled: true,
     fillColor: surfaceColor,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: borderColor),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: borderColor),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
     ),
   );
 }
@@ -564,13 +759,16 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text,
-          style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5)),
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        text.toUpperCase(),
+        style: GoogleFonts.inter(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.2,
+        ),
+      ),
     );
   }
 }
@@ -628,11 +826,17 @@ class _DateField extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_today_outlined,
-                    size: 16, color: Colors.blue.shade400),
-                const SizedBox(width: 8),
-                Text(DateFormat('MMM dd, yyyy').format(date.value),
-                    style: TextStyle(color: textColor, fontSize: 13)),
+                Icon(Icons.calendar_month_rounded,
+                    size: 18, color: Colors.blue.shade500),
+                const SizedBox(width: 10),
+                Text(
+                  DateFormat('MMM dd, yyyy').format(date.value),
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -674,8 +878,12 @@ class _AssigneeRow extends StatelessWidget {
                             color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))
                     : null,
               ),
-              label: Text(u.name, style: const TextStyle(fontSize: 13)),
-              deleteIcon: const Icon(Icons.close, size: 14),
+              label: Text(
+                u.name,
+                style: GoogleFonts.inter(
+                    fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              deleteIcon: const Icon(Icons.close_rounded, size: 14),
               onDeleted: () {
                 selectedAssignees.value = selectedAssignees.value
                     .where((user) => user.id != u.id)
@@ -684,13 +892,18 @@ class _AssigneeRow extends StatelessWidget {
               backgroundColor: surfaceColor,
               side: BorderSide(color: borderColor),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(10)),
             )),
         ActionChip(
-          avatar: Icon(Icons.person_add_outlined,
+          avatar: Icon(Icons.person_add_rounded,
               size: 16, color: Colors.blue.shade600),
-          label: Text('Add',
-              style: TextStyle(color: Colors.blue.shade600, fontSize: 13)),
+          label: Text(
+            'Add Member',
+            style: GoogleFonts.inter(
+                color: Colors.blue.shade600,
+                fontSize: 13,
+                fontWeight: FontWeight.w700),
+          ),
           onPressed: () async {
             final available = allUsersAsync.value ?? [];
             final result = await showDialog<User>(
@@ -761,8 +974,14 @@ class _MilestoneList extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(m.title,
-                        style: TextStyle(color: textColor, fontSize: 13)),
+                    child: Text(
+                      m.title,
+                      style: GoogleFonts.inter(
+                        color: textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -791,7 +1010,14 @@ class _MilestoneList extends StatelessWidget {
                 hintStyle: TextStyle(color: labelColor, fontSize: 13),
                 isDense: true,
                 border: InputBorder.none,
-                icon: Icon(Icons.add, size: 18, color: labelColor),
+                icon: InkWell(
+                  onTap: _addMilestone,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Icon(Icons.add, size: 18, color: labelColor),
+                  ),
+                ),
               ),
             ),
           ),
@@ -882,6 +1108,49 @@ class _AssigneePicker extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Header Budget Badge ──────────────────────────────────────────────────────
+
+class _HeaderBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool highlight;
+
+  const _HeaderBadge({
+    required this.icon,
+    required this.label,
+    this.highlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: highlight
+            ? Colors.white.withOpacity(0.25)
+            : Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white.withOpacity(0.9)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 10.5,
+              fontWeight: highlight ? FontWeight.w900 : FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
       ),
     );
   }

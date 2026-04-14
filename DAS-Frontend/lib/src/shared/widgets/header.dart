@@ -32,15 +32,30 @@ class AppHeader extends ConsumerWidget {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 16 : 24,
-        vertical: isMobile ? 12 : 16,
+        vertical: isMobile ? 8 : 12, // Reduced padding for premium, denser layout
       ),
       decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF05263E).withOpacity(isDark ? 0.95 : 1.0),
+            const Color(0xFF05263E).withOpacity(isDark ? 0.8 : 0.9),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
         border: Border(
           bottom: BorderSide(
-            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+            color: Colors.white.withOpacity(isDark ? 0.1 : 0.15),
+            width: 1,
           ),
         ),
-        color: Theme.of(context).scaffoldBackgroundColor,
       ),
       child: Row(
         children: [
@@ -48,9 +63,9 @@ class AppHeader extends ConsumerWidget {
           if (onMenuTap != null) ...[
             IconButton(
               onPressed: onMenuTap,
-              icon: Icon(
+              icon: const Icon(
                 Icons.menu,
-                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                color: Colors.white,
               ),
               tooltip: 'Menu',
             ),
@@ -66,11 +81,11 @@ class AppHeader extends ConsumerWidget {
                 else
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.outfit( // Switched to Outfit for premium look
                       fontWeight: FontWeight.w700,
-                      fontSize: isMobile ? 18 : 20,
-                      letterSpacing: -0.5,
-                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: isMobile ? 18 : 22,
+                      letterSpacing: -0.2,
+                      color: Colors.white,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -81,8 +96,8 @@ class AppHeader extends ConsumerWidget {
                     subtitle,
                     style: GoogleFonts.inter(
                       fontSize: isMobile ? 11 : 13,
-                      color:
-                          isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.7),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -107,11 +122,10 @@ class AppHeader extends ConsumerWidget {
                 // Theme Switcher - 3 buttons like React
                 Container(
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                    color: Colors.white.withOpacity(isDark ? 0.08 : 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color:
-                          isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                      color: Colors.white.withOpacity(isDark ? 0.1 : 0.2),
                     ),
                   ),
                   padding: const EdgeInsets.all(4),
@@ -192,13 +206,13 @@ class _ThemeButton extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: isActive
-                ? (isDark ? Colors.grey.shade700 : Colors.white)
+                ? (isDark ? Colors.white.withOpacity(0.15) : Colors.white)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withOpacity(0.1),
                       blurRadius: 2,
                       offset: const Offset(0, 1),
                     ),
@@ -209,8 +223,8 @@ class _ThemeButton extends StatelessWidget {
             icon,
             size: 14,
             color: isActive
-                ? Colors.blue.shade600
-                : (isDark ? Colors.grey.shade400 : Colors.grey.shade500),
+                ? (isDark ? Colors.white : const Color(0xFF05263E))
+                : Colors.white.withOpacity(0.5),
           ),
         ),
       ),
@@ -527,10 +541,9 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
         children: [
           IconButton(
             onPressed: _toggleDropdown,
-            icon: Icon(
+            icon: const Icon(
               FontAwesomeIcons.bell,
-              color:
-                  widget.isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              color: Colors.white,
             ),
             tooltip: 'Notifications',
           ),
@@ -545,7 +558,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
                   color: Colors.red.shade500,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color: const Color(0xFF05263E),
                     width: 2,
                   ),
                 ),
@@ -1058,7 +1071,7 @@ class _CriticalAttentionButtonState
                         child: Icon(
                           Icons.warning_rounded,
                           size: 28,
-                          color: Color.lerp(Colors.red.shade900,
+                          color: Color.lerp(Colors.red.shade100,
                               Colors.redAccent, _opacityAnimation.value),
                         ),
                       );
@@ -1067,9 +1080,7 @@ class _CriticalAttentionButtonState
                 : Icon(
                     Icons.warning_amber_rounded,
                     size: 28,
-                    color: widget.isDark
-                        ? Colors.grey.shade600
-                        : Colors.grey.shade400,
+                    color: Colors.white.withOpacity(0.6),
                   ),
             tooltip: 'Critical Attention',
           ),
@@ -1084,7 +1095,7 @@ class _CriticalAttentionButtonState
                   color: Colors.red.shade500,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color: const Color(0xFF05263E),
                     width: 2,
                   ),
                 ),

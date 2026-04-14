@@ -41,7 +41,7 @@ final dashboardProjectsProvider =
 typedef DashboardProjectsRef
     = AutoDisposeFutureProviderRef<List<ProjectWithTasks>>;
 String _$filteredDashboardStatsHash() =>
-    r'3b61f5612cf6fc30ecaddd64c2ca07107a2f920c';
+    r'5ab89822e6b4cc48f30da3d120e93ad8960d35bb';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -268,7 +268,7 @@ final statsProjectsProvider = AutoDisposeFutureProvider<List<dynamic>>.internal(
 
 typedef StatsProjectsRef = AutoDisposeFutureProviderRef<List<dynamic>>;
 String _$projectCompletionChartHash() =>
-    r'f434b6bf032a299754791b956660e840f923b4bf';
+    r'ee32495e0603d043e51e2f6d77900da4635f18c8';
 
 /// See also [projectCompletionChart].
 @ProviderFor(projectCompletionChart)
@@ -403,7 +403,7 @@ class _ProjectCompletionChartProviderElement
 }
 
 String _$taskCompletionChartHash() =>
-    r'71b52cec21c721e5f0541053dd0aa2014187189c';
+    r'bc9afcca3112f0ef942d5ac4aab5b4580f78ef0d';
 
 /// See also [taskCompletionChart].
 @ProviderFor(taskCompletionChart)
@@ -537,7 +537,7 @@ class _TaskCompletionChartProviderElement
 }
 
 String _$hoursCompletionChartHash() =>
-    r'51079cecb07a208565fe45414d7f08f3728613dc';
+    r'f383988a0bdfdb5ae245aadbae9d3b999f014706';
 
 /// See also [hoursCompletionChart].
 @ProviderFor(hoursCompletionChart)

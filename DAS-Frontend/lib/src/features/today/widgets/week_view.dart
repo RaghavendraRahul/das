@@ -109,10 +109,10 @@ class WeekView extends HookConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E3A6E).withValues(alpha: 0.08),
+                    color: const Color(0xFF1E3A6E).withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: const Color(0xFF1E3A6E).withValues(alpha: 0.2),
+                      color: const Color(0xFF1E3A6E).withOpacity(0.2),
                     ),
                   ),
                   child: Text(
@@ -523,7 +523,7 @@ class WeekView extends HookConsumerWidget {
                                               decoration: BoxDecoration(
                                                 color: candidateData.isNotEmpty
                                                     ? const Color(0xFF2563EB)
-                                                        .withValues(alpha: 0.05)
+                                                        .withOpacity(0.05)
                                                     : (isDark
                                                         ? const Color(
                                                             0xFF0F172A)
@@ -550,8 +550,8 @@ class WeekView extends HookConsumerWidget {
                                                             .add_circle_outline,
                                                         color: const Color(
                                                                 0xFF2563EB)
-                                                            .withValues(
-                                                                alpha: 0.5),
+                                                            .withOpacity(
+                                                                0.5),
                                                         size: 20,
                                                       ),
                                                     )
@@ -729,7 +729,7 @@ class _EventCard extends HookConsumerWidget {
                   boxShadow: isHovered.value
                       ? [
                           BoxShadow(
-                            color: theme.accent.withValues(alpha: 0.12),
+                            color: theme.accent.withOpacity(0.12),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           )
