@@ -69,8 +69,10 @@ class DayPlanner extends HookConsumerWidget {
       ][selectedDate.month - 1]} ${selectedDate.day}";
     }
 
+    final horizontalPadding = MediaQuery.of(context).size.width < 600 ? 12.0 : 24.0;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -103,9 +105,10 @@ class DayPlanner extends HookConsumerWidget {
                 children: [
                   Text(
                     dateHeader,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w800,
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w900,
                       fontSize: 18,
+                      letterSpacing: 0.2,
                       color: isDark ? Colors.white : const Color(0xFF05263E),
                     ),
                   ),
@@ -118,21 +121,21 @@ class DayPlanner extends HookConsumerWidget {
                               sum +
                               (item['planned_duration_minutes'] as int? ?? 0));
                       return Text(
-                        "Total Hour's : ${formatDuration(apiTotal)}",
+                        "Total Hours : ${formatDuration(apiTotal)}",
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w700,
                           color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
                         ),
                       );
                     },
                     loading: () => Text(
-                      "Total Hour's : --",
+                      "Total Hours : --",
                       style: GoogleFonts.inter(
                           fontSize: 11, color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316), fontWeight: FontWeight.w600),
                     ),
                     error: (_, __) => Text(
-                      "Total Hour's : --",
+                      "Total Hours : --",
                       style: GoogleFonts.inter(
                           fontSize: 11, color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316), fontWeight: FontWeight.w600),
                     ),
@@ -210,7 +213,9 @@ class DayPlanner extends HookConsumerWidget {
           if (ref.watch(apiPendingItemsProvider(selectedDateStr)).maybeWhen(data: (items) => items.isNotEmpty, orElse: () => false)) ...[ if (isPendingBoxVisible.value)
             Flexible(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 280),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.3, // Responsive height (30% of screen)
+              ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,9 +225,10 @@ class DayPlanner extends HookConsumerWidget {
                       children: [
                         Text(
                           "Pending Tasks",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
                             fontSize: 16,
+                            letterSpacing: 0.1,
                             color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
@@ -296,9 +302,7 @@ class DayPlanner extends HookConsumerWidget {
                                           ref.read(taskApiServiceProvider);
                                       final userId =
                                           ref.read(currentUserIdProvider);
-                                      final now = DateTime.now();
-                                      final planDate =
-                                          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+                                      final planDate = selectedDateStr;
 
                                       if (data['type'] == 'catalog_item' &&
                                           data['catalog_id'] != null) {
@@ -362,9 +366,10 @@ class DayPlanner extends HookConsumerWidget {
               children: [
                 Text(
                   "Pending Tasks",
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w800,
                     fontSize: 16,
+                    letterSpacing: 0.1,
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
@@ -378,8 +383,7 @@ class DayPlanner extends HookConsumerWidget {
           const SizedBox(height: 8),
 
           // Start Day / Locked Status Button
-          if ((!isFinalized || isFinalized) &&
-              apiTodayPlanAsync.valueOrNull != null &&
+          if (apiTodayPlanAsync.valueOrNull != null &&
               apiTodayPlanAsync.value!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
@@ -478,7 +482,7 @@ class DayPlanner extends HookConsumerWidget {
           const SizedBox(height: 12),
           _QuadrantBox(
             quadrant: 'Q2',
-            title: 'Q2 Schedule First (Important, Not Urgent)',
+            title: 'Q2 Schedule (Important, Not Urgent)',
             color: const Color(0xFFF97316), // Orange
             apiItems: apiItems.where((i) => i['quadrant']?.toString().toUpperCase() == 'Q2').toList(),
             isFinalized: isFinalized,
@@ -593,12 +597,11 @@ class _QuadrantBox extends ConsumerWidget {
           );
           return;
         }
+        if (details.data is! Map<String, dynamic>) return;
         final data = details.data as Map<String, dynamic>;
 
         // Handle moving an existing API item (Drag from another quadrant)
         if (data.containsKey('id') &&
-
-            data.containsKey('id') &&
             !data.containsKey('type')) {
           final int itemId = data['id'];
           // If it's already in this quadrant, do nothing
@@ -624,16 +627,27 @@ class _QuadrantBox extends ConsumerWidget {
             final userId = ref.read(currentUserIdProvider);
             final planDate = selectedDateStr;
 
-
-
-
             final int duration = ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120);
 
-            if ((data['type'] == 'catalog_item' || data['type'] == 'custom_template') &&
+            // Case: today-inbox pending_item — already a TodayPlan row, just reassign quadrant
+            if (data['type'] == 'pending_item' &&
+                data['is_today_inbox'] == true) {
+              await apiService.updateTodayPlanItem(data['id'], {
+                'quadrant': quadrant,
+                'status': 'PLANNED',
+              });
+              final selectedDate = ref.read(selectedDateProvider);
+              final refreshDateStr =
+                  '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+              ref.invalidate(apiTodayPlanProvider);
+              ref.invalidate(apiPendingItemsProvider(refreshDateStr));
+              ref.invalidate(apiAllPendingItemsProvider);
+            } else if ((data['type'] == 'catalog_item' || data['type'] == 'custom_template') &&
                 (data['catalog_id'] != null || data['template_id'] != null)) {
+              // Catalog item — add using the catalog endpoint
               await apiService.addItemToTodayPlan(
                 itemType: 'catalog',
-                catalogId: data['catalog_id'] != null 
+                catalogId: data['catalog_id'] != null
                     ? parseTaskId(data['catalog_id'])
                     : parseTaskId(data['template_id']),
                 planDate: planDate,
@@ -642,7 +656,30 @@ class _QuadrantBox extends ConsumerWidget {
                 quadrant: quadrant,
                 userId: userId,
               );
+
+              // Clean up pending if applicable
+              if (data['is_pending'] == true && data['pending_id'] != null) {
+                await apiService.deletePendingTask(data['pending_id']);
+                final selectedDate = ref.read(selectedDateProvider);
+                final refreshDateStr =
+                    '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+                ref.invalidate(apiPendingItemsProvider(refreshDateStr));
+                ref.invalidate(apiAllPendingItemsProvider);
+              }
+
+              ref.invalidate(apiTodayPlanProvider);
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Added "${data['name']}" to $quadrant'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              }
             } else {
+              // Project task, catalog_task, or custom — add as custom item
               await apiService.addItemToTodayPlan(
                 itemType: 'custom',
                 title: data['name'] ?? 'New Task',
@@ -655,28 +692,30 @@ class _QuadrantBox extends ConsumerWidget {
                     : (data['id'] != null && data['type'] == 'catalog_task' ? parseTaskId(data['id']) : null),
                 userId: userId,
               );
-            }
 
-            // If it's a pending task, delete it from the pending table
-            if (data['is_pending'] == true && data['pending_id'] != null) {
-              await apiService.deletePendingTask(data['pending_id']);
-              final selectedDate = ref.read(selectedDateProvider);
-              final refreshDateStr =
-                  '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-              ref.invalidate(apiPendingItemsProvider(refreshDateStr));
-              ref.invalidate(apiAllPendingItemsProvider);
-            }
+              // Clean up pending if applicable
+              if (data['is_pending'] == true &&
+                  data['pending_id'] != null &&
+                  data['is_today_inbox'] != true) {
+                await apiService.deletePendingTask(data['pending_id']);
+                final selectedDate = ref.read(selectedDateProvider);
+                final refreshDateStr =
+                    '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+                ref.invalidate(apiPendingItemsProvider(refreshDateStr));
+                ref.invalidate(apiAllPendingItemsProvider);
+              }
 
-            ref.invalidate(apiTodayPlanProvider);
-            
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Added "${data['name']}" to $quadrant'),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 1),
-                ),
-              );
+              ref.invalidate(apiTodayPlanProvider);
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Added "${data['name']}" to $quadrant'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              }
             }
           } catch (e) {
             debugPrint('Error direct adding item: $e');
@@ -689,98 +728,8 @@ class _QuadrantBox extends ConsumerWidget {
               );
             }
           }
-        } else if (data['type'] == 'pending_item' &&
-
-              data['type'] == 'pending_item' &&
-              data['is_today_inbox'] == true) {
-            // Today inbox item — already exists as TodayPlan, just move to this quadrant
-            try {
-              final apiService = ref.read(taskApiServiceProvider);
-              await apiService.updateTodayPlanItem(data['id'], {
-                'quadrant': quadrant,
-                'status': 'PLANNED',
-              });
-              final selectedDate = ref.read(selectedDateProvider);
-              final refreshDateStr =
-                  '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-              ref.invalidate(apiTodayPlanProvider);
-              ref.invalidate(apiPendingItemsProvider(refreshDateStr));
-              ref.invalidate(apiAllPendingItemsProvider);
-            } catch (e) {
-              debugPrint('Error moving inbox item to quadrant: $e');
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(e.toString()),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          } else {
-            showDialog(
-                context: context,
-                builder: (context) => TaskConfigModal(
-                    initialTitle: data['name'] as String?,
-                    initialDescription: data['description'] as String?,
-                    initialDuration:
-                        (data['duration'] as int? ?? 60).clamp(15, 120),
-                    onConfirm: ({
-                      required String name,
-                      required int duration,
-                      String? description,
-                      List<String>? selectedMilestoneIds,
-                      String? quadrant,
-                    }) async {
-                      try {
-                        final apiService = ref.read(taskApiServiceProvider);
-                        final userId = ref.read(currentUserIdProvider);
-                        final planDate = selectedDateStr;
-
-
-
-
-                        // Save custom task to backend
-                        await apiService.addItemToTodayPlan(
-                          itemType: 'custom',
-                          title: name,
-                          planDate: planDate,
-                          description: description,
-                          plannedDurationMinutes: duration,
-                          quadrant: quadrant,
-                          userId: userId,
-                        );
-
-                        // If it's a historical pending task, delete from Pending table
-                        // Skip for today inbox items (they are TodayPlan records, not Pending)
-                        if (data['is_pending'] == true &&
-                            data['pending_id'] != null &&
-                            data['is_today_inbox'] != true) {
-                          await apiService
-                              .deletePendingTask(data['pending_id']);
-                        }
-                        final selectedDate = ref.read(selectedDateProvider);
-                        final refreshDateStr =
-                            '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-                        ref.invalidate(apiPendingItemsProvider(refreshDateStr));
-                        ref.invalidate(apiAllPendingItemsProvider);
-
-                        // Refresh API data
-                        ref.invalidate(apiTodayPlanProvider);
-                      } catch (e) {
-                        debugPrint('Error saving custom task: $e');
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(e.toString()),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    }));
-          }
-      },
+        }
+    },
       builder: (context, candidateData, rejectedData) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final isHovering = candidateData.isNotEmpty;
@@ -829,8 +778,8 @@ class _QuadrantBox extends ConsumerWidget {
                       children: [
                         Text(
                           title,
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w700,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
                             fontSize: 13,
                             color: color,
                             letterSpacing: 0.5,
@@ -843,19 +792,27 @@ class _QuadrantBox extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     if (apiItems.isEmpty && !isHovering)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Center(
-                          child: Text(
-                            "READY FOR DEPLOYMENT",
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: isDark
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade300,
-                              letterSpacing: 1.5,
-                            ),
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.assignment_outlined,
+                                size: 32,
+                                color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Drop items here to plan your day",
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       )
@@ -1312,40 +1269,6 @@ class _ApiPlannedItem extends ConsumerWidget {
 }
 
 
-class _BlueprintGridPainter extends CustomPainter {
-  final bool isDark;
-  _BlueprintGridPainter({required this.isDark});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color =
-          isDark ? Colors.blue.withOpacity(0.05) : Colors.blue.withOpacity(0.03)
-      ..strokeWidth = 1.0;
-
-    const step = 30.0;
-    for (double i = 0; i < size.width; i += step) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += step) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-
-    // Sub-grid
-    paint.strokeWidth = 0.5;
-    paint.color = paint.color.withOpacity(isDark ? 0.02 : 0.01);
-    const subStep = 10.0;
-    for (double i = 0; i < size.width; i += subStep) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += subStep) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
 class DashedBorderPainter extends CustomPainter {
   final Color color;
   final double dashWidth;

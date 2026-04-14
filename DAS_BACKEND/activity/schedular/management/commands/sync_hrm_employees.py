@@ -25,7 +25,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        hrm_url = options['hrm_url']
+        # Sanitize URL (remove trailing slash)
+        hrm_url = options['hrm_url'].rstrip('/')
         
         self.stdout.write(self.style.WARNING(f'Starting HRM employee sync from {hrm_url}...'))
         
@@ -59,16 +60,27 @@ class Command(BaseCommand):
                         continue
                     
                     # Map HRM designation to DAS role
-                    hrm_designation = emp_data.get('designation')
-                    das_role = 'EMPLOYEE'  # Default role
+                    hrm_designation = emp_data.get('designation', '')
                     
-                    if hrm_designation == 'Admin':
-                        das_role = 'ADMIN'
-                    elif hrm_designation == 'HR':
-                        das_role = 'MANAGER'
-                    elif hrm_designation in ['Employee', 'Recruiter']:
-                        das_role = 'EMPLOYEE'
+                    def get_das_role(hrm_role_str):
+                        if not hrm_role_str: return 'EMPLOYEE'
+                        role_l = hrm_role_str.lower()
+                        if role_l in ['admin', 'administrator', 'superadmin']: return 'ADMIN'
+                        if role_l in ['hr', 'manager', 'hr manager', 'head']: return 'MANAGER'
+                        if role_l in ['tl', 'teamlead', 'lead', 'team lead']: return 'TEAMLEAD'
+                        return 'EMPLOYEE'
                     
+                    das_role = get_das_role(hrm_designation)
+                    
+                    # Helper for safe date parsing
+                    from datetime import datetime
+                    def parse_date_safe(date_str):
+                        if not date_str: return None
+                        try:
+                            if 'T' in date_str: return datetime.fromisoformat(date_str).date()
+                            return datetime.strptime(date_str, '%Y-%m-%d').date()
+                        except: return None
+
                     # Create or update User
                     user, created = User.objects.update_or_create(
                         email=email,
@@ -79,7 +91,7 @@ class Command(BaseCommand):
                             'designation': hrm_designation,
                             'role': das_role,  # Map designation to role
                             'location': emp_data.get('work_location'),
-                            'date_of_joining': emp_data.get('hired_date'),
+                            'date_of_joining': parse_date_safe(emp_data.get('hired_date')),
                             'is_active_in_hrm': True,
                             'last_sync_time': timezone.now(),
                             'is_active': True,
@@ -92,10 +104,10 @@ class Command(BaseCommand):
                         user.set_password(random_password)
                         user.save()
                         created_count += 1
-                        self.stdout.write(self.style.SUCCESS(f'  ✓ Created user: {email} ({emp_data.get("full_name")})'))
+                        self.stdout.write(self.style.SUCCESS(f'  [CREATED] {email} ({emp_data.get("full_name")})'))
                     else:
                         updated_count += 1
-                        self.stdout.write(f'  • Updated user: {email} ({emp_data.get("full_name")})')
+                        self.stdout.write(f'  [UPDATED] {email} ({emp_data.get("full_name")})')
                     
                     # Create or update Employee profile
                     Employee.objects.update_or_create(
@@ -105,10 +117,10 @@ class Command(BaseCommand):
                             'name': emp_data.get('full_name'),
                             'employee_id': emp_data.get('employee_Id'),
                             'phone': emp_data.get('phone'),
-                            'designation': emp_data.get('designation'),
+                            'designation': hrm_designation,
                             'work_location': emp_data.get('work_location'),
-                            'date_of_joining': emp_data.get('hired_date'),
-                            'date_of_birth': emp_data.get('date_of_birth'),
+                            'date_of_joining': parse_date_safe(emp_data.get('hired_date')),
+                            'date_of_birth': parse_date_safe(emp_data.get('date_of_birth')),
                             'employment_type': emp_data.get('Employeement_Type'),
                             'hrm_employee_id': emp_data.get('employee_Id'),
                             'is_active_in_hrm': True,
@@ -117,7 +129,7 @@ class Command(BaseCommand):
                     
                 except Exception as e:
                     error_count += 1
-                    self.stdout.write(self.style.ERROR(f'  ✗ Error syncing {email}: {str(e)}'))
+                    self.stdout.write(self.style.ERROR(f'  [ERROR] syncing {email}: {str(e)}'))
             
             self.stdout.write('')
             self.stdout.write(self.style.SUCCESS('=' * 60))

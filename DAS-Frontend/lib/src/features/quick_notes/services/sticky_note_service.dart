@@ -24,11 +24,12 @@ class StickyNoteService {
   }
 
   Future<StickyNote> createNote(
-      {required String content, required Color color}) async {
+      {required String title, required String content, required Color color}) async {
     try {
       final response = await _dio.post(
         '/sticky-notes/',
         data: {
+          'title': title,
           'content': content,
           'color': _colorToHex(color),
         },
@@ -41,9 +42,10 @@ class StickyNoteService {
   }
 
   Future<StickyNote> updateNote(
-      {required String id, String? content, Color? color}) async {
+      {required String id, String? title, String? content, Color? color}) async {
     try {
       final data = <String, dynamic>{};
+      if (title != null) data['title'] = title;
       if (content != null) data['content'] = content;
       if (color != null) data['color'] = _colorToHex(color);
 
@@ -70,6 +72,7 @@ class StickyNoteService {
   StickyNote _fromJson(Map<String, dynamic> json) {
     return StickyNote(
       id: json['id'].toString(),
+      title: json['title'] ?? '',
       content: json['content'] ?? '',
       color: _hexToColor(json['color']),
       createdAt: DateTime.parse(json['created_at']),

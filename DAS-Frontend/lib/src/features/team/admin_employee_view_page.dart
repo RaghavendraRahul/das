@@ -643,15 +643,16 @@ class _EmployeeNotesTab extends HookConsumerWidget {
                           runSpacing: 16,
                           children: notes.map((note) {
                             final color = hexToColor(note['color'] as String?);
+                            final title = (note['title'] as String?) ?? 'Untitled';
                             final content = (note['content'] as String?) ?? '';
                             final createdAt = note['created_at'] != null
-                                ? DateTime.tryParse(
-                                    note['created_at'] as String)
+                                ? DateTime.tryParse(note['created_at'] as String)
                                 : null;
                             return SizedBox(
                               width: (constraints.maxWidth - (cols - 1) * 16) /
                                   cols,
                               child: _StickyNoteCard(
+                                title: title,
                                 content: content,
                                 color: color,
                                 createdAt: createdAt,
@@ -984,16 +985,19 @@ class _PlanItemCard extends StatelessWidget {
 }
 
 class _StickyNoteCard extends StatelessWidget {
+  final String title;
   final String content;
   final Color color;
   final DateTime? createdAt;
   final bool isDark;
 
-  const _StickyNoteCard(
-      {required this.content,
-      required this.color,
-      this.createdAt,
-      required this.isDark});
+  const _StickyNoteCard({
+    required this.title,
+    required this.content,
+    required this.color,
+    this.createdAt,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1017,24 +1021,25 @@ class _StickyNoteCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (content.isEmpty)
-            Text(
-              'Empty note',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-                color: Colors.black38,
-              ),
-            )
-          else
-            Text(
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Text(
               content,
               style: GoogleFonts.inter(
-                fontSize: 13,
-                color: Colors.black87,
                 height: 1.5,
               ),
             ),
+          ),
           if (dateStr.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(

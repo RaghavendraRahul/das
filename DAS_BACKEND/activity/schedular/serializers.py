@@ -417,14 +417,19 @@ class TodayPlanSerializer(serializers.ModelSerializer):
     
     def get_catalog_name(self, obj):
         """Return catalog name or custom title, with unplanned prefix if applicable"""
-        name = obj.catalog_item.name if obj.catalog_item else obj.custom_title
+        if obj.catalog_item:
+            name = obj.catalog_item.name
+        else:
+            name = obj.custom_title or 'Untitled Task'
         if obj.is_unplanned:
-            return f"[Unplanned] {name or 'Untitled'}"
+            return f"[Unplanned] {name}"
         return name
     
     def get_catalog_type(self, obj):
         """Return catalog type or 'CUSTOM' for custom tasks"""
-        return obj.catalog_item.catalog_type if obj.catalog_item else 'CUSTOM'
+        if obj.catalog_item:
+            return obj.catalog_item.catalog_type
+        return 'CUSTOM'
 
 
 class ActivityLogSerializer(serializers.ModelSerializer):

@@ -90,6 +90,10 @@ class _TodayPageState extends ConsumerState<TodayPage> {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+      drawer: const Drawer(
+        width: 300,
+        child: ActivityCatalog(),
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -105,8 +109,10 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                   final user = ref.watch(currentUserProvider).valueOrNull;
                   final isAdmin = user?.role == 'ADMIN';
 
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       // 1. Navigation Views (Today, Week, Month)
                       Container(
@@ -142,21 +148,28 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
 
                       // 2. Catalog
-                      _PillButton(
-                        label: 'Catalog',
-                        icon: Icons.menu_open_rounded,
-                        isSelected: _isCatalogOpen,
-                        onTap: () => setState(() => _isCatalogOpen = !_isCatalogOpen),
-                        showShadow: false,
-                        backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
-                      ),
-                      const SizedBox(width: 12),
+                      Builder(builder: (context) {
+                        return _PillButton(
+                          label: 'Catalog',
+                          icon: Icons.menu_open_rounded,
+                          isSelected: _isCatalogOpen,
+                          onTap: () {
+                            final width = MediaQuery.of(context).size.width;
+                            if (width < 1100) {
+                              Scaffold.of(context).openDrawer();
+                            } else {
+                              setState(() => _isCatalogOpen = !_isCatalogOpen);
+                            }
+                          },
+                          showShadow: false,
+                          backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
+                        );
+                      }),
 
                       // 3. Send Instructions - ADMIN ONLY
-                      if (isAdmin) ...[
+                      if (isAdmin)
                         _PillButton(
                           label: 'Send Instructions',
                           icon: Icons.group_rounded,
@@ -170,8 +183,6 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                           showShadow: false,
                           backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
                         ),
-                        const SizedBox(width: 12),
-                      ],
 
                       // 4. Instructions Inbox - ALL USERS (with badge)
                       Stack(
@@ -216,7 +227,6 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                             ),
                         ],
                       ),
-                      const SizedBox(width: 12),
 
                       // 5. Calendar Popup Icon
                       _IconButton(
@@ -251,36 +261,64 @@ class _TodayPageState extends ConsumerState<TodayPage> {
             ),
           ),
 
-          // Main Content Area (3 Columns)
+          // Main Content Area (Responsive Columns)
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 1. Activity Catalog
-                  if (_isCatalogOpen)
-                    const SizedBox(
-                      width: 280,
-                      child: ActivityCatalog(),
-                    ),
-                  if (_isCatalogOpen) const SizedBox(width: 20),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final showCatalog = _isCatalogOpen && width >= 1100;
+                  final showLog = currentView == CalendarViewMode.today;
+                  final isLogStacked = width < 800;
+                  
+                  // Mobile view: Vertical Stack
+                  if (width < 600) {
+                    return SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _buildCurrentView(currentView),
+                          if (showLog) ...[
+                            const SizedBox(height: 20),
+                            const SizedBox(
+                              height: 600, // Fixed height for log in vertical stack
+                              child: DayLog(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
 
-                  // 2. Today's Plan (Center Column)
-                  Expanded(
-                    flex: 1,
-                    child: _buildCurrentView(currentView),
-                  ),
+                  // Tablet/Desktop view: Row with wrapping or conditional columns
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. Activity Catalog (Only on Desk)
+                      if (showCatalog)
+                        const SizedBox(
+                          width: 280,
+                          child: ActivityCatalog(),
+                        ),
+                      if (showCatalog) const SizedBox(width: 20),
 
-                  // 3. Activity Log (Right Column)
-                  if (currentView == CalendarViewMode.today) ...[
-                    const SizedBox(width: 20),
-                    const Expanded(
-                      flex: 1,
-                      child: DayLog(),
-                    ),
-                  ],
-                ],
+                      // 2. Today's Plan (Center Column)
+                      Expanded(
+                        flex: 1,
+                        child: _buildCurrentView(currentView),
+                      ),
+
+                      // 3. Activity Log (Right Column) - Hide or Stack
+                      if (showLog && !isLogStacked) ...[
+                        const SizedBox(width: 20),
+                        const Expanded(
+                          flex: 1,
+                          child: DayLog(),
+                        ),
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
           ),

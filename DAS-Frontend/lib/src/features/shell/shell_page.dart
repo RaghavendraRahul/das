@@ -468,7 +468,7 @@ class ShellPage extends ConsumerWidget {
         subtitle = "Detailed project metrics and details.";
         break;
       case ViewMode.quickNotes:
-        subtitle = "Capture ideas and reminders.";
+        subtitle = "Capture Ideas and Reminders.";
         break;
       case ViewMode.grid:
         subtitle = "Manage tasks in a grid view.";
@@ -596,7 +596,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
           fontWeight: FontWeight.w800,
           fontSize: isMobile ? 16 : 18,
           letterSpacing: -0.5,
-          color: isDark ? Colors.white : Colors.black87,
+          color: Colors.white,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -619,7 +619,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: isMobile ? 11 : 12,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              color: Colors.white.withOpacity(0.6),
             ),
           ),
           const SizedBox(width: 8),
@@ -628,16 +628,15 @@ class _AppBarProjectSelector extends ConsumerWidget {
               child: DropdownButton<String>(
                 value: project.id,
                 isDense: true,
-                icon: Icon(Icons.arrow_drop_down,
+                icon: const Icon(Icons.arrow_drop_down,
                     size: 24,
-                    color:
-                        isDark ? Colors.grey.shade400 : Colors.blue.shade700),
+                    color: Colors.white),
                 dropdownColor: isDark ? const Color(0xFF1F2937) : Colors.white,
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: isMobile ? 16 : 18,
                   letterSpacing: -0.5,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: Colors.white,
                 ),
                 items: allProjects
                     .map((p) => DropdownMenuItem<String>(

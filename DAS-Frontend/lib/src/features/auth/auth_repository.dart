@@ -214,4 +214,16 @@ class AuthRepository {
       rethrow;
     }
   }
+
+  /// Update quick notes dashboard label
+  Future<void> updateQuickNotesLabel(String label) async {
+    try {
+      await _dio.patch(
+        '/user-preferences/update_label/',
+        data: {'quick_notes_label': label},
+      );
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
 }

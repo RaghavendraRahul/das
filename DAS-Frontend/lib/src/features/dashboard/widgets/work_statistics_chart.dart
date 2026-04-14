@@ -312,7 +312,7 @@ class _KpiRow extends StatelessWidget {
             _StatCard(
               title: 'Planned Hours',
               value: '${planned.toStringAsFixed(1)}',
-              color: const Color(0xFF6366F1),
+              color: const Color(0xFF6366F1), // Indigo
               icon: Icons.timer_rounded,
               width: cardWidth,
               isDark: isDark,
@@ -321,7 +321,7 @@ class _KpiRow extends StatelessWidget {
             _StatCard(
               title: 'Achieved Hours',
               value: '${achieved.toStringAsFixed(1)}',
-              color: const Color(0xFF0D9488),
+              color: const Color(0xFF10B981), // Emerald Green
               icon: Icons.check_circle_rounded,
               width: cardWidth,
               isDark: isDark,
@@ -330,7 +330,7 @@ class _KpiRow extends StatelessWidget {
             _StatCard(
               title: 'Remaining Hours',
               value: '${remaining.toStringAsFixed(1)}',
-              color: const Color(0xFFF59E0B),
+              color: const Color(0xFFF59E0B), // Amber
               icon: Icons.pending_actions_rounded,
               width: cardWidth,
               isDark: isDark,
@@ -436,10 +436,11 @@ class _StatCard extends HookWidget {
                               fit: BoxFit.scaleDown,
                               child: Text(
                                 value,
-                                style: GoogleFonts.inter(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white : const Color(0xFF1F2937),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: color,
+                                  letterSpacing: -0.5,
                                 ),
                               ),
                             ),
@@ -508,20 +509,32 @@ class _DonutSection extends StatelessWidget {
     plannedSub = selectedProject != null 
         ? '$workedT/$totalT Tasks Worked'
         : '$totalT Active Tasks';
- 
+
+    final double planned = totalPlanned;
     final double achieved = (stats['totals']?['achieved_hours'] ?? stats['total_achieved_hours'] ?? 0.0).toDouble();
-    final double planned = (stats['totals']?['planned_hours'] ?? stats['total_planned_hours'] ?? 0.0).toDouble();
     final double remaining = (planned - achieved).clamp(0.0, double.infinity);
     final double achievedRate = planned > 0 ? (achieved / planned * 100).clamp(0, 100) : 0;
  
-    final achievedSlices = [
-      _Slice(value: achieved, color: const Color(0xFF6366F1), label: 'Achieved'),
-      _Slice(
-        value: remaining,
-        color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF3F4F6),
-        label: 'Remaining',
-      ),
-    ];
+    final List<_Slice> achievedSlices;
+    achievedSlices = tasks.asMap().entries.map((e) {
+      final ah = (e.value['achieved_hours'] as num? ?? 0).toDouble();
+      return _Slice(
+        value: ah,
+        color: _palette[e.key % _palette.length][0],
+        label: e.value['name'] as String? ?? 'Task ${e.key + 1}',
+      );
+    }).where((s) => s.value > 0).toList();
+
+    // Add remaining slice if there is a gap
+    if (remaining > 0) {
+      achievedSlices.add(
+        _Slice(
+          value: remaining,
+          color: const Color(0xFFF59E0B).withOpacity(isDark ? 0.2 : 0.1), // Match Remaining card color
+          label: 'Remaining',
+        ),
+      );
+    }
  
     return LayoutBuilder(builder: (context, constraints) {
       final isWide = constraints.maxWidth > 700;
@@ -564,9 +577,9 @@ class _DonutSection extends StatelessWidget {
                           centerText: '${achievedRate.toStringAsFixed(0)}%',
                           subLabel: '${achieved.toStringAsFixed(1)}h Recorded',
                           slices: achievedSlices,
-                          hasData: planned > 0,
+                          hasData: achievedSlices.isNotEmpty,
                           isDark: isDark,
-                          accentColor: const Color(0xFF0D9488),
+                          accentColor: const Color(0xFF10B981), // Emerald
                         ),
                       ),
                     ],
@@ -591,9 +604,9 @@ class _DonutSection extends StatelessWidget {
                           centerText: '${achievedRate.toStringAsFixed(0)}%',
                           subLabel: '${achieved.toStringAsFixed(1)}h Recorded',
                           slices: achievedSlices,
-                          hasData: planned > 0,
+                          hasData: achievedSlices.isNotEmpty,
                           isDark: isDark,
-                          accentColor: const Color(0xFF0D9488),
+                          accentColor: const Color(0xFF10B981), // Emerald
                         ),
                       ),
                     ],
@@ -732,13 +745,12 @@ class _DonutChart extends HookWidget {
                             ? slices.asMap().entries.map((e) {
                                 final s = e.value;
                                 final isHovered = e.key == hoveredIndex.value;
-                                final colors = _palette[e.key % _palette.length];
                                 return PieChartSectionData(
                                   value: s.value,
                                   title: '',
                                   radius: isHovered ? radius * 1.2 : radius,
                                   gradient: LinearGradient(
-                                    colors: colors,
+                                    colors: [s.color, s.color.withOpacity(0.7)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),

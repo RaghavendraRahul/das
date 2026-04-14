@@ -37,6 +37,7 @@ class User(AbstractBaseUser):
    is_active = models.BooleanField(default=True)
    phone_number = models.CharField(max_length=15, blank=True, null=True)
    theme_preference = models.CharField(max_length=10, choices=THEME_CHOICES, default='auto')
+   quick_notes_label = models.CharField(max_length=100, default='QUICK NOTES')
    
    # HRM Sync Fields
    hrm_employee_id = models.CharField(max_length=100, null=True, blank=True, help_text='Employee ID from HRM system')
@@ -715,6 +716,7 @@ class TodayPlan(models.Model):
         ('Q2', 'Q2: Schedule (Important, Not Urgent)'),
         ('Q3', 'Q3: Delegate (Urgent, Not Important)'),
         ('Q4', 'Q4: Eliminate (Not Urgent, Not Important)'),
+        ('inbox', 'Inbox (Unquadranted)'),
     )
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='today_plans')
@@ -729,7 +731,7 @@ class TodayPlan(models.Model):
     scheduled_end_time = models.TimeField(null=True, blank=True, help_text="Can be set later in activity log")
     planned_duration_minutes = models.IntegerField(help_text="Planned duration in minutes")
     
-    quadrant = models.CharField(max_length=2, choices=QUADRANT_CHOICES, default='Q2', help_text="Eisenhower Matrix quadrant")
+    quadrant = models.CharField(max_length=5, choices=QUADRANT_CHOICES, default='Q2', help_text="Eisenhower Matrix quadrant")
     order_index = models.IntegerField(default=0, help_text="Order in today's plan")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PLANNED')
     
@@ -784,7 +786,11 @@ class ActivityLog(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.user.email} - {self.today_plan.catalog_item.name} - {self.status}"
+        plan = self.today_plan
+        task_name = (
+            plan.catalog_item.name if plan.catalog_item else (plan.custom_title or 'Custom Task')
+        )
+        return f"{self.user.email} - {task_name} - {self.status}"
     
     def calculate_time_worked(self):
         """Calculate time worked when stopped"""
@@ -861,6 +867,7 @@ class DaySession(models.Model):
 
 class StickyNote(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sticky_notes')
+    title = models.CharField(max_length=200, blank=True, default='')
     content = models.TextField(blank=True)
     color = models.CharField(max_length=20, default='0xFFFEF3C7') # Store as 0xAARRGGBB hex string
     created_at = models.DateTimeField(auto_now_add=True)

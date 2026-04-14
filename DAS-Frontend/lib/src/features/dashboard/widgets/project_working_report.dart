@@ -1089,7 +1089,7 @@ class _MonthlyTaskDetailView extends ConsumerWidget {
             height: 200,
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (err, stack) => SizedBox(
+          error: (err, stack) => const SizedBox(
             height: 200,
             child: Center(child: Text('Error loading tasks')),
           ),

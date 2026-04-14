@@ -84,10 +84,11 @@ class RedirectToDASView(View):
             access_token = str(refresh.access_token)
             
             # Build DAS SSO URL
-            # das_sso_url = f"http://localhost:8001/api/sso-login/?token={access_token}"
-            das_sso_url = f"{settings.DAS_FRONTEND_URL}api/sso-login/?token={access_token}"
+            # Get DAS frontend URL from settings or use local dev default
+            das_frontend_url = getattr(settings, 'DAS_FRONTEND_URL', 'http://localhost:63105/').rstrip('/')
+            das_sso_url = f"{das_frontend_url}/api/sso-login/?token={access_token}"
             
-            logger.info(f"Redirecting employee {employee_id} to DAS with SSO token")
+            logger.info(f"Redirecting employee {employee_id} to DAS at {das_sso_url[:60]}...")
             
             # Redirect to DAS
             return redirect(das_sso_url)

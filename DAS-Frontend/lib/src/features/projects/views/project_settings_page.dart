@@ -1,4 +1,3 @@
-import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';

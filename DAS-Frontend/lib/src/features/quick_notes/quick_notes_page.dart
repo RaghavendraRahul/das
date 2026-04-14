@@ -37,6 +37,7 @@ class QuickNotesPage extends HookConsumerWidget {
       (n) => n.id == selectedNoteId.value,
       orElse: () => StickyNote(
         id: 'placeholder',
+        title: '',
         content: '',
         color: const Color(0xFFFEF3C7),
         createdAt: DateTime.now(),
@@ -73,7 +74,7 @@ class QuickNotesPage extends HookConsumerWidget {
                 // Return the new note so we can select it
                 final newNote = await ref
                     .read(stickyNotesProvider.notifier)
-                    .addNote("", color);
+                    .addNote("New Note", color);
                 selectedNoteId.value = newNote.id;
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -155,6 +156,11 @@ class QuickNotesPage extends HookConsumerWidget {
                                     .read(stickyNotesProvider.notifier)
                                     .updateNoteContent(activeNote.id, content);
                               },
+                              onTitleUpdate: (title) {
+                                ref
+                                    .read(stickyNotesProvider.notifier)
+                                    .updateNoteTitle(activeNote.id, title);
+                              },
                               onDelete: () async {
                                 final confirm = await showDialog<bool>(
                                   context: context,
@@ -201,11 +207,13 @@ class QuickNotesPage extends HookConsumerWidget {
                                 Text(
                                   "No notes created yet.\nSelect a color from the sidebar to start.",
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: GoogleFonts.inter(
                                     color: isDark
-                                        ? Colors.grey
+                                        ? Colors.grey.shade400
                                         : Colors.grey.shade500,
-                                    fontSize: 16,
+                                    fontSize: 15,
+                                    height: 1.5,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
@@ -356,8 +364,9 @@ class _StickyNotesSidebar extends HookWidget {
                         children: [
                           Text("Sticky Notes",
                               style: GoogleFonts.outfit(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
                                   color:
                                       isDark ? Colors.white : Colors.black87)),
                           const Spacer(),
@@ -520,16 +529,36 @@ class _SidebarNoteItem extends HookWidget {
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
                     width: double.infinity,
                     height: double.infinity,
-                    child: Text(
-                      note.content.isEmpty ? "Empty" : note.content,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.kalam(
-                          fontSize: 12,
-                          color: Colors.black.withOpacity(0.8),
-                          height: 1.1,
-                          fontWeight: FontWeight.w600),
-                    ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (note.title.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4.0),
+                              child: Text(
+                                note.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    color: Colors.black.withOpacity(0.8),
+                                    fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          Expanded(
+                            child: Text(
+                              note.content.isEmpty ? "Empty" : note.content,
+                              maxLines: note.title.isNotEmpty ? 3 : 4,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.patrickHand(
+                                  fontSize: 14,
+                                  color: Colors.black.withOpacity(0.7),
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
                   ),
                 ),
               ),
@@ -735,6 +764,7 @@ class _EditableStickyNote extends HookWidget {
   final StickyNote note;
   final bool isDark;
   final Function(String) onUpdate;
+  final Function(String) onTitleUpdate;
   final VoidCallback onDelete;
 
   const _EditableStickyNote({
@@ -742,18 +772,23 @@ class _EditableStickyNote extends HookWidget {
     required this.note,
     required this.isDark,
     required this.onUpdate,
+    required this.onTitleUpdate,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     final controller = useTextEditingController(text: note.content);
+    final titleController = useTextEditingController(text: note.title);
     final focusNode = useFocusNode();
 
     // Sync if note changes externally
     useEffect(() {
       if (controller.text != note.content) {
         controller.text = note.content;
+      }
+      if (titleController.text != note.title) {
+        titleController.text = note.title;
       }
       return null;
     }, [note.id]);
@@ -805,13 +840,22 @@ class _EditableStickyNote extends HookWidget {
                           children: [
                             const Icon(Icons.edit_note_rounded,
                                 size: 20, color: Colors.black54),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Edit Note",
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black.withOpacity(0.7),
+                            Expanded(
+                              child: TextField(
+                                controller: titleController,
+                                onChanged: onTitleUpdate,
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: "Untitled Note",
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                  color: Colors.black.withOpacity(0.8),
+                                ),
                               ),
                             ),
                             const Spacer(),
@@ -842,10 +886,10 @@ class _EditableStickyNote extends HookWidget {
                             hintText: "Start typing your note here...",
                             hintStyle: TextStyle(color: Colors.black38),
                           ),
-                          style: GoogleFonts.kalam(
-                            fontSize: 18,
-                            height: 1.6,
-                            color: Colors.black87,
+                          style: GoogleFonts.patrickHand(
+                            fontSize: 22,
+                            height: 1.8,
+                            color: Colors.black.withOpacity(0.85),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

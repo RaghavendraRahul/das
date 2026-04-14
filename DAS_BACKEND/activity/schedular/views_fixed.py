@@ -1797,7 +1797,9 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # Temporarily allow unauthenticated access for testing
     serializer_class = TodayPlanSerializer
     pagination_class = None
-    queryset = TodayPlan.objects.all()
+    queryset = TodayPlan.objects.select_related(
+        'user', 'catalog_item', 'catalog_item__project', 'catalog_item__task'
+    ).all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['plan_date', 'status', 'catalog_item__catalog_type']
     search_fields = ['catalog_item__name', 'notes']
@@ -1808,7 +1810,9 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
         Admin can pass ?user_id=<id> to view any employee's plan.
         """
         user = self.request.user
-        queryset = TodayPlan.objects.all()
+        queryset = TodayPlan.objects.select_related(
+            'user', 'catalog_item', 'catalog_item__project', 'catalog_item__task'
+        ).all()
 
         # Handle anonymous users (when authentication is bypassed)
         if user.is_authenticated:
@@ -1841,6 +1845,8 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set the user field and auto-fill missing fields when creating"""
+        from django.db.models import Max
+        from django.db import IntegrityError
         user = self.request.user if self.request.user.is_authenticated else User.objects.first()
         
         # Get plan_date from request
@@ -1849,9 +1855,9 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
             from datetime import datetime
             plan_date = datetime.strptime(plan_date, '%Y-%m-%d').date()
         
-        # Calculate order_index
-        last_plan = TodayPlan.objects.filter(user=user, plan_date=plan_date).order_by('-order_index').first()
-        order_index = (last_plan.order_index + 1) if last_plan else 0
+        # Calculate order_index using Max() to avoid race conditions
+        agg = TodayPlan.objects.filter(user=user, plan_date=plan_date).aggregate(Max('order_index'))
+        order_index = (agg['order_index__max'] + 1) if agg['order_index__max'] is not None else 0
         
         # Get scheduled times from request (if explicitly provided)
         scheduled_start_time = self.request.data.get('scheduled_start_time')
@@ -1870,7 +1876,14 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
         if scheduled_end_time:
             save_kwargs['scheduled_end_time'] = scheduled_end_time
         
-        serializer.save(**save_kwargs)
+        # Try saving - if unique_together conflict, retry with a higher index
+        for attempt in range(5):
+            try:
+                serializer.save(**save_kwargs)
+                return
+            except IntegrityError:
+                save_kwargs['order_index'] += 1
+        serializer.save(**save_kwargs)  # Final attempt, let it raise if still failing
     
     @action(detail=False, methods=['get'])
     def today(self, request):
@@ -1903,16 +1916,11 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
             plan_date = dt.strptime(plan_date, '%Y-%m-%d').date()
             
         scheduled_start_time = request.data.get('scheduled_start_time')
-        scheduled_end_time = request.data.get('scheduled_start_time') # Type in original request? usually start/end
-        # The frontend sends 'scheduled_start_time' but maybe not end time?
-        # Let's check the request data from the frontend service:
-        # 'scheduled_start_time': scheduledStartTime
-        
-        scheduled_end_time = request.data.get('scheduled_end_time')
+        scheduled_end_time = request.data.get('scheduled_end_time')  # Fixed: was incorrectly reading from scheduled_start_time
 
         planned_duration_minutes = request.data.get('planned_duration_minutes')
-        quadrant = request.data.get('quadrant', 'inbox')
-        notes = request.data.get('description', '') # Map description to notes or custom_description
+        quadrant = request.data.get('quadrant', 'Q2')
+        notes = request.data.get('description', '')
         
         if not title:
             return Response(
@@ -1929,9 +1937,10 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
         if not user:
             return Response({"error": "No user available"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Calculate order_index
-        last_plan = TodayPlan.objects.filter(user=user, plan_date=plan_date).order_by('-order_index').first()
-        order_index = (last_plan.order_index + 1) if last_plan else 0
+        # Calculate order_index using Max() to avoid race conditions
+        from django.db.models import Max as _Max
+        _agg = TodayPlan.objects.filter(user=user, plan_date=plan_date).aggregate(_Max('order_index'))
+        order_index = (_agg['order_index__max'] + 1) if _agg['order_index__max'] is not None else 0
         
         # Calculate duration/times if needed (similar logic to add_from_catalog)
         if not planned_duration_minutes:
@@ -1939,8 +1948,8 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
             
         # Generate default scheduled times if not provided
         if not scheduled_start_time:
-             # Find the last planned item's end time, or use current time
             now = timezone.now()
+            last_plan = TodayPlan.objects.filter(user=user, plan_date=plan_date).order_by('-order_index').first()
             if last_plan and last_plan.scheduled_end_time:
                 # Start after the last planned item
                 start_dt = datetime.combine(now.date(), last_plan.scheduled_end_time)
@@ -1969,15 +1978,20 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
              end_dt = start_dt + timedelta(minutes=int(planned_duration_minutes))
              scheduled_end_time = end_dt.time()
 
+        # Normalize quadrant: 'inbox' is stored as-is (valid choice now), anything unknown maps to 'Q2'
+        valid_quadrants = ['Q1', 'Q2', 'Q3', 'Q4', 'inbox']
+        if quadrant not in valid_quadrants:
+            quadrant = 'Q2'
+
         today_plan = TodayPlan.objects.create(
             user=user,
-            custom_title=title, # Use custom_title for non-catalog items
+            custom_title=title,
             custom_description=notes,
             plan_date=plan_date,
             scheduled_start_time=scheduled_start_time,
             scheduled_end_time=scheduled_end_time,
             planned_duration_minutes=planned_duration_minutes,
-            quadrant=quadrant if quadrant != 'inbox' else 'Q2', # Default inbox to Q2 if not specified
+            quadrant=quadrant,
             order_index=order_index,
             notes=notes
         )
@@ -2024,9 +2038,10 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
         if not user:
             return Response({"error": "No user available"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Calculate order_index
-        last_plan = TodayPlan.objects.filter(user=user, plan_date=plan_date).order_by('-order_index').first()
-        order_index = (last_plan.order_index + 1) if last_plan else 0
+        # Calculate order_index using Max() to avoid race conditions
+        from django.db.models import Max as _Max
+        _agg = TodayPlan.objects.filter(user=user, plan_date=plan_date).aggregate(_Max('order_index'))
+        order_index = (_agg['order_index__max'] + 1) if _agg['order_index__max'] is not None else 0
         
         # Calculate duration if not provided
         if not planned_duration_minutes:
@@ -2044,6 +2059,7 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
         if not scheduled_start_time or not scheduled_end_time:
             # Find the last planned item's end time, or use current time
             now = timezone.now()
+            last_plan = TodayPlan.objects.filter(user=user, plan_date=plan_date).order_by('-order_index').first()
             if last_plan and last_plan.scheduled_end_time:
                 # Start after the last planned item
                 start_dt = datetime.combine(now.date(), last_plan.scheduled_end_time)
@@ -2059,6 +2075,11 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
             scheduled_start_time = start_dt.time()
             scheduled_end_time = end_dt.time()
         
+        # Normalize quadrant: allow 'inbox', reject others that are neither Q1-Q4 nor inbox
+        valid_quadrants = ['Q1', 'Q2', 'Q3', 'Q4', 'inbox']
+        if quadrant not in valid_quadrants:
+            quadrant = 'Q2'
+
         today_plan = TodayPlan.objects.create(
             user=user,
             catalog_item=catalog_item,
@@ -2355,7 +2376,9 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ActivityLogSerializer
     pagination_class = None
-    queryset = ActivityLog.objects.all()
+    queryset = ActivityLog.objects.select_related(
+        'user', 'today_plan', 'today_plan__catalog_item', 'today_plan__catalog_item__project', 'today_plan__catalog_item__task'
+    ).all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'is_task_completed']
     search_fields = ['work_notes', 'today_plan__catalog_item__name']
@@ -2364,7 +2387,9 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter activity logs based on user permissions"""
         user = self.request.user
-        queryset = ActivityLog.objects.all()
+        queryset = ActivityLog.objects.select_related(
+            'user', 'today_plan', 'today_plan__catalog_item', 'today_plan__catalog_item__project', 'today_plan__catalog_item__task'
+        ).all()
         
         if user.role == 'ADMIN':
             queryset = ActivityLog.objects.all()
@@ -3955,6 +3980,7 @@ class AutoLoginView(viewsets.GenericViewSet):
 # â”€â”€â”€ Project Working Hours Report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class ProjectWorkingHoursViewSet(viewsets.GenericViewSet):
+    pass
 
 
 # â”€â”€â”€ Team Activity Status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

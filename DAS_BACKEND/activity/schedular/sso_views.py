@@ -223,8 +223,9 @@ class SSOLoginView(View):
             # hrm_base_url = getattr(settings, 'HRM_BASE_URL', 'https://hrmbackendapi.meridahr.com')
             # hrm_api_url = f"{hrm_base_url}/root/api/check-employee-status/{email}/"
             hrm_api_url = getattr(settings, 'HRM_API_URL', 'http://localhost:8001/root/api/check-employee-status/{email}/')
+            formatted_url = hrm_api_url.format(email=email)
             
-            response = requests.get(hrm_api_url, timeout=5)
+            response = requests.get(formatted_url, timeout=5)
             
             if response.status_code == 200:
                 return response.json()
@@ -329,27 +330,31 @@ class SSOLoginView(View):
         import secrets
         from django.utils import timezone
         
-        # Get HRM URL from settings
-        # hrm_url = getattr(settings, 'HRM_BASE_URL', 'https://hrmbackendapi.meridahr.com/')
-        hrm_url = getattr(settings, 'HRM_BASE_URL', 'http://localhost:8001/')
-        hrm_api_url = f"{hrm_url}/root/api/check-employee-status/{email}/"
+        # Get HRM URL from settings and sanitize it (ensure no trailing slash)
+        hrm_url = getattr(settings, 'HRM_BASE_URL', 'http://localhost:8001').rstrip('/')
+        
+        logger.info(f"Starting full employee sync from HRM: {hrm_url}/root/api/employees-active/")
         
         try:
             # Fetch all active employees from HRM
             response = requests.get(
                 f'{hrm_url}/root/api/employees-active/',
-                timeout=30
+                timeout=30,
+                verify=getattr(settings, 'VERIFY_SSL_HRM', False)
             )
             
             if response.status_code != 200:
-                logger.error(f'Failed to fetch employees from HRM. Status: {response.status_code}')
+                logger.error(f'Failed to fetch employees from HRM. Status: {response.status_code}, Body: {response.text[:200]}')
                 return None
             
             data = response.json()
             employees = data.get('employees', [])
             
             if not employees:
+                logger.warning("No active employees found in HRM response")
                 return {'created': 0, 'updated': 0, 'total': 0}
+            
+            logger.info(f"Received {len(employees)} active employees from HRM. Processing...")
             
             created_count = 0
             updated_count = 0
@@ -362,7 +367,8 @@ class SSOLoginView(View):
                         continue
                     
                     # Map HRM designation to DAS role
-                    das_role = self.map_das_role(emp_data.get('designation', ''))
+                    designation = emp_data.get('designation', '')
+                    das_role = self.map_das_role(designation)
                     
                     # Create or update User
                     user, created = User.objects.update_or_create(
@@ -371,7 +377,7 @@ class SSOLoginView(View):
                             'hrm_employee_id': emp_data.get('employee_Id'),
                             'employee_name': emp_data.get('full_name'),
                             'employee_type': emp_data.get('Employeement_Type'),
-                            'designation': emp_data.get('designation'),
+                            'designation': designation,
                             'hrm_department': emp_data.get('department'),
                             'role': das_role,
                             'location': emp_data.get('work_location'),
@@ -388,6 +394,7 @@ class SSOLoginView(View):
                         user.set_password(random_password)
                         user.save()
                         created_count += 1
+                        logger.debug(f"Created new user: {email}")
                     else:
                         updated_count += 1
                     
@@ -396,7 +403,11 @@ class SSOLoginView(View):
                         if date_str:
                             try:
                                 from datetime import datetime
-                                return datetime.fromisoformat(date_str).date()
+                                # Handle both isoformat and YY-MM-DD
+                                if 'T' in date_str:
+                                    return datetime.fromisoformat(date_str).date()
+                                else:
+                                    return datetime.strptime(date_str, '%Y-%m-%d').date()
                             except:
                                 return None
                         return None
@@ -405,12 +416,12 @@ class SSOLoginView(View):
                         user=user,
                         defaults={
                             'name': emp_data.get('full_name', ''),
-                            'email': emp_data.get('email', ''),
+                            'email': email,
                             'phone': emp_data.get('phone', ''),
-                            'role': emp_data.get('designation', ''),
+                            'role': designation,
                             'department': emp_data.get('department', ''),
                             'employment_type': emp_data.get('Employeement_Type', ''),
-                            'designation': emp_data.get('designation', ''),
+                            'designation': designation,
                             'work_location': emp_data.get('work_location', ''),
                             'date_of_joining': parse_date(emp_data.get('hired_date')),
                             'date_of_birth': parse_date(emp_data.get('date_of_birth')),
@@ -424,6 +435,7 @@ class SSOLoginView(View):
                     logger.error(f"Error syncing employee {emp_data.get('email', 'unknown')}: {str(e)}")
                     continue
             
+            logger.info(f"Sync completed. Created: {created_count}, Updated: {updated_count}, Total: {len(employees)}")
             return {
                 'created': created_count,
                 'updated': updated_count,
@@ -446,21 +458,21 @@ class SSOLoginView(View):
         HRM Roles: Admin, HR, Employee, Recruiter, intern, permanent, Trainee, Consultant
         DAS Roles: ADMIN, MANAGER, TEAMLEAD, EMPLOYEE
         """
-        role_mapping = {
-            # HRM Designation -> DAS Role
-            'Admin': 'ADMIN',
-            'HR': 'MANAGER',
-            'Recruiter': 'EMPLOYEE',
-            'Employee': 'EMPLOYEE',
-            # HRM Employment Type -> DAS Role
-            'intern': 'EMPLOYEE',
-            'permanent': 'EMPLOYEE',
-            'Trainee': 'EMPLOYEE',
-            'Consultant': 'EMPLOYEE',
-        }
+        if not hrm_role:
+            return 'EMPLOYEE'
+            
+        hrm_role_lower = hrm_role.lower()
         
-        # Default to EMPLOYEE if role not found
-        return role_mapping.get(hrm_role, 'EMPLOYEE')
+        # HRM Designation/Role -> DAS Role
+        if hrm_role_lower in ['admin', 'administrator', 'superadmin']:
+            return 'ADMIN'
+        elif hrm_role_lower in ['hr', 'manager', 'hr manager', 'head']:
+            return 'MANAGER'
+        elif hrm_role_lower in ['team lead', 'teamlead', 'tl', 'lead']:
+            return 'TEAMLEAD'
+        
+        # Default to EMPLOYEE for others (Employee, Recruiter, intern, trainee, etc.)
+        return 'EMPLOYEE'
 
 
 class InactiveUserView(View):

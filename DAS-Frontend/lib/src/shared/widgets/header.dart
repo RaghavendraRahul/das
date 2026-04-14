@@ -97,7 +97,7 @@ class AppHeader extends ConsumerWidget {
                     style: GoogleFonts.inter(
                       fontSize: isMobile ? 11 : 13,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withOpacity(0.9),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

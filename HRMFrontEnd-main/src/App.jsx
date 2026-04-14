@@ -116,16 +116,16 @@ import LoginProtect from './Components/AuthPermissions/LoginProtect'
 import CandidateFormPage from './Pages/Activity/CandidateFormPage'
 
 // LOCALHOST URLS
-export const port = 'https://hrmbackendapi.meridahr.com/'  // Production
-// export const port = 'http://localhost:8001/'
-export const meridahrsite = 'https://hrmbackendapi.meridahr.com/'  // Production
-// export const meridahrsite = 'http://localhost:8001/'
-export const domain = 'https://hrm.meridahr.com'
-// export const domain = 'http://localhost:3000'
-export const das = 'https://dasbackendapi.meridahr.com/'  // Production
-// export const das = 'http://localhost:8000/'
-export const meridahrport = 'https://hrmbackendapi.meridahr.com/'  // Production
-// export const meridahrport = 'http://localhost:8001/'
+// export const port = 'https://hrmbackendapi.meridahr.com/'  // Production
+export const port = 'http://localhost:8001/'
+// export const meridahrsite = 'https://hrmbackendapi.meridahr.com/'  // Production
+export const meridahrsite = 'http://localhost:8001/'
+// export const domain = 'https://hrm.meridahr.com'
+export const domain = 'http://localhost:3000'
+// export const das = 'https://dasbackendapi.meridahr.com/'  // Production
+export const das = 'http://localhost:8000/'
+// export const meridahrport = 'https://hrmbackendapi.meridahr.com/'  // Production
+export const meridahrport = 'http://localhost:8001/'
 
 //changes2
 const App = () => {

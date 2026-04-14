@@ -52,7 +52,8 @@ class LoginViewSet(viewsets.GenericViewSet):
             "user_id": user.id,
             "role": user.role,
             "email": user.email,
-            "theme_preference": user.theme_preference
+            "theme_preference": user.theme_preference,
+            "quick_notes_label": user.quick_notes_label
         })
     
 
@@ -155,7 +156,8 @@ class UserPreferencesViewSet(viewsets.GenericViewSet):
             'department': user.department.name if user.department else None,
             'department_id': user.department.id if user.department else None,
             'phone_number': user.phone_number or '',
-            'theme_preference': user.theme_preference
+            'theme_preference': user.theme_preference,
+            'quick_notes_label': user.quick_notes_label,
         })
     
     @action(detail=True, methods=['get'], url_path='profile')
@@ -196,6 +198,22 @@ class UserPreferencesViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
     
+    @action(detail=False, methods=['patch'])
+    def update_label(self, request):
+        """Update quick notes dashboard label"""
+        label = request.data.get('quick_notes_label')
+        if not label:
+            return Response({"error": "Label is required"}, status=400)
+            
+        user = request.user
+        user.quick_notes_label = label
+        user.save(update_fields=['quick_notes_label'])
+        
+        return Response({
+            "message": "Label updated",
+            "quick_notes_label": user.quick_notes_label
+        })
+
     @action(detail=False, methods=['patch'])
     def theme(self, request):
         """Update theme preference"""
@@ -2093,58 +2111,8 @@ class TaskAssigneeViewSet(viewsets.ModelViewSet):
             return TaskAssignee.objects.select_related('task', 'task__project', 'user').filter(user=user)
 
 
-# ===== PLANNER CATALOG ENDPOINTS =====
-# Dedicated endpoints for Planner Catalog that always show only assigned items
 
-class CatalogProjectViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for Planner Catalog projects - shows only projects assigned to the user.
-    This endpoint is separate from ProjectViewSet to prevent Dashboard changes 
-    from affecting the Planner Catalog feature.
-    """
-    permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
-    serializer_class = ProjectSerializer
-    queryset = Projects.objects.all()
-    
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'handled_by', 'created_by', 'project_lead']
-    search_fields = ['name', 'description']
-    ordering_fields = ['start_date', 'due_date', 'create_date', 'name']
-    ordering = ['-create_date']
-
-    def get_queryset(self):
-        """Show all active projects for the catalog - visible to all users"""
-        # For ALL users, show all active projects in the catalog
-        return Projects.objects.filter(status='ACTIVE').distinct()
-    
-    def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
-            from .serializers import ProjectDetailSerializer
-            return ProjectDetailSerializer
-        return ProjectSerializer
-
-
-class CatalogTaskViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for Planner Catalog tasks - shows only tasks assigned to the user.
-    This endpoint is separate from TaskViewSet to prevent Dashboard changes 
-    from affecting the Planner Catalog feature.
-    """
-    permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
-    serializer_class = TaskSerializer
-    pagination_class = None
-    queryset = Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').all()
-    
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['priority', 'status', 'project', 'due_date', 'start_date']
-    search_fields = ['title', 'project__name']
-    ordering_fields = ['created_at', 'due_date', 'start_date', 'priority']
-    
-    def get_queryset(self):
-        """Show all active tasks for the catalog - visible to all users"""
-        # For ALL users, show all tasks that are not 'DONE'
-        return Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').exclude(status='DONE').distinct()
-
+# Planner Catalog logic consolidated at the end of the file
 
 class SubTaskViewSet(viewsets.ModelViewSet):
     """ViewSet for managing subtasks"""
@@ -2537,7 +2505,7 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
     serializer_class = TodayPlanSerializer
     pagination_class = None
     queryset = TodayPlan.objects.select_related(
-        'user', 'catalog_item', 'catalog_item__project', 'project', 'task'
+        'user', 'catalog_item', 'catalog_item__project', 'catalog_item__task'
     ).all()  # Prefetch planner relations to avoid N+1 queries
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['plan_date', 'status', 'catalog_item__catalog_type']
@@ -2550,7 +2518,7 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         queryset = TodayPlan.objects.select_related(
-            'user', 'catalog_item', 'catalog_item__project', 'project', 'task'
+            'user', 'catalog_item', 'catalog_item__project', 'catalog_item__task'
         ).all()  # Reuse optimized queryset in get_queryset
 
         if user.is_authenticated:
@@ -3335,7 +3303,7 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     serializer_class = ActivityLogSerializer
     pagination_class = None
     queryset = ActivityLog.objects.select_related(
-        'user', 'today_plan', 'today_plan__catalog_item', 'today_plan__project', 'today_plan__task'
+        'user', 'today_plan', 'today_plan__catalog_item', 'today_plan__catalog_item__project', 'today_plan__catalog_item__task'
     ).all()  # Prefetch for activity log lookups
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'is_task_completed']
@@ -3346,7 +3314,7 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         """Filter activity logs based on user permissions"""
         user = self.request.user
         queryset = ActivityLog.objects.select_related(
-            'user', 'today_plan', 'today_plan__catalog_item', 'today_plan__project', 'today_plan__task'
+            'user', 'today_plan', 'today_plan__catalog_item', 'today_plan__catalog_item__project', 'today_plan__catalog_item__task'
         ).all()  # Reuse optimized queryset in get_queryset
         target_user_id = self.request.query_params.get('user_id')
         
@@ -4965,6 +4933,8 @@ class AutoLoginView(viewsets.GenericViewSet):
                 'access_token': str(refresh.access_token),
                 'refresh_token': str(refresh),
                 'is_new_user': created,
+                'theme_preference': user.theme_preference,
+                'quick_notes_label': user.quick_notes_label,
             }, status=status.HTTP_200_OK)
             
         except requests.exceptions.Timeout:
@@ -5165,17 +5135,22 @@ class SyncHRMEmployeesViewSet(viewsets.GenericViewSet):
         """
         # Get HRM URL from settings or request
         from django.conf import settings
+        import secrets
+        from datetime import datetime
+        
         # hrm_url = getattr(settings, 'HRM_BASE_URL', 'https://hrmbackendapi.meridahr.com/')
-        hrm_url = getattr(settings, 'HRM_BASE_URL', 'https://localhost:8001')
+        hrm_url = getattr(settings, 'HRM_BASE_URL', 'http://localhost:8001').rstrip('/')
         
         try:
             # Fetch all active employees from HRM
             response = requests.get(
                 f'{hrm_url}/root/api/employees-active/',
-                timeout=30
+                timeout=30,
+                verify=getattr(settings, 'VERIFY_SSL_HRM', False)
             )
             
             if response.status_code != 200:
+                logger.error(f"Sync failed. Status: {response.status_code}, Body: {response.text[:200]}")
                 return Response({
                     'success': False,
                     'error': f'Failed to fetch employees from HRM. Status: {response.status_code}'
@@ -5197,23 +5172,29 @@ class SyncHRMEmployeesViewSet(viewsets.GenericViewSet):
             error_count = 0
             errors = []
             
+            # Map roles consistently with SSOLoginView
+            def get_das_role(hrm_role):
+                if not hrm_role: return 'EMPLOYEE'
+                role_l = hrm_role.lower()
+                if role_l in ['admin', 'administrator', 'superadmin']: return 'ADMIN'
+                if role_l in ['hr', 'manager', 'hr manager', 'head']: return 'MANAGER'
+                if role_l in ['tl', 'teamlead', 'lead', 'team lead']: return 'TEAMLEAD'
+                return 'EMPLOYEE'
+
+            def parse_date_safe(date_str):
+                if not date_str: return None
+                try:
+                    if 'T' in date_str: return datetime.fromisoformat(date_str).date()
+                    return datetime.strptime(date_str, '%Y-%m-%d').date()
+                except: return None
+            
             for emp_data in employees:
                 try:
                     email = emp_data.get('email')
+                    if not email: continue
                     
-                    if not email:
-                        continue
-                    
-                    # Map HRM designation to DAS role
-                    hrm_designation = emp_data.get('designation')
-                    das_role = 'EMPLOYEE'  # Default role
-                    
-                    if hrm_designation == 'Admin':
-                        das_role = 'ADMIN'
-                    elif hrm_designation == 'HR':
-                        das_role = 'MANAGER'
-                    elif hrm_designation in ['Employee', 'Recruiter']:
-                        das_role = 'EMPLOYEE'
+                    hrm_designation = emp_data.get('designation', '')
+                    das_role = get_das_role(hrm_designation)
                     
                     # Create or update User
                     user, created = User.objects.update_or_create(
@@ -5233,7 +5214,6 @@ class SyncHRMEmployeesViewSet(viewsets.GenericViewSet):
                         }
                     )
                     
-                    # Set password for new users (they'll need to reset it)
                     if created:
                         random_password = secrets.token_urlsafe(16)
                         user.set_password(random_password)
@@ -5242,29 +5222,20 @@ class SyncHRMEmployeesViewSet(viewsets.GenericViewSet):
                     else:
                         updated_count += 1
                     
-                    # Create or update Employee profile (detailed employee information)
-                    def parse_date(date_str):
-                        if date_str:
-                            try:
-                                from datetime import datetime
-                                return datetime.fromisoformat(date_str).date()
-                            except:
-                                return None
-                        return None
-                    
+                    # Create or update Employee profile
                     Employee.objects.update_or_create(
                         user=user,
                         defaults={
                             'name': emp_data.get('full_name', ''),
-                            'email': emp_data.get('email', ''),
+                            'email': email,
                             'phone': emp_data.get('phone', ''),
-                            'role': emp_data.get('designation', ''),
+                            'role': hrm_designation,
                             'department': emp_data.get('department', ''),
                             'employment_type': emp_data.get('Employeement_Type', ''),
-                            'designation': emp_data.get('designation', ''),
+                            'designation': hrm_designation,
                             'work_location': emp_data.get('work_location', ''),
-                            'date_of_joining': parse_date(emp_data.get('hired_date')),
-                            'date_of_birth': parse_date(emp_data.get('date_of_birth')),
+                            'date_of_joining': parse_date_safe(emp_data.get('hired_date')),
+                            'date_of_birth': parse_date_safe(emp_data.get('date_of_birth')),
                             'is_active': True,
                             'employee_status': 'active',
                             'employee_id': emp_data.get('employee_Id', ''),
@@ -5331,22 +5302,14 @@ class CatalogProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Return projects for the planner catalog.
-        ADMIN/MANAGER/TEAMLEAD: See all active projects.
-        EMPLOYEE: See only projects where they are assigned.
+        Only show active projects where the user is an explicit assignee.
         """
         user = self.request.user
-        
-        # Admin, Manager, TeamLead see all active projects
-        if user.role in ['ADMIN', 'MANAGER', 'TEAMLEAD']:
-            return Projects.objects.select_related('created_by', 'project_lead', 'handled_by').prefetch_related('assignees').all().distinct()
-        
-        # Employees see only their assigned projects
-        return Projects.objects.filter(
-            models.Q(created_by=user) | 
-            models.Q(project_lead=user) | 
-            models.Q(handled_by=user) |
-            models.Q(tasks__assignees__user=user)
-        ).distinct()
+        if not user or not user.is_authenticated:
+            return Projects.objects.none()
+            
+        # Show only assigned active projects (Role-independent restriction)
+        return Projects.objects.filter(status='ACTIVE', assignees=user).distinct()
     
     def list(self, request, *args, **kwargs):
         """Override list to handle pagination"""
@@ -5385,17 +5348,19 @@ class CatalogTaskViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Return tasks for the planner catalog.
-        ADMIN/MANAGER/TEAMLEAD: See all active tasks.
-        EMPLOYEE: See only tasks where they are assigned.
+        Only show tasks where the user is assigned at both Project and Task level.
         """
         user = self.request.user
-        
-        # Admin, Manager, TeamLead see all active tasks
-        if user.role in ['ADMIN', 'MANAGER', 'TEAMLEAD']:
-            return Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').exclude(status='DONE').distinct()
-        
-        # Employees see only their assigned tasks
-        return Task.objects.select_related('project', 'project__project_lead').prefetch_related('assignees', 'assignees__user', 'subtasks').filter(assignees__user=user).exclude(status='DONE').distinct()
+        if not user or not user.is_authenticated:
+            return Task.objects.none()
+            
+        # Show tasks where user is assigned to both project AND task (Role-independent restriction)
+        return Task.objects.select_related('project', 'project__project_lead').prefetch_related(
+            'assignees', 'assignees__user', 'subtasks'
+        ).filter(
+            project__assignees=user,
+            assignees__user=user
+        ).exclude(status='DONE').distinct()
 
 
 class HoursCompletionLineChartViewSet(viewsets.ViewSet):

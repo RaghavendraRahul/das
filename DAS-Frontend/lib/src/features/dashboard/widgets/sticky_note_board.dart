@@ -1,66 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:project_pm/src/features/auth/auth_state_providers.dart';
+import 'package:project_pm/src/features/quick_notes/notes_provider.dart';
 import 'package:uuid/uuid.dart';
 
-class StickyNote {
-  final String id;
-  final String content;
-  final Color color;
-  final DateTime createdAt;
+// StickyNote is now imported from notes_provider.dart
 
-  StickyNote({
-    required this.id,
-    required this.content,
-    required this.color,
-    required this.createdAt,
-  });
-}
-
-class StickyNoteBoard extends StatefulWidget {
+class StickyNoteBoard extends ConsumerStatefulWidget {
   const StickyNoteBoard({super.key});
 
   @override
-  State<StickyNoteBoard> createState() => _StickyNoteBoardState();
+  ConsumerState<StickyNoteBoard> createState() => _StickyNoteBoardState();
 }
 
-class _StickyNoteBoardState extends State<StickyNoteBoard> {
+class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
   bool isExpanded = true;
-  final List<StickyNote> notes = [
-    // Mock initial note
-    StickyNote(
-        id: "1",
-        content: "Discuss deployment timeline with team",
-        color: Colors.yellow.shade100,
-        createdAt: DateTime.now()),
-  ];
+  bool isEditingLabel = false;
+  late TextEditingController _labelController;
+
+  @override
+  void initState() {
+    super.initState();
+    _labelController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _labelController.dispose();
+    super.dispose();
+  }
 
   void _addNote() {
     showDialog(
         context: context,
         builder: (context) => _AddNoteDialog(
-              onAdd: (content, color) {
-                setState(() {
-                  notes.insert(
-                      0,
-                      StickyNote(
-                        id: const Uuid().v4(),
-                        content: content,
-                        color: color,
-                        createdAt: DateTime.now(),
-                      ));
-                });
+              onAdd: (content, color) async {
+                try {
+                  await ref
+                      .read(stickyNotesProvider.notifier)
+                      .addNote(content, color);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Failed to add note: $e")),
+                  );
+                }
               },
             ));
   }
 
   void _deleteNote(String id) {
-    setState(() {
-      notes.removeWhere((n) => n.id == id);
-    });
+    ref.read(stickyNotesProvider.notifier).deleteNote(id);
   }
 
-  @override
+      @override
   Widget build(BuildContext context) {
+    final asyncNotes = ref.watch(stickyNotesProvider);
+    final notes = asyncNotes.value ?? [];
+
     return Column(
       children: [
         InkWell(
@@ -77,12 +75,48 @@ class _StickyNoteBoardState extends State<StickyNoteBoard> {
                     size: 20,
                     color: Colors.grey),
                 const SizedBox(width: 8),
-                Text("QUICK NOTES",
-                    style: TextStyle(
+                if (isEditingLabel)
+                  Expanded(
+                    child: TextField(
+                      controller: _labelController,
+                      autofocus: true,
+                      style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade500,
-                        letterSpacing: 1.0)),
+                        color: Colors.grey.shade600,
+                        letterSpacing: 1.0,
+                      ),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onSubmitted: (val) {
+                        if (val.trim().isNotEmpty) {
+                          ref
+                              .read(authNotifierProvider.notifier)
+                              .updateQuickNotesLabel(val.trim());
+                        }
+                        setState(() => isEditingLabel = false);
+                      },
+                    ),
+                  )
+                else
+                  GestureDetector(
+                    onDoubleTap: () {
+                      final label = ref.read(authNotifierProvider).value?.quickNotesLabel ?? "QUICK NOTES";
+                      _labelController.text = label;
+                      setState(() => isEditingLabel = true);
+                    },
+                    child: Text(
+                        ref.watch(authNotifierProvider).value?.quickNotesLabel ??
+                            "QUICK NOTES",
+                        style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade500,
+                            letterSpacing: 1.0)),
+                  ),
                 const SizedBox(width: 8),
                 if (!isExpanded)
                   Container(

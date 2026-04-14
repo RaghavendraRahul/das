@@ -46,6 +46,7 @@ class LoginResponse {
   final String role;
   final String email;
   final String themePreference;
+  final String? quickNotesLabel;
 
   LoginResponse({
     required this.refresh,
@@ -54,6 +55,7 @@ class LoginResponse {
     required this.role,
     required this.email,
     required this.themePreference,
+    this.quickNotesLabel,
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
@@ -64,6 +66,7 @@ class LoginResponse {
       role: json['role'] as String,
       email: json['email'] as String,
       themePreference: json['theme_preference'] as String,
+      quickNotesLabel: json['quick_notes_label'] as String?,
     );
   }
 }

@@ -6,12 +6,14 @@ import 'services/sticky_note_service.dart';
 
 class StickyNote {
   final String id;
+  final String title;
   final String content;
   final Color color;
   final DateTime createdAt;
 
   StickyNote({
     required this.id,
+    required this.title,
     required this.content,
     required this.color,
     required this.createdAt,
@@ -61,7 +63,7 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
           // Cycle through colors based on how many we already have
           final colorIndex = (notes.length + i) % defaultColors.length;
           final newNote = await _service.createNote(
-              content: "", color: defaultColors[colorIndex]);
+              title: "Edit Note", content: "", color: defaultColors[colorIndex]);
           newNotes.add(newNote);
         }
 
@@ -84,7 +86,8 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
 
   Future<StickyNote> addNote(String content, Color color) async {
     try {
-      final newNote = await _service.createNote(content: content, color: color);
+      final newNote = await _service.createNote(
+          title: "New Note", content: content, color: color);
       final currentList = state.value ?? [];
       state = AsyncValue.data([newNote, ...currentList]);
       return newNote;
@@ -124,6 +127,40 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
     }
   }
 
+  Future<void> updateNoteTitle(String id, String newTitle) async {
+    // Optimistic update
+    final currentList = state.value;
+    if (currentList == null) return;
+
+    final noteIndex = currentList.indexWhere((n) => n.id == id);
+    if (noteIndex == -1) return;
+
+    final note = currentList[noteIndex];
+    if (note.title == newTitle) return;
+
+    final updatedNote = StickyNote(
+      id: note.id,
+      title: newTitle,
+      content: note.content,
+      color: note.color,
+      createdAt: note.createdAt,
+    );
+
+    var newList = List<StickyNote>.from(currentList);
+    newList[noteIndex] = updatedNote;
+    state = AsyncValue.data(newList);
+
+    // Debounce API call
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 800), () async {
+      try {
+        await _service.updateNote(id: id, title: newTitle);
+      } catch (e) {
+        print('Error updating note title: $e');
+      }
+    });
+  }
+
   Future<void> updateNoteContent(String id, String newContent) async {
     // Optimistic update for UI responsiveness
     final currentList = state.value;
@@ -137,6 +174,7 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
 
     final updatedNote = StickyNote(
       id: note.id,
+      title: note.title,
       content: newContent,
       color: note.color,
       createdAt: note.createdAt,
@@ -172,6 +210,7 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
 
     final updatedNote = StickyNote(
       id: note.id,
+      title: note.title,
       content: note.content,
       color: newColor,
       createdAt: note.createdAt,

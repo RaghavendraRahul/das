@@ -18,6 +18,7 @@ class AuthState {
   final String? userEmail;
   final UserRole? userRole;
   final String? themePreference;
+  final String? quickNotesLabel;
 
   const AuthState({
     this.isAuthenticated = false,
@@ -27,6 +28,7 @@ class AuthState {
     this.userEmail,
     this.userRole,
     this.themePreference,
+    this.quickNotesLabel,
   });
 
   AuthState copyWith({
@@ -37,6 +39,7 @@ class AuthState {
     String? userEmail,
     UserRole? userRole,
     String? themePreference,
+    String? quickNotesLabel,
   }) {
     return AuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
@@ -46,6 +49,7 @@ class AuthState {
       userEmail: userEmail ?? this.userEmail,
       userRole: userRole ?? this.userRole,
       themePreference: themePreference ?? this.themePreference,
+      quickNotesLabel: quickNotesLabel ?? this.quickNotesLabel,
     );
   }
 }
@@ -170,6 +174,7 @@ class AuthNotifier extends _$AuthNotifier {
         userEmail: userEmail,
         userRole: roleString != null ? UserRole.fromString(roleString) : null,
         themePreference: themePreference,
+        quickNotesLabel: prefs.getString('quick_notes_label'),
       );
     }
 
@@ -206,6 +211,7 @@ class AuthNotifier extends _$AuthNotifier {
         userEmail: response.email,
         userRole: UserRole.fromString(response.role),
         themePreference: response.themePreference,
+        quickNotesLabel: response.quickNotesLabel,
       );
     });
   }
@@ -316,6 +322,25 @@ class AuthNotifier extends _$AuthNotifier {
     }
   }
 
+  Future<void> updateQuickNotesLabel(String newLabel) async {
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      await repository.updateQuickNotesLabel(newLabel);
+
+      // Update state
+      final currentState = state.value;
+      if (currentState != null) {
+        state = AsyncValue.data(currentState.copyWith(quickNotesLabel: newLabel));
+      }
+
+      // Save to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('quick_notes_label', newLabel);
+    } catch (e) {
+      debugPrint('❌ [AuthNotifier] Error updating quick notes label: $e');
+    }
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
@@ -324,6 +349,7 @@ class AuthNotifier extends _$AuthNotifier {
     await prefs.remove('user_email');
     await prefs.remove('user_role');
     await prefs.remove('theme_preference');
+    await prefs.remove('quick_notes_label');
     // Also clear any leftover impersonation state from a previous admin session
     await prefs.remove('impersonate_user_id');
     await prefs.remove('impersonate_user_name');
