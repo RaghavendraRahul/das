@@ -1175,14 +1175,16 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                     task.plannedHours.toString();
                                 taskStartDate.value = task.startDate;
                                 taskEndDate.value = task.endDate;
-                                if (task.startDate != null)
+                                if (task.startDate != null) {
                                   taskStartController.text =
                                       DateFormat('dd/MM/yyyy')
                                           .format(task.startDate!);
-                                if (task.endDate != null)
+                                }
+                                if (task.endDate != null) {
                                   taskEndController.text =
                                       DateFormat('dd/MM/yyyy')
                                           .format(task.endDate!);
+                                }
                                 taskAssignees.value = List.from(task.assignees);
                                 taskMilestones.value =
                                     List.from(task.milestones);
@@ -1314,14 +1316,16 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                       task.plannedHours.toString();
                                   taskStartDate.value = task.startDate;
                                   taskEndDate.value = task.endDate;
-                                  if (task.startDate != null)
+                                  if (task.startDate != null) {
                                     taskStartController.text =
                                         DateFormat('dd/MM/yyyy')
                                             .format(task.startDate!);
-                                  if (task.endDate != null)
+                                  }
+                                  if (task.endDate != null) {
                                     taskEndController.text =
                                         DateFormat('dd/MM/yyyy')
                                             .format(task.endDate!);
+                                  }
                                   taskAssignees.value =
                                       List.from(task.assignees);
                                   taskMilestones.value =
@@ -1400,9 +1404,10 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
       ref.invalidate(apiCatalogProvider);
       if (context.mounted) Navigator.pop(context);
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -1467,9 +1472,10 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
           errorMsg = data.toString();
         }
       }
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text("Error: $errorMsg"), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -1603,12 +1609,13 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
           data: (users) {
             final filteredUsers =
                 users.where((u) => allowedIds.value.contains(u['id'])).toList();
-            if (filteredUsers.isEmpty)
+            if (filteredUsers.isEmpty) {
               return Text("Select Assignees first",
                   style: GoogleFonts.outfit(
                       color: Colors.grey,
                       fontSize: 13,
                       fontStyle: FontStyle.italic));
+            }
             return Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -1735,8 +1742,9 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                               style: GoogleFonts.outfit())))
                       .toList(),
                   onChanged: (val) {
-                    if (val != null)
+                    if (val != null) {
                       selectedIds.value = [...selectedIds.value, val];
+                    }
                   },
                 ),
                 const SizedBox(height: 12),
@@ -1961,8 +1969,9 @@ class _AddTaskForm extends HookConsumerWidget {
                                     style: GoogleFonts.outfit())))
                             .toList(),
                         onChanged: (val) {
-                          if (val != null)
+                          if (val != null) {
                             taskAssignees.value = [...taskAssignees.value, val];
+                          }
                         },
                       ),
                     const SizedBox(height: 12),

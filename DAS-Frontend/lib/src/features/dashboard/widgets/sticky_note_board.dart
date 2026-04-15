@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/auth/auth_state_providers.dart';
 import 'package:project_pm/src/features/quick_notes/notes_provider.dart';
-import 'package:uuid/uuid.dart';
 
 // StickyNote is now imported from notes_provider.dart
 

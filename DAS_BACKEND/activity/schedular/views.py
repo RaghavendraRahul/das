@@ -976,8 +976,8 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return ApprovalRequest.objects.none()
         if user.role == 'ADMIN':
-            return ApprovalRequest.objects.select_related('requested_by').prefetch_related('responses').all()
-        return ApprovalRequest.objects.select_related('requested_by').prefetch_related('responses').filter(requested_by=user)
+            return ApprovalRequest.objects.select_related('requested_by').prefetch_related('response').all()
+        return ApprovalRequest.objects.select_related('requested_by').prefetch_related('response').filter(requested_by=user)
     
     def perform_create(self, serializer):
         """Set the requested_by field to current user"""
@@ -4790,13 +4790,13 @@ class StickyNoteViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class AutoLoginView(viewsets.GenericViewSet):
+class AutoLoginView(viewsets.ViewSet):
     """
     Auto-login endpoint for HRM-DAS integration.
     Validates temporary code from HRM and authenticates user.
     """
     permission_classes = [AllowAny]
-    serializer_class = None  # Not used - all endpoints are custom actions
+    # serializer_class = None  # Not used - all endpoints are custom actions
     
     @action(detail=False, methods=['post'])
     def login(self, request):
@@ -4918,6 +4918,16 @@ class AutoLoginView(viewsets.GenericViewSet):
                 }
             )
             
+            # If user is ADMIN, auto-sync all active employees from HRM
+            if das_role == 'ADMIN':
+                print(f"[DAS AutoLogin] Admin user detected. Starting auto-sync of all active employees from HRM...")
+                try:
+                    self._sync_all_employees_from_hrm(hrm_url)
+                    print(f"[DAS AutoLogin] Employee sync completed successfully")
+                except Exception as sync_error:
+                    print(f"[DAS AutoLogin] Warning: Employee sync failed: {str(sync_error)}")
+                    # Don't fail the login - just log the error
+            
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             
@@ -4945,6 +4955,129 @@ class AutoLoginView(viewsets.GenericViewSet):
             return Response({
                 'error': f'Failed to connect to HRM service: {str(e)}'
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    
+    def _sync_all_employees_from_hrm(self, hrm_url):
+        """
+        Helper method to sync all active employees from HRM to DAS
+        Called automatically when an admin logs in
+        """
+        import secrets
+        from datetime import datetime
+        
+        try:
+            # Fetch all active employees from HRM
+            response = requests.get(
+                f'{hrm_url}/api/employees-active/',
+                timeout=30,
+                verify=getattr(settings, 'VERIFY_SSL_HRM', False)
+            )
+            
+            if response.status_code != 200:
+                print(f"[HRM Sync] Failed to fetch employees. Status: {response.status_code}")
+                return
+            
+            data = response.json()
+            employees = data.get('employees', [])
+            
+            if not employees:
+                print(f"[HRM Sync] No active employees found in HRM")
+                return
+            
+            created_count = 0
+            updated_count = 0
+            error_count = 0
+            
+            # Map roles consistently with SSOLoginView
+            def get_das_role(hrm_role):
+                if not hrm_role: 
+                    return 'EMPLOYEE'
+                role_l = hrm_role.lower()
+                if role_l in ['admin', 'administrator', 'superadmin']: 
+                    return 'ADMIN'
+                if role_l in ['hr', 'manager', 'hr manager', 'head']: 
+                    return 'MANAGER'
+                if role_l in ['tl', 'teamlead', 'lead', 'team lead']: 
+                    return 'TEAMLEAD'
+                return 'EMPLOYEE'
+            
+            def parse_date_safe(date_str):
+                if not date_str: 
+                    return None
+                try:
+                    if 'T' in date_str: 
+                        return datetime.fromisoformat(date_str).date()
+                    return datetime.strptime(date_str, '%Y-%m-%d').date()
+                except: 
+                    return None
+            
+            print(f"[HRM Sync] Starting sync of {len(employees)} employees from HRM")
+            
+            for emp_data in employees:
+                try:
+                    email = emp_data.get('email')
+                    if not email: 
+                        continue
+                    
+                    hrm_designation = emp_data.get('designation', '')
+                    das_role = get_das_role(hrm_designation)
+                    
+                    # Create or update User
+                    user, created = User.objects.update_or_create(
+                        email=email,
+                        defaults={
+                            'hrm_employee_id': emp_data.get('employee_Id'),
+                            'employee_name': emp_data.get('full_name'),
+                            'employee_type': emp_data.get('Employeement_Type'),
+                            'designation': hrm_designation,
+                            'hrm_department': emp_data.get('department'),
+                            'role': das_role,
+                            'location': emp_data.get('work_location'),
+                            'date_of_joining': parse_date_safe(emp_data.get('hired_date')),
+                            'is_active_in_hrm': True,
+                            'last_sync_time': timezone.now(),
+                            'is_active': True,
+                        }
+                    )
+                    
+                    if created:
+                        random_password = secrets.token_urlsafe(16)
+                        user.set_password(random_password)
+                        user.save()
+                        created_count += 1
+                    else:
+                        updated_count += 1
+                    
+                    # Create or update Employee profile
+                    Employee.objects.update_or_create(
+                        user=user,
+                        defaults={
+                            'name': emp_data.get('full_name', ''),
+                            'email': email,
+                            'phone': emp_data.get('phone', ''),
+                            'role': hrm_designation,
+                            'department': emp_data.get('department', ''),
+                            'employment_type': emp_data.get('Employeement_Type', ''),
+                            'designation': hrm_designation,
+                            'work_location': emp_data.get('work_location', ''),
+                            'date_of_joining': parse_date_safe(emp_data.get('hired_date')),
+                            'date_of_birth': parse_date_safe(emp_data.get('date_of_birth')),
+                            'is_active': True,
+                            'employee_status': 'active',
+                            'employee_id': emp_data.get('employee_Id', ''),
+                            'hrm_employee_id': emp_data.get('employee_Id', ''),
+                            'is_active_in_hrm': True,
+                        }
+                    )
+                    
+                except Exception as e:
+                    error_count += 1
+                    print(f"[HRM Sync] Error syncing {emp_data.get('email', 'unknown')}: {str(e)}")
+            
+            print(f"[HRM Sync] Sync completed. Created: {created_count}, Updated: {updated_count}, Errors: {error_count}")
+            
+        except Exception as e:
+            print(f"[HRM Sync] Sync failed: {str(e)}")
+            raise
 
 
 # ─── Project Working Hours Report ─────────────────────────────────────────────
@@ -5144,7 +5277,7 @@ class SyncHRMEmployeesViewSet(viewsets.GenericViewSet):
         try:
             # Fetch all active employees from HRM
             response = requests.get(
-                f'{hrm_url}/root/api/employees-active/',
+                f'{hrm_url}/api/employees-active/',
                 timeout=30,
                 verify=getattr(settings, 'VERIFY_SSL_HRM', False)
             )

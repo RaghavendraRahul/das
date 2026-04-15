@@ -234,6 +234,58 @@ class TaskSerializer(serializers.ModelSerializer):
         from .serializers import SubTaskSerializer
         subtasks = obj.subtasks.all()
         return SubTaskSerializer(subtasks, many=True).data
+    
+    def _auto_add_assignees_to_project(self, task, user_ids):
+        """
+        Auto-add task assignees to the project's assignees
+        This ensures users assigned to a task are also project members
+        """
+        if not user_ids or not task.project:
+            return
+        
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                # Add to project assignees if not already there
+                if not task.project.assignees.filter(id=user.id).exists():
+                    task.project.assignees.add(user)
+                    print(f"[Auto-Add] Added {user.email} to project '{task.project.name}' assignees")
+            except User.DoesNotExist:
+                continue
+    
+    def create(self, validated_data):
+        """
+        Create a new task and handle assignees
+        Auto-add assignees to project.assignees for catalog visibility
+        """
+        assignees_data = validated_data.pop('assignees', None)
+        milestones_data = validated_data.pop('milestones', None)
+        
+        # Create the task
+        task = Task.objects.create(**validated_data)
+        
+        # Create task assignees and auto-add to project
+        if assignees_data:
+            self._auto_add_assignees_to_project(task, assignees_data)
+            for user_id in assignees_data:
+                try:
+                    user = User.objects.get(id=user_id)
+                    TaskAssignee.objects.create(task=task, user=user, role='DEV')
+                except User.DoesNotExist:
+                    continue
+        
+        # Create milestones (subtasks)
+        if milestones_data:
+            for milestone in milestones_data:
+                if 'title' in milestone:
+                    SubTask.objects.create(
+                        task=task,
+                        title=milestone['title'],
+                        progress_weight=milestone.get('progress_weight', 25),
+                        due_date=task.due_date
+                    )
+        
+        return task
 
     def update(self, instance, validated_data):
         assignees_data = validated_data.pop('assignees', None)
@@ -250,6 +302,8 @@ class TaskSerializer(serializers.ModelSerializer):
         # Update assignees if provided
         if assignees_data is not None:
             TaskAssignee.objects.filter(task=instance).delete()
+            # Auto-add assignees to project when updating task assignments
+            self._auto_add_assignees_to_project(instance, assignees_data)
             for user_id in assignees_data:
                 try:
                     user = User.objects.get(id=user_id)
@@ -668,12 +722,33 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             data['due_date'] = data.pop('end_date')
         return super().to_internal_value(data)
     
+    def _auto_add_assignees_to_project(self, task, user_ids):
+        """
+        Auto-add task assignees to the project's assignees
+        Called when creating tasks inside a project to ensure catalog visibility
+        """
+        if not user_ids or not task.project:
+            return
+        
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                # Add to project assignees if not already there
+                if not task.project.assignees.filter(id=user.id).exists():
+                    task.project.assignees.add(user)
+                    print(f"[Auto-Add] Added {user.email} to project '{task.project.name}' assignees")
+            except User.DoesNotExist:
+                continue
+    
     def create(self, validated_data):
         assignees_data = validated_data.pop('assignees', [])
         milestones_data = validated_data.pop('milestones', [])
         
         # Create the standard task
         task = Task.objects.create(task_type='STANDARD', **validated_data)
+        
+        # Auto-add assignees to project
+        self._auto_add_assignees_to_project(task, assignees_data)
         
         # Create task assignees
         for user_id in assignees_data:
@@ -720,6 +795,24 @@ class RecurringTaskCreateSerializer(serializers.ModelSerializer):
             'recurrence_pattern', 'assignees', 'milestones'
         ]
     
+    def _auto_add_assignees_to_project(self, task, user_ids):
+        """
+        Auto-add task assignees to the project's assignees
+        Called when creating tasks inside a project to ensure catalog visibility
+        """
+        if not user_ids or not task.project:
+            return
+        
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                # Add to project assignees if not already there
+                if not task.project.assignees.filter(id=user.id).exists():
+                    task.project.assignees.add(user)
+                    print(f"[Auto-Add] Added {user.email} to project '{task.project.name}' assignees")
+            except User.DoesNotExist:
+                continue
+    
     def create(self, validated_data):
         assignees_data = validated_data.pop('assignees', [])
         milestones_data = validated_data.pop('milestones', [])
@@ -730,6 +823,9 @@ class RecurringTaskCreateSerializer(serializers.ModelSerializer):
             due_date=validated_data['next_occurrence'],  # Set due_date to next_occurrence
             **validated_data
         )
+        
+        # Auto-add assignees to project
+        self._auto_add_assignees_to_project(task, assignees_data)
         
         # Create task assignees
         for user_id in assignees_data:
@@ -764,11 +860,32 @@ class RoutineTaskCreateSerializer(serializers.ModelSerializer):
         model = Task
         fields = ['title', 'priority', 'start_date', 'due_date', 'planned_hours', 'assignees']
     
+    def _auto_add_assignees_to_project(self, task, user_ids):
+        """
+        Auto-add task assignees to the project's assignees
+        Called when creating tasks inside a project to ensure catalog visibility
+        """
+        if not user_ids or not task.project:
+            return
+        
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                # Add to project assignees if not already there
+                if not task.project.assignees.filter(id=user.id).exists():
+                    task.project.assignees.add(user)
+                    print(f"[Auto-Add] Added {user.email} to project '{task.project.name}' assignees")
+            except User.DoesNotExist:
+                continue
+    
     def create(self, validated_data):
         assignees_data = validated_data.pop('assignees', [])
         
         # Create the routine task
         task = Task.objects.create(task_type='ROUTINE', **validated_data)
+        
+        # Auto-add assignees to project
+        self._auto_add_assignees_to_project(task, assignees_data)
         
         # Create task assignees
         for user_id in assignees_data:
@@ -913,13 +1030,17 @@ class ProjectCreateWithTasksSerializer(serializers.Serializer):
                 planned_hours=float(t.get('planned_hours', 0.0)),  # Set task planned hours
             )
             
-            # Create assignees
+            # Create assignees and auto-add to project assignees
             assignee_ids = t.get('assignees', [])
             for uid in assignee_ids:
                 try:
                     uid_int = int(uid) if not isinstance(uid, int) else uid
                     user = User.objects.get(id=uid_int)
                     TaskAssignee.objects.create(task=task, user=user, role='DEV')
+                    # Auto-add to project assignees if not already there
+                    if not project.assignees.filter(id=user.id).exists():
+                        project.assignees.add(user)
+                        print(f"[Auto-Add] Added {user.email} to project '{project.name}' assignees")
                 except (User.DoesNotExist, ValueError, TypeError):
                     continue
             
