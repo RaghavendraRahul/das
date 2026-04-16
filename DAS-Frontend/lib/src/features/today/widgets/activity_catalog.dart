@@ -134,9 +134,9 @@ class ActivityCatalog extends HookConsumerWidget {
                     Text(
                       "ACTIVITY CATALOG",
                       style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
                         color: isDark ? Colors.white : const Color(0xFF05263E),
                       ),
                     ),
@@ -144,11 +144,19 @@ class ActivityCatalog extends HookConsumerWidget {
                     if (!isReadOnly)
                       InkWell(
                         onTap: () {
-                          final backendCatalogTypes = [
+                          // Extract unique categories from current catalog items
+                          final catalogItems = catalogAsync.valueOrNull ?? [];
+                          final backendCatalogTypes = {
                             'COURSE',
                             'ROUTINE',
                             'WORK',
-                          ];
+                            ...catalogItems
+                                .map((item) => item.catalogType)
+                                .where((type) =>
+                                    type.isNotEmpty && type != 'PROJECT'),
+                          }.toList();
+                          backendCatalogTypes.sort();
+
                           showDialog(
                             context: context,
                             builder: (context) => AddActivityTemplateModal(
@@ -158,16 +166,32 @@ class ActivityCatalog extends HookConsumerWidget {
                         },
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                           decoration: BoxDecoration(
                             color: isDark
                                 ? const Color(0xFF374151)
                                 : const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.add_rounded,
-                              size: 16,
-                              color: isDark ? Colors.white : Colors.black87),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.add_rounded,
+                                size: 12,
+                                color: isDark ? Colors.white : const Color(0xFF05263E),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                "New Catalog",
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : const Color(0xFF05263E),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                   ],

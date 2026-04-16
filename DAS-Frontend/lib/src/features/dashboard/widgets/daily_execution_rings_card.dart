@@ -39,9 +39,9 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                 'Daily Execution Analytics',
                 style: GoogleFonts.inter(
                   fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                   color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
-                  letterSpacing: -0.2,
+                  letterSpacing: -0.5,
                 ),
               ),
               // Date Picker Icon
@@ -87,7 +87,7 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                         Icons.calendar_month_outlined,
                         size: 16,
                         color: isToday 
-                            ? (isDark ? Colors.white54 : Colors.grey.shade600)
+                            ? (isDark ? Colors.white54 : const Color(0xFF05263E))
                             : Colors.blue,
                       ),
                       const SizedBox(width: 8),
@@ -97,8 +97,8 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: isToday 
-                              ? (isDark ? Colors.white54 : Colors.grey.shade700)
-                              : Colors.blue,
+                            ? (isDark ? Colors.white54 : const Color(0xFF05263E))
+                            : const Color(0xFF05263E),
                         ),
                       ),
                       if (!isToday) ...[

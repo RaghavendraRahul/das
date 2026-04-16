@@ -235,3 +235,16 @@ final stickyNotesProvider =
   final service = ref.watch(stickyNoteServiceProvider);
   return StickyNotesNotifier(service);
 });
+
+// Professional fonts selection for Quick Notes
+final availableQuickNoteFonts = [
+  'Inter',
+  'Roboto',
+  'Montserrat',
+  'Open Sans',
+  'Outfit',
+  'Poppins',
+  'Lato',
+];
+
+final quickNoteFontProvider = StateProvider<String>((ref) => 'Inter');
