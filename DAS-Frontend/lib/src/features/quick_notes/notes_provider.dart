@@ -238,13 +238,13 @@ final stickyNotesProvider =
 
 // Professional fonts selection for Quick Notes
 final availableQuickNoteFonts = [
-  'Inter',
+  'Century Schoolbook',
+  'Helvetica',
   'Roboto',
-  'Montserrat',
-  'Open Sans',
-  'Outfit',
-  'Poppins',
-  'Lato',
+  'Georgia',
+  'Garamond',
+  'Calibri',
+  'Times New Roman',
 ];
 
-final quickNoteFontProvider = StateProvider<String>((ref) => 'Inter');
+final quickNoteFontProvider = StateProvider<String>((ref) => 'Century Schoolbook');

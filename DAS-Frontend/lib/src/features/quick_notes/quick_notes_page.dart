@@ -552,7 +552,7 @@ class _SidebarNoteItem extends HookConsumerWidget {
                             note.content.isEmpty ? "Empty" : note.content,
                             maxLines: note.title.isNotEmpty ? 3 : 4,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.getFont(
+                            style: _getSafeTextStyle(
                               selectedFont,
                               fontSize: 13,
                               color: Colors.black.withOpacity(0.7),
@@ -892,7 +892,7 @@ class _EditableStickyNote extends HookConsumerWidget {
                           hintText: "Start typing your note here...",
                           hintStyle: TextStyle(color: Colors.black38),
                         ),
-                        style: GoogleFonts.getFont(
+                        style: _getSafeTextStyle(
                           selectedFont,
                           fontSize: 18,
                           height: 1.6,
@@ -990,7 +990,7 @@ class _QuickNoteFontSelector extends ConsumerWidget {
               icon: Icon(Icons.keyboard_arrow_down_rounded,
                   size: 16, color: Colors.black.withOpacity(0.5)),
               dropdownColor: isDark ? const Color(0xFF1F2937) : Colors.white,
-              style: GoogleFonts.getFont(
+              style: _getSafeTextStyle(
                 selectedFont,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
@@ -1001,7 +1001,7 @@ class _QuickNoteFontSelector extends ConsumerWidget {
                         value: font,
                         child: Text(
                           font,
-                          style: GoogleFonts.getFont(
+                          style: _getSafeTextStyle(
                             font,
                             fontWeight: FontWeight.w500,
                             fontSize: 13,
@@ -1021,4 +1021,39 @@ class _QuickNoteFontSelector extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Safely gets a text style by checking if the font exists in Google Fonts.
+/// Falls back to a standard TextStyle with fontFamily if not found.
+TextStyle _getSafeTextStyle(
+  String fontName, {
+  double? fontSize,
+  FontWeight? fontWeight,
+  Color? color,
+  double? height,
+  double? letterSpacing,
+}) {
+  try {
+    if (GoogleFonts.asMap().containsKey(fontName)) {
+      return GoogleFonts.getFont(
+        fontName,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        height: height,
+        letterSpacing: letterSpacing,
+      );
+    }
+  } catch (_) {
+    // Fallback if keys exist but font fails to load
+  }
+
+  return TextStyle(
+    fontFamily: fontName,
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    color: color,
+    height: height,
+    letterSpacing: letterSpacing,
+  );
 }

@@ -1091,7 +1091,7 @@ class _ApiPlannedItem extends ConsumerWidget {
         'Task';
 
     final duration = apiItem['planned_duration_minutes'] ?? 0;
-    final status = apiItem['status'] ?? 'PLANNED';
+    final status = (apiItem['status'] ?? 'PLANNED').toString().toUpperCase();
 
     // Watch for any active task to disable play buttons
     final activeTaskAsync = ref.watch(apiActiveTaskProvider);
@@ -1209,10 +1209,10 @@ class _ApiPlannedItem extends ConsumerWidget {
                                     value: 'delete', child: Text("Delete"))
                               ]))
                 ],
-                if (isFinalized && status == 'PLANNED') ...[
+                if (isFinalized) ...[
                   const SizedBox(width: 12),
                   InkWell(
-                    onTap: (hasActiveTask || isReadOnly)
+                    onTap: (hasActiveTask || isReadOnly || status == 'IN_ACTIVITY' || status == 'STARTED')
                         ? null
                         : () async {
                             // Start Task from API item
@@ -1255,7 +1255,7 @@ class _ApiPlannedItem extends ConsumerWidget {
                             }
                           },
                     child: Icon(Icons.play_circle_fill,
-                        color: (hasActiveTask || isReadOnly)
+                        color: (hasActiveTask || isReadOnly || status == 'IN_ACTIVITY' || status == 'STARTED')
                             ? Colors.grey.withOpacity(0.5)
                             : const Color(0xFF10B981),
                         size: 24),

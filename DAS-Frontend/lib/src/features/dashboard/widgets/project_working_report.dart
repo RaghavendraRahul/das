@@ -150,8 +150,9 @@ class _MainTitleSection extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.1),
+            color: const Color(0xFF05263E).withOpacity(0.08),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF05263E).withOpacity(0.1)),
           ),
           child: const Icon(
             Icons.trending_up,
@@ -164,9 +165,9 @@ class _MainTitleSection extends StatelessWidget {
           "Project Working Status",
           style: GoogleFonts.inter(
             fontSize: 16,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w900,
             color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
-            letterSpacing: -0.2,
+            letterSpacing: -0.5,
           ),
         ),
       ],
@@ -229,8 +230,9 @@ class _HeaderSection extends StatelessWidget {
               "Project Working Status",
               style: GoogleFonts.inter(
                 fontSize: 15,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w900,
                 color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
+                letterSpacing: -0.2,
               ),
             ),
             const SizedBox(height: 4),
@@ -238,8 +240,8 @@ class _HeaderSection extends StatelessWidget {
               "Monthly project completion trend for $selectedYear",
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A),
-                fontWeight: FontWeight.w400,
+                color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E).withOpacity(0.7),
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -341,7 +343,7 @@ class _SegmentedControl<T> extends StatelessWidget {
                     size: 13,
                     color: isSelected
                         ? Colors.white
-                        : (isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A)),
+                        : (isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E).withOpacity(0.6)),
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -351,7 +353,7 @@ class _SegmentedControl<T> extends StatelessWidget {
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected
                           ? Colors.white
-                          : (isDark ? const Color(0xFFB0C8E0) : const Color(0xFF374151)),
+                          : (isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E).withOpacity(0.7)),
                     ),
                   ),
                 ],
@@ -402,14 +404,14 @@ class _ModernYearPicker extends StatelessWidget {
                   selectedYear.toString(),
                   style: GoogleFonts.inter(
                     fontSize: 10, 
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : const Color(0xFF0D1B2A),
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : const Color(0xFF05263E),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Icon(Icons.keyboard_arrow_down_rounded, 
                   size: 14, 
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade500),
+                  color: isDark ? Colors.grey.shade400 : const Color(0xFF05263E)),
               ],
             ),
           ),
