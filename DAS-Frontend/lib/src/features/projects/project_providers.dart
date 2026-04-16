@@ -1,5 +1,6 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/database/database.dart';
 import '../../core/database/database_provider.dart';
 import 'project_repository.dart';
@@ -131,4 +132,51 @@ Stream<List<ActivityTemplate>> pendingTemplates(PendingTemplatesRef ref) {
   return (db.select(db.activityTemplates)
         ..where((t) => t.status.equals('pending')))
       .watch();
+}
+
+/// ============================================================================
+/// Project Analytics Providers - for hours breakdown with cascading filters
+/// ============================================================================
+
+/// Selected project ID for analytics view
+final selectedAnalyticsProjectIdProvider = StateProvider<int?>((ref) => null);
+
+/// Selected employee ID for analytics view
+final selectedAnalyticsEmployeeIdProvider = StateProvider<int?>((ref) => null);
+
+/// Fetches project analytics hours with optional project and employee filters
+/// DEDICATED provider for analytics - does NOT use dashboard's date filters
+@riverpod
+Future<Map<String, dynamic>> analyticsData(AnalyticsDataRef ref) async {
+  final apiService = ref.watch(taskApiServiceProvider);
+  final currentUser = ref.watch(currentUserProvider);
+  final selectedProjectId = ref.watch(selectedAnalyticsProjectIdProvider);
+  final selectedEmployeeId = ref.watch(selectedAnalyticsEmployeeIdProvider);
+
+  debugPrint('');
+  debugPrint('🔄╔════════════════════════════════════════════════════════════');
+  debugPrint('🔄║ [ANALYTICS PROVIDER] analyticsData()');
+  debugPrint('🔄║ CURRENT STATE:');
+  debugPrint('🔄║   User ID: ${currentUser?.id}');
+  debugPrint('🔄║   Project ID: $selectedProjectId  ← WATCH THIS');
+  debugPrint('🔄║   Employee ID: $selectedEmployeeId  ← WATCH THIS');
+  debugPrint('🔄╚════════════════════════════════════════════════════════════');
+  debugPrint('');
+
+  try {
+    final data = await apiService.getProjectAnalyticsHours(
+      userId: currentUser?.id,
+      projectId: selectedProjectId,
+      employeeId: selectedEmployeeId,
+    );
+    debugPrint('✅ Analytics Provider: Data fetched successfully');
+    return data;
+  } catch (e) {
+    debugPrint('❌ Analytics Provider: Error $e');
+    return {
+      'dropdowns': {},
+      'tasks': [],
+      'totals': {'planned_hours': 0, 'achieved_hours': 0},
+    };
+  }
 }

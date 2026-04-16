@@ -46,7 +46,8 @@ class TaskApiService {
     Map<String, dynamic>? params,
     String? startDate,
     String? endDate,
-    bool allProjects = true, // Defaults to true to maintain existing full-fetch behavior
+    bool allProjects =
+        true, // Defaults to true to maintain existing full-fetch behavior
   }) async {
     try {
       final queryParams = {
@@ -176,17 +177,16 @@ class TaskApiService {
         if (plannedDurationMinutes != null)
           'planned_duration_minutes': plannedDurationMinutes,
         if (relatedTaskId != null) 'related_task_id': relatedTaskId,
-        
+
         // Text fields (Map to both description and notes for compatibility)
         if (description != null) 'description': description,
         if (description != null) 'notes': description,
 
         // Custom-specific fields
         if (itemType == 'custom' && title != null) 'title': title,
-        
+
         // Catalog-specific fields
-        if (itemType == 'catalog' && catalogId != null)
-          'catalog_id': catalogId,
+        if (itemType == 'catalog' && catalogId != null) 'catalog_id': catalogId,
       };
 
       print('📋 API Call: POST /today-plan/add_item/ → $itemType');
@@ -205,7 +205,6 @@ class TaskApiService {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
-
 
   Future<void> moveTodayPlanToActivityLog(int plannedItemId) async {
     try {
@@ -795,21 +794,30 @@ class TaskApiService {
     }
   }
 
-  Future<Map<String, dynamic>> getProjectWorkStats(
-    int? userId, {
-    String? startDate,
-    String? endDate,
+  /// DEDICATED Analytics API method (separate from dashboard stats)
+  /// Only takes: user_id, project_id, employee_id
+  /// Does NOT take startDate/endDate (those are dashboard-only)
+  Future<Map<String, dynamic>> getProjectAnalyticsHours({
+    int? userId,
     int? projectId,
+    int? employeeId,
   }) async {
     try {
-      final queryParams = {
-        if (userId != null) 'user_id': userId,
-        if (startDate != null) 'start_date': startDate,
-        if (endDate != null) 'end_date': endDate,
-        if (projectId != null) 'project_id': projectId,
-      };
+      final queryParams = <String, dynamic>{};
+      if (userId != null) queryParams['user_id'] = userId;
+      if (projectId != null) queryParams['project_id'] = projectId;
+      if (employeeId != null) queryParams['employee_id'] = employeeId;
 
-      print('📊 Fetching project work stats: /project-analytics/hours/ params=$queryParams');
+      print('');
+      print('📊╔════════════════════════════════════════════════════════════');
+      print('📊║ [ANALYTICS API] getProjectAnalyticsHours()');
+      print('📊║ Parameters:');
+      print('📊║   user_id: $userId');
+      print('📊║   project_id: $projectId  ← PROJECT FILTER');
+      print('📊║   employee_id: $employeeId  ← EMPLOYEE FILTER');
+      print('📊║ Query params: $queryParams');
+      print('📊╚════════════════════════════════════════════════════════════');
+      print('');
 
       final response = await _dio.get(
         '/project-analytics/hours/',
@@ -818,12 +826,69 @@ class TaskApiService {
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
-        print('📊 Got ${(data['all_projects'] as List?)?.length ?? 0} projects for dropdown, ${(data['projects'] as List?)?.length ?? 0} project stats');
+        final projects = (data['dropdowns']?['projects'] as List?)?.length ?? 0;
+        final employees =
+            (data['dropdowns']?['employees'] as List?)?.length ?? 0;
+        final tasks = (data['tasks'] as List?)?.length ?? 0;
+        print(
+            '📊╔════════════════════════════════════════════════════════════');
+        print('📊║ [ANALYTICS RESPONSE]');
+        print('📊║   Projects: $projects');
+        print('📊║   Employees: $employees  ← FILTERED by project!');
+        print('📊║   Tasks: $tasks');
+        print('📊║   Planned: ${data['totals']?['planned_hours']}');
+        print('📊║   Achieved: ${data['totals']?['achieved_hours']}');
+        print(
+            '📊╚════════════════════════════════════════════════════════════');
         return data;
       }
       return <String, dynamic>{};
     } catch (e) {
-      print('❌ Error fetching project work stats: $e');
+      print('❌ Analytics API Error: $e');
+      return <String, dynamic>{};
+    }
+  }
+
+  Future<Map<String, dynamic>> getProjectWorkStats(
+    int? userId, {
+    String? startDate,
+    String? endDate,
+    int? projectId,
+    int? employeeId,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (userId != null) queryParams['user_id'] = userId;
+      if (startDate != null) queryParams['start_date'] = startDate;
+      if (endDate != null) queryParams['end_date'] = endDate;
+      if (projectId != null) queryParams['project_id'] = projectId;
+      if (employeeId != null) queryParams['employee_id'] = employeeId;
+
+      print('');
+      print('📊╔════════════════════════════════════════════════════════════');
+      print('📊║ [DASHBOARD STATS API] getProjectWorkStats()');
+      print('📊║ Parameters:');
+      print('📊║   user_id: $userId');
+      print('📊║   project_id: $projectId');
+      print('📊║   employee_id: $employeeId');
+      print('📊║   start_date: $startDate');
+      print('📊║   end_date: $endDate');
+      print('📊║ Query params: $queryParams');
+      print('📊╚════════════════════════════════════════════════════════════');
+      print('');
+
+      final response = await _dio.get(
+        '/project-analytics/hours/',
+        queryParameters: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return data;
+      }
+      return <String, dynamic>{};
+    } catch (e) {
+      print('❌ Dashboard Stats API Error: $e');
       return <String, dynamic>{};
     }
   }
@@ -842,7 +907,8 @@ class TaskApiService {
   }
 
   Future<Map<String, dynamic>> getProjectCompletionChart(
-      int year, String filter, [int? userId]) async {
+      int year, String filter,
+      [int? userId]) async {
     try {
       final startDate = '$year-01-01';
       final endDate = '$year-12-31';
@@ -864,7 +930,8 @@ class TaskApiService {
   }
 
   Future<Map<String, dynamic>> getTaskCompletionChart(
-      String startDate, String endDate, String filter, [int? userId]) async {
+      String startDate, String endDate, String filter,
+      [int? userId]) async {
     try {
       final response =
           await _dio.get('/task-completion-chart/', queryParameters: {
@@ -883,7 +950,8 @@ class TaskApiService {
     }
   }
 
-  Future<List<dynamic>> getHoursCompletionChart(int year, String filter, [int? userId]) async {
+  Future<List<dynamic>> getHoursCompletionChart(int year, String filter,
+      [int? userId]) async {
     try {
       final response = await _dio.get(
         '/hours-completion-chart/',

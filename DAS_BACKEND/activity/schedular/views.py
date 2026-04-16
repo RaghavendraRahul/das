@@ -6061,18 +6061,25 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
         - EMPLOYEE: Only projects assigned to them
         """
         if user.role == 'ADMIN':
-            projects = Projects.objects.filter(status='ACTIVE')
             if employee_id:
-                # If employee specified, show only projects where they're assigned
-                projects = projects.filter(
-                    tasks__assignees__user_id=employee_id
-                ).distinct()
+                # Get projects where this employee is assigned to tasks
+                try:
+                    employee = User.objects.get(id=employee_id)
+                    project_ids = set()
+                    for task_assignee in TaskAssignee.objects.filter(user=employee):
+                        project_ids.add(task_assignee.task.project_id)
+                    projects = Projects.objects.filter(id__in=project_ids, status='ACTIVE').order_by('name')
+                except User.DoesNotExist:
+                    projects = Projects.objects.none()
+            else:
+                # All active projects
+                projects = Projects.objects.filter(status='ACTIVE').order_by('name')
         else:
             # Employee: only their assigned projects
-            projects = Projects.objects.filter(
-                status='ACTIVE',
-                tasks__assignees__user=user
-            ).distinct()
+            project_ids = set()
+            for task_assignee in TaskAssignee.objects.filter(user=user):
+                project_ids.add(task_assignee.task.project_id)
+            projects = Projects.objects.filter(id__in=project_ids, status='ACTIVE').order_by('name')
         
         return projects
 
@@ -6084,13 +6091,19 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
         """
         if user.role == 'ADMIN':
             if project_id:
-                # Show only employees assigned to this specific project
-                employees = User.objects.filter(
-                    taskassignee__task__project_id=project_id
-                ).distinct()
+                # Get employees assigned to tasks in this specific project
+                try:
+                    project = Projects.objects.get(id=project_id)
+                    employee_ids = set()
+                    for task in project.tasks.all():
+                        for assignee in task.assignees.all():
+                            employee_ids.add(assignee.user_id)
+                    employees = User.objects.filter(id__in=employee_ids).order_by('email')
+                except Projects.DoesNotExist:
+                    employees = User.objects.none()
             else:
-                # Show all employees
-                employees = User.objects.all()
+                # All employees
+                employees = User.objects.all().order_by('email')
         else:
             # Employee: only themselves
             employees = User.objects.filter(id=user.id)
@@ -6292,11 +6305,18 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
         if project_id:
             # CASE 1: Project selected (with or without employee)
             tasks_qs = project.tasks.all()
-            total_planned = float(project.planned_hours or 0.0)
             
-            # If tasks exceed project budget, use sum of tasks
-            tasks_sum = sum(float(t.planned_hours or 0.0) for t in tasks_qs)
-            total_planned = max(total_planned, tasks_sum)
+            # If employee is also selected, filter tasks to only those assigned to the employee
+            if employee_id:
+                tasks_qs = tasks_qs.filter(assignees__user_id=employee_id).distinct()
+                # IMPORTANT: Calculate total from filtered tasks, NOT project total
+                total_planned = sum(float(t.planned_hours or 0.0) for t in tasks_qs)
+            else:
+                # No employee filter: use project total as baseline
+                total_planned = float(project.planned_hours or 0.0)
+                # If tasks sum exceeds project budget, use the sum of tasks
+                tasks_sum = sum(float(t.planned_hours or 0.0) for t in tasks_qs)
+                total_planned = max(total_planned, tasks_sum)
             
             processed_task_ids = set()
             for task in tasks_qs:
