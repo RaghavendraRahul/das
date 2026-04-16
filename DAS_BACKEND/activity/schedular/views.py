@@ -6054,6 +6054,97 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
         """Get planned hours for a task"""
         return float(task.planned_hours or 0.0)
 
+    def get_filtered_projects(self, user, employee_id=None):
+        """
+        Get projects based on user role.
+        - ADMIN: All projects (optionally filtered by employee if provided)
+        - EMPLOYEE: Only projects assigned to them
+        """
+        if user.role == 'ADMIN':
+            projects = Projects.objects.filter(status='ACTIVE')
+            if employee_id:
+                # If employee specified, show only projects where they're assigned
+                projects = projects.filter(
+                    tasks__assignees__user_id=employee_id
+                ).distinct()
+        else:
+            # Employee: only their assigned projects
+            projects = Projects.objects.filter(
+                status='ACTIVE',
+                tasks__assignees__user=user
+            ).distinct()
+        
+        return projects
+
+    def get_filtered_employees(self, user, project_id=None):
+        """
+        Get employees based on user role.
+        - ADMIN: All employees (optionally filtered by project if provided)
+        - EMPLOYEE: Only themselves (single item list)
+        """
+        if user.role == 'ADMIN':
+            if project_id:
+                # Show only employees assigned to this specific project
+                employees = User.objects.filter(
+                    taskassignee__task__project_id=project_id
+                ).distinct()
+            else:
+                # Show all employees
+                employees = User.objects.all()
+        else:
+            # Employee: only themselves
+            employees = User.objects.filter(id=user.id)
+        
+        return employees
+
+    def build_dropdowns(self, user, project_id=None, employee_id=None):
+        """
+        Build dropdown data based on current filters and user role.
+        Returns: {
+            'projects': [...],
+            'employees': [...]
+        }
+        """
+        projects = self.get_filtered_projects(user, employee_id=employee_id)
+        employees = self.get_filtered_employees(user, project_id=project_id)
+
+        projects_data = []
+        for p in projects:
+            task_count = Task.objects.filter(
+                project=p,
+                assignees__user_id=employee_id
+            ).distinct().count() if employee_id else p.tasks.count()
+            
+            projects_data.append({
+                'id': p.id,
+                'name': p.name,
+                'status': p.status,
+                'task_count': task_count,
+                'planned_hours': float(p.planned_hours or 0.0)
+            })
+
+        employees_data = []
+        for emp in employees:
+            task_count = Task.objects.filter(
+                assignees__user=emp,
+                project_id=project_id
+            ).distinct().count() if project_id else TaskAssignee.objects.filter(
+                user=emp
+            ).values('task').distinct().count()
+            
+            employees_data.append({
+                'id': emp.id,
+                'name': emp.employee_name or emp.email.split('@')[0],
+                'email': emp.email,
+                'role': emp.role,
+                'task_count': task_count
+            })
+
+        return {
+            'projects': projects_data,
+            'employees': employees_data
+        }
+
     @action(detail=False, methods=['get'], url_path='tasks')
     def tasks_analytics(self, request):
         """
@@ -6124,51 +6215,28 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
     def hours(self, request):
         """
         Get project/employee hours with task breakdown - optimized for doughnut chart visualization.
-        Flexible filtering: project only, employee only, or both.
+        Role-based filtering with intelligent defaults and cascading dropdowns.
         
-        This endpoint is specifically designed for doughnut chart rendering with:
-        - Center value: Total planned hours (and achieved hours)
-        - Slices: Individual task hours in different colors
+        ADMIN BEHAVIOR:
+        - No filters: Show all projects, all employees, all hours
+        - Project only: Show users assigned to that project
+        - Employee only: Show projects assigned to that employee
+        - Both: Show that employee's tasks in that project only
         
-        Query Parameters (at least one required):
-        - project_id: Optional. The project to filter by
-        - employee_id: Optional. The employee to filter by
+        EMPLOYEE BEHAVIOR:
+        - Auto-locked to themselves (cannot select other employees)
+        - Can filter by their assigned projects only
+        - Default shows all their projects and hours
         
-        Examples:
-        1. GET /api/project-analytics/hours/?project_id=58
-           → All tasks in project 58
+        Query Parameters (all optional):
+        - project_id: Filter by specific project
+        - employee_id / user_id: Filter by specific employee (admin only, locked for employee role)
         
-        2. GET /api/project-analytics/hours/?employee_id=50
-           → All tasks assigned to employee 50 (across all projects)
-        
-        3. GET /api/project-analytics/hours/?project_id=58&employee_id=50
-           → Tasks assigned to employee 50 in project 58
-        
-        Returns:
-        {
-            "project": null or {"id": 58, "name": "My Project", "planned_hours": 100},
-            "employee": null or {"id": 50, "name": "John Doe", "email": "john@example.com"},
-            "tasks": [
-                {
-                    "id": 1,
-                    "name": "Task 1",
-                    "project_id": 58,
-                    "project_name": "My Project",
-                    "planned_hours": 30,
-                    "achieved_hours": 25
-                },
-                ...
-            ],
-            "totals": {
-                "planned_hours": 100,
-                "achieved_hours": 75
-            },
-            "filter": {
-                "project_id": 58,
-                "employee_id": null
-            }
-        }
+        Returns: Complete response with dropdowns for cascading filters
         """
+        user = request.user
+        
+        # Get filter parameters from query string
         project_id = request.query_params.get('project_id')
         employee_id = request.query_params.get('employee_id') or request.query_params.get('user_id')
         
@@ -6178,14 +6246,12 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
         if employee_id in [None, '', 'null', 'undefined']:
             employee_id = None
         
-        # At least one filter is required
-        if not project_id and not employee_id:
-            return Response(
-                {'error': 'At least one of project_id or employee_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # ROLE-BASED LOGIC: Lock employee to themselves
+        if user.role != 'ADMIN':
+            # Employee can only see their own data
+            employee_id = user.id
         
-        # Fetch project if provided
+        # Validate provided IDs if they exist
         project = None
         project_data = None
         if project_id:
@@ -6202,7 +6268,6 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_404_NOT_FOUND
                 )
         
-        # Fetch employee if provided
         employee = None
         employee_data = None
         if employee_id:
@@ -6210,7 +6275,7 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
                 employee = User.objects.get(id=employee_id)
                 employee_data = {
                     'id': employee.id,
-                    'name': employee.name,  # Uses the name property (employee_name or email)
+                    'name': employee.employee_name or employee.email.split('@')[0],
                     'email': employee.email
                 }
             except User.DoesNotExist:
@@ -6219,22 +6284,20 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_404_NOT_FOUND
                 )
         
-        # Build tasks queryset and calculate totals
+        # Build tasks data and calculate totals
         tasks_data = []
         total_planned = 0.0
         total_achieved = 0.0
         
         if project_id:
-            # For a specific project, we show ALL tasks in the distribution donut
-            # but we can filter the achieved hours by user if requested.
+            # CASE 1: Project selected (with or without employee)
             tasks_qs = project.tasks.all()
             total_planned = float(project.planned_hours or 0.0)
             
-            # If tasks exceed project budget sum, we use the sum of tasks
+            # If tasks exceed project budget, use sum of tasks
             tasks_sum = sum(float(t.planned_hours or 0.0) for t in tasks_qs)
             total_planned = max(total_planned, tasks_sum)
             
-            # Populate tasks_data from the task queryset
             processed_task_ids = set()
             for task in tasks_qs:
                 p_h = float(task.planned_hours or 0.0)
@@ -6244,14 +6307,13 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
                 tasks_data.append({
                     'id': task.id,
                     'name': task.title,
-                    'project_id': task.id,
+                    'project_id': task.project_id,
                     'project_name': project.name,
                     'planned_hours': p_h,
                     'achieved_hours': a_h
                 })
             
-            # ORPHAN WORK SWEEP: Add unplanned activity logs that belong to the project
-            # but aren't strictly linked to any of the predefined 'Task' objects.
+            # ORPHAN WORK: Include activity logs not linked to specific tasks
             orphan_logs_filters = {
                 'today_plan__catalog_item__project_id': project_id,
                 'status__in': ['COMPLETED', 'PENDING', 'STOPPED', 'IN_PROGRESS']
@@ -6259,23 +6321,19 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
             if employee_id:
                 orphan_logs_filters['user_id'] = employee_id
             
-            # Exclude tasks we already processed
             orphan_logs = ActivityLog.objects.filter(
                 **orphan_logs_filters
             ).exclude(today_plan__catalog_item__task_id__in=processed_task_ids)
             
-            # Group by task name to show as slices in the donut
             from django.db.models import Sum
             from django.utils import timezone
             
             unplanned_tasks_agg = {}
             for log in orphan_logs:
-                # Name comes from catalog item if it exists, or custom title (for unplanned)
                 name = log.today_plan.catalog_item.name if log.today_plan.catalog_item else log.today_plan.custom_title
                 if not name:
                     name = "Unplanned Work"
                 
-                # Use current log hours or calculate live if in_progress
                 hrs = float(log.hours_worked or 0.0)
                 if log.status == 'IN_PROGRESS' and hrs <= 0:
                     delta = timezone.now() - log.actual_start_time
@@ -6286,20 +6344,20 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
                 else:
                     unplanned_tasks_agg[name] = hrs
             
-            # Add these unplanned items to tasks_data
             for name, hrs in unplanned_tasks_agg.items():
                 total_achieved += hrs
                 tasks_data.append({
-                    'id': -1, # Marker for unplanned
+                    'id': -1,
                     'name': f"{name} (Unplanned)",
                     'project_id': project_id,
                     'project_name': project.name,
                     'planned_hours': 0.0,
                     'achieved_hours': hrs
                 })
+        
         elif employee_id:
-            # Employee only view (across multiple projects)
-            # Show individual task distribution for this specific employee
+            # CASE 2: Employee selected (no project specified)
+            # Show all their tasks across all projects
             tasks_qs = Task.objects.filter(assignees__user_id=employee_id, project__status='ACTIVE').distinct()
             total_planned = sum(float(t.planned_hours or 0.0) for t in tasks_qs)
             
@@ -6315,28 +6373,32 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
                     'planned_hours': p_h,
                     'achieved_hours': a_h
                 })
+        
         else:
-            # ALL PROJECTS VIEW (Global Portfolio)
-            # Aggregate stats across projects and show per-project distribution
+            # CASE 3: No filters (default view for admin or employee)
             from django.db.models import Sum
             
-            # Filter active projects. If employee_id is provided, only show projects they are assigned to.
-            active_projects = Projects.objects.filter(status='ACTIVE')
-            if employee_id:
-                active_projects = active_projects.filter(project_assignees=employee_id)
+            # Get projects based on role
+            if user.role == 'ADMIN':
+                # Admin: all active projects
+                active_projects = Projects.objects.filter(status='ACTIVE')
+            else:
+                # Employee: only their assigned projects
+                active_projects = Projects.objects.filter(
+                    status='ACTIVE',
+                    tasks__assignees__user=user
+                ).distinct()
             
-            # Use aggregate for performance on planned hours
             total_planned = active_projects.aggregate(total=Sum('planned_hours'))['total'] or 0.0
             total_planned = float(total_planned)
             
             for p in active_projects:
-                # Sum all activity logs for this project (portfolio distribution)
                 log_filters = {
                     'today_plan__catalog_item__project_id': p.id,
-                    'status__in': ['COMPLETED', 'PENDING', 'STOPPED']
+                    'status__in': ['COMPLETED', 'PENDING', 'STOPPED', 'IN_PROGRESS']
                 }
-                if employee_id:
-                    log_filters['user_id'] = employee_id
+                if user.role != 'ADMIN':
+                    log_filters['user_id'] = user.id
                 
                 a_h = ActivityLog.objects.filter(**log_filters).aggregate(total=Sum('hours_worked'))['total'] or 0.0
                 a_h = float(a_h)
@@ -6344,29 +6406,15 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
                 
                 tasks_data.append({
                     'id': p.id,
-                    'name': p.name, # Map project name to 'name' so donut chart segments are project-based
+                    'name': p.name,
                     'project_id': p.id,
                     'project_name': p.name,
                     'planned_hours': float(p.planned_hours or 0.0),
                     'achieved_hours': a_h
                 })
         
-        # Final safety check: if we have a project but no total_achieved 
-        # (maybe logged against the project directly, not specific tasks)
-        if project_id and total_achieved == 0:
-            # Sum ALL activity logs linked to this project's catalog items
-            from django.db.models import Sum
-            project_logs_filters = {
-                'today_plan__catalog_item__project_id': project_id,
-                'status__in': ['COMPLETED', 'PENDING', 'STOPPED']
-            }
-            if employee_id:
-                project_logs_filters['user_id'] = employee_id
-                
-            total_achieved = ActivityLog.objects.filter(
-                **project_logs_filters
-            ).aggregate(total=Sum('hours_worked'))['total'] or 0.0
-            total_achieved = float(total_achieved)
+        # Build cascading dropdowns based on current filters
+        dropdowns = self.build_dropdowns(user, project_id=project_id, employee_id=employee_id)
         
         return Response({
             'project': project_data,
@@ -6376,11 +6424,15 @@ class ProjectAnalyticsViewSet(viewsets.GenericViewSet):
                 'planned_hours': total_planned,
                 'achieved_hours': total_achieved
             },
+            'dropdowns': dropdowns,
             'filter': {
                 'project_id': project_id,
                 'employee_id': employee_id
-            }
+            },
+            'user_role': user.role,
+            'is_employee_locked': user.role != 'ADMIN'
         })
+
 
     @action(detail=False, methods=['get'], url_path='employees-for-project')
     def employees_for_project(self, request):
