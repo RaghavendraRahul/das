@@ -634,6 +634,48 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                             ),
                         ],
                       ),
+                      if (item['work_notes'] != null &&
+                          (item['work_notes'] as String).isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.05)
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.1)
+                                  : Colors.grey.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.notes,
+                                  size: 12,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  item['work_notes'],
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontStyle: FontStyle.italic,
+                                    color: isDark
+                                        ? Colors.grey.shade300
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -711,6 +753,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
     final extraTimeController = TextEditingController(text: '0');
     final startTimeController = TextEditingController(text: startTimeDisplay);
     final endTimeController = TextEditingController(text: endTimeDisplay);
+    final remarkController = TextEditingController(text: item['work_notes'] as String? ?? '');
 
     showDialog(
       context: context,
@@ -1041,6 +1084,30 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Remarks / Work Notes:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: remarkController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    hintText: 'What did you work on?',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                ),
               ],
             ),
             actions: [
@@ -1079,6 +1146,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                       activityLogId: activityLogId,
                       isCompleted: isCompleted,
                       reason: isCompleted ? 'Task completed' : 'Task paused',
+                      workNotes: remarkController.text,
                       minutesLeft: minutesLeft,
                       extraMinutes: extraMinutes,
                       startTime: startTimeController.text,

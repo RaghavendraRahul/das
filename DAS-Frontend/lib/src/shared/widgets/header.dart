@@ -265,6 +265,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   void _closeDropdown() {
     _overlayEntry?.remove();
     _overlayEntry = null;
+    if (mounted) setState(() {});
   }
 
   OverlayEntry _createOverlayEntry() {
@@ -273,16 +274,25 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
     // final notifications = ref.read(notificationPollingProvider); // Unused
 
     return OverlayEntry(
-      builder: (context) => Positioned(
-        width: 360,
-        child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          offset: Offset(-(360.0 - size.width), size.height + 8), // Align right
-          child: Material(
-            elevation: 8,
-            color: Colors.transparent,
-            child: Container(
+      builder: (context) => Stack(
+        children: [
+          Positioned.fill(
+            child: ModalBarrier(
+              dismissible: true,
+              onDismiss: _closeDropdown,
+              color: Colors.transparent,
+            ),
+          ),
+          Positioned(
+            width: 360,
+            child: CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              offset: Offset(-(360.0 - size.width), size.height + 8), // Align right
+              child: Material(
+                elevation: 8,
+                color: Colors.transparent,
+                child: Container(
               constraints: const BoxConstraints(maxHeight: 400),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
@@ -316,19 +326,31 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
                             fontSize: 16,
                           ),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            ref
-                                .read(notificationPollingProvider.notifier)
-                                .markAllAsRead(); // Add this method if missing or loop
-                            // Optimistic update logic is in polling service
-                            _closeDropdown(); // Close on action? Or keep open? Keep open to see update.
-                            setState(
-                                () {}); // Rebuild button but overlay needs rebuild too?
-                            // Actually, OverlayEntry builder context might not rebuild if provider changes unless we wrap it in Consumer.
-                            // Better: Wrap the overlay content in Consumer.
-                          },
-                          child: const Text('Mark all as read'),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                ref
+                                    .read(notificationPollingProvider.notifier)
+                                    .markAllAsRead();
+                                _closeDropdown();
+                                setState(() {});
+                              },
+                              child: const Text('Mark all as read'),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: Icon(Icons.close,
+                                  size: 20,
+                                  color: widget.isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600),
+                              onPressed: _closeDropdown,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -526,8 +548,10 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
           ),
         ),
       ),
-    );
-  }
+    ],
+  ),
+);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -739,16 +763,25 @@ class _CriticalAttentionButtonState
     var size = renderBox.size;
 
     return OverlayEntry(
-      builder: (context) => Positioned(
-        width: 360,
-        child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          offset: Offset(-(360.0 - size.width), size.height + 8), // Align right
-          child: Material(
-            elevation: 8,
-            color: Colors.transparent,
-            child: Container(
+      builder: (context) => Stack(
+        children: [
+          Positioned.fill(
+            child: ModalBarrier(
+              dismissible: true,
+              onDismiss: _closeDropdown,
+              color: Colors.transparent,
+            ),
+          ),
+          Positioned(
+            width: 360,
+            child: CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              offset: Offset(-(360.0 - size.width), size.height + 8), // Align right
+              child: Material(
+                elevation: 8,
+                color: Colors.transparent,
+                child: Container(
               constraints: const BoxConstraints(maxHeight: 400),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
@@ -1020,8 +1053,10 @@ class _CriticalAttentionButtonState
           ),
         ),
       ),
-    );
-  }
+    ],
+  ),
+);
+}
 
   @override
   Widget build(BuildContext context) {

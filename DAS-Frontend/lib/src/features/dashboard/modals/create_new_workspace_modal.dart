@@ -475,7 +475,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
         return Column(
           children: [
             _SelectionCard(
-              title: "Dev Project",
+              title: "Development Project",
               description: "Software, Design, Marketing tasks with deadlines.",
               icon: Icons.developer_mode_rounded,
               type: WorkspaceType.project,
@@ -495,7 +495,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
             ),
             const SizedBox(height: 16),
             _SelectionCard(
-              title: "Routing Group",
+              title: "Routine Group",
               description: "Weekly meeting, CRM, and daily admin.",
               icon: Icons.coffee_rounded,
               type: WorkspaceType.routine,
@@ -1786,7 +1786,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
   String _getWorkspaceLabel(WorkspaceType type) {
     switch (type) {
       case WorkspaceType.project:
-        return "Dev Project";
+        return "Devevelopement Project";
       case WorkspaceType.course:
         return "Class / Course";
       case WorkspaceType.routine:

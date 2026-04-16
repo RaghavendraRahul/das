@@ -95,7 +95,7 @@ class ProjectOverviewStats extends ConsumerWidget {
                 isPrimary: false, // Turned off to match Figma's white card
                 progressOverride:
                     totalProjects > 0 ? completedProjects / totalProjects : 0,
-                strokeColor: const Color(0xFF6366F1), // Premium Indigo
+                strokeColor: const Color(0xFF05263E),
                 onTap: () => showCategoryModal(StatCategory.portfolio),
               ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
               _StatCard(
@@ -108,7 +108,7 @@ class ProjectOverviewStats extends ConsumerWidget {
                 icon: Icons.timer_outlined,
                 color: Colors.black87,
                 isSub2Alert: overdueCount > 0,
-                strokeColor: const Color(0xFF0EA5E9), // Vibrant Sky Blue
+                strokeColor: const Color(0xFF05263E),
                 onTap: () => showCategoryModal(StatCategory.timeline),
               ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
               _StatCard(
@@ -120,7 +120,7 @@ class ProjectOverviewStats extends ConsumerWidget {
                 sub2Label: "Pending",
                 icon: Icons.check_box_outlined,
                 color: Colors.black87,
-                strokeColor: const Color(0xFF10B981), // Crisp Emerald
+                strokeColor: const Color(0xFF05263E),
                 onTap: () => showCategoryModal(StatCategory.completion),
               ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
               _StatCard(
@@ -134,7 +134,7 @@ class ProjectOverviewStats extends ConsumerWidget {
                 color: Colors.black87,
                 isSub1Alert: criticalCount > 0,
                 isCritical: criticalCount > 0,
-                strokeColor: const Color(0xFFF43F5E), // Striking Rose Red
+                strokeColor: const Color(0xFF05263E),
                 onTap: () => showCategoryModal(StatCategory.attention),
               ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
             ],
@@ -261,7 +261,7 @@ class _StatsModal extends StatelessWidget {
                 border: Border(
                   bottom: BorderSide(
                     color:
-                        isDark ? const Color(0xFF374151) : Colors.grey.shade200,
+                        isDark ? const Color(0xFF05263E).withOpacity(0.7) : Colors.grey.shade200,
                   ),
                 ),
               ),
@@ -321,7 +321,7 @@ class _StatsModal extends StatelessWidget {
                 separatorBuilder: (_, __) => Divider(
                   height: 1,
                   color: isDark
-                      ? const Color(0xFF374151).withOpacity(0.3)
+                      ? const Color(0xFF05263E).withOpacity(0.7).withOpacity(0.3)
                       : Colors.grey.shade100,
                 ),
                 itemBuilder: (context, index) {
@@ -393,7 +393,7 @@ class _StatsModal extends StatelessWidget {
                 border: Border(
                   top: BorderSide(
                     color:
-                        isDark ? const Color(0xFF374151) : Colors.grey.shade200,
+                        isDark ? const Color(0xFF05263E).withOpacity(0.7) : Colors.grey.shade200,
                   ),
                 ),
               ),
@@ -498,8 +498,8 @@ class _StatCardState extends State<_StatCard> {
     final bgColor = isDark 
         ? const Color(0xFF0B1A2E)
         : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF0D1B2A);          // Max contrast
-    final mutedColor = isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A); // Muted but visible
+    final textColor = isDark ? Colors.white : const Color(0xFF05263E);          // Max contrast
+    final mutedColor = isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E).withOpacity(0.7); // Muted but visible
     
     // Deeper, more sophisticated shadows
     final shadowColor = isDark 
@@ -600,8 +600,8 @@ class _StatCardState extends State<_StatCard> {
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.outfit(
                                         fontSize: titleSz,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1.0,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.8,
                                         color: widget.strokeColor,
                                         height: 1.2,
                                       ),

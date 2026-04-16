@@ -235,6 +235,7 @@ class TaskApiService {
     required int activityLogId,
     required bool isCompleted,
     String? reason,
+    String? workNotes,
     int? minutesLeft,
     int? extraMinutes,
     String? startTime,
@@ -244,6 +245,7 @@ class TaskApiService {
       await _dio.post('/activity-log/$activityLogId/stop/', data: {
         'is_completed': isCompleted,
         'reason': reason,
+        'work_notes': workNotes,
         'minutes_left': minutesLeft,
         'extra_minutes': extraMinutes,
         'start_time': startTime,

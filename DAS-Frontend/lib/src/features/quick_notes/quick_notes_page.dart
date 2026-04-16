@@ -23,6 +23,7 @@ class QuickNotesPage extends HookConsumerWidget {
     final selectedNoteId = useState<String?>(null);
     final isSelectionMode = useState(false);
     final selectedIds = useState<Set<String>>({});
+    final selectedFont = ref.watch(quickNoteFontProvider);
 
     // If notes exist but none selected, select the first one
     useEffect(() {
@@ -439,7 +440,7 @@ class _StickyNotesSidebar extends HookWidget {
   }
 }
 
-class _SidebarNoteItem extends HookWidget {
+class _SidebarNoteItem extends HookConsumerWidget {
   final int index;
   final StickyNote note;
   final bool isSelected;
@@ -463,8 +464,9 @@ class _SidebarNoteItem extends HookWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isHovered = useState(false);
+    final selectedFont = ref.watch(quickNoteFontProvider);
 
     return GestureDetector(
       onLongPress: onLongPress,
@@ -529,36 +531,38 @@ class _SidebarNoteItem extends HookWidget {
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
                     width: double.infinity,
                     height: double.infinity,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (note.title.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 4.0),
-                              child: Text(
-                                note.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.outfit(
-                                    fontSize: 12,
-                                    color: Colors.black.withOpacity(0.8),
-                                    fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (note.title.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4.0),
                             child: Text(
-                              note.content.isEmpty ? "Empty" : note.content,
-                              maxLines: note.title.isNotEmpty ? 3 : 4,
+                              note.title,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.patrickHand(
-                                  fontSize: 14,
-                                  color: Colors.black.withOpacity(0.7),
-                                  height: 1.1,
-                                  fontWeight: FontWeight.w500),
+                              style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: Colors.black.withOpacity(0.8),
+                                  fontWeight: FontWeight.w700),
                             ),
                           ),
-                        ],
-                      ),
+                        Expanded(
+                          child: Text(
+                            note.content.isEmpty ? "Empty" : note.content,
+                            maxLines: note.title.isNotEmpty ? 3 : 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.getFont(
+                              selectedFont,
+                              fontSize: 13,
+                              color: Colors.black.withOpacity(0.7),
+                              height: 1.25,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -760,7 +764,7 @@ class _QuickActionButton extends StatelessWidget {
   }
 }
 
-class _EditableStickyNote extends HookWidget {
+class _EditableStickyNote extends HookConsumerWidget {
   final StickyNote note;
   final bool isDark;
   final Function(String) onUpdate;
@@ -777,10 +781,11 @@ class _EditableStickyNote extends HookWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final controller = useTextEditingController(text: note.content);
     final titleController = useTextEditingController(text: note.title);
     final focusNode = useFocusNode();
+    final selectedFont = ref.watch(quickNoteFontProvider);
 
     // Sync if note changes externally
     useEffect(() {
@@ -796,112 +801,114 @@ class _EditableStickyNote extends HookWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Dynamic Shadow with Parallax Effect
-            Positioned.fill(
+        clipBehavior: Clip.none,
+        children: [
+          // Dynamic Shadow with Parallax Effect
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 30,
+                    spreadRadius: 2,
+                    offset: const Offset(10, 20),
+                  ),
+                ],
+              ),
+            )
+                .animate(
+                    onPlay: (controller) => controller.repeat(reverse: true))
+                .moveY(
+                    begin: 10,
+                    end: -10,
+                    duration: 3.seconds,
+                    curve: Curves.easeInOut),
+          ),
+
+          // Main Paper Component
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _StickyNotePainter(color: note.color, isDark: isDark),
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 30,
-                      spreadRadius: 2,
-                      offset: const Offset(10, 20),
+                ),
+                child: Column(
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_note_rounded,
+                              size: 20, color: Colors.black54),
+                          Expanded(
+                            child: TextField(
+                              controller: titleController,
+                              onChanged: onTitleUpdate,
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "Untitled Note",
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.2,
+                                color: Colors.black.withOpacity(0.8),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          const _QuickNoteFontSelector(),
+                          IconButton(
+                            onPressed: onDelete,
+                            icon: const Icon(Icons.delete_outline, size: 20),
+                            color: Colors.red.shade700.withOpacity(0.7),
+                            tooltip: "Delete Note",
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: Colors.black12),
+                    // Editor Area
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        autofocus: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        onChanged: onUpdate,
+                        maxLines: null,
+                        expands: true,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          filled: false,
+                          contentPadding: EdgeInsets.fromLTRB(32, 16, 32, 40),
+                          hintText: "Start typing your note here...",
+                          hintStyle: TextStyle(color: Colors.black38),
+                        ),
+                        style: GoogleFonts.getFont(
+                          selectedFont,
+                          fontSize: 18,
+                          height: 1.6,
+                          color: Colors.black.withOpacity(0.85),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              )
-                  .animate(
-                      onPlay: (controller) => controller.repeat(reverse: true))
-                  .moveY(
-                      begin: 10,
-                      end: -10,
-                      duration: 3.seconds,
-                      curve: Curves.easeInOut),
-            ),
-
-            // Main Paper Component
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _StickyNotePainter(color: note.color, isDark: isDark),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      // Header
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.edit_note_rounded,
-                                size: 20, color: Colors.black54),
-                            Expanded(
-                              child: TextField(
-                                controller: titleController,
-                                onChanged: onTitleUpdate,
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: "Untitled Note",
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                style: GoogleFonts.outfit(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
-                                  color: Colors.black.withOpacity(0.8),
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              onPressed: onDelete,
-                              icon: const Icon(Icons.delete_outline, size: 20),
-                              color: Colors.red.shade700.withOpacity(0.7),
-                              tooltip: "Delete Note",
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Divider(height: 1, color: Colors.black12),
-                      // Editor Area
-                      Expanded(
-                        child: TextField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          autofocus: true,
-                          textAlignVertical: TextAlignVertical.top,
-                          onChanged: onUpdate,
-                          maxLines: null,
-                          expands: true,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            filled: false,
-                            contentPadding: EdgeInsets.fromLTRB(32, 16, 32, 40),
-                            hintText: "Start typing your note here...",
-                            hintStyle: TextStyle(color: Colors.black38),
-                          ),
-                          style: GoogleFonts.patrickHand(
-                            fontSize: 22,
-                            height: 1.8,
-                            color: Colors.black.withOpacity(0.85),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -933,8 +940,8 @@ class _DottedBackgroundPainter extends CustomPainter {
           radius = baseRadius * scale;
 
           final interactionColor = color.withOpacity((color.opacity +
-                      (0.3 * (1.0 - (distance / maxInteractionRadius))))
-                  .clamp(0.0, 1.0));
+                  (0.3 * (1.0 - (distance / maxInteractionRadius))))
+              .clamp(0.0, 1.0));
           paint.color = interactionColor;
         } else {
           paint.color = color;
@@ -949,5 +956,69 @@ class _DottedBackgroundPainter extends CustomPainter {
   bool shouldRepaint(covariant _DottedBackgroundPainter oldDelegate) {
     return oldDelegate.mousePosition != mousePosition ||
         oldDelegate.color != color;
+  }
+}
+
+class _QuickNoteFontSelector extends ConsumerWidget {
+  const _QuickNoteFontSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedFont = ref.watch(quickNoteFontProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.title_rounded,
+            size: 14,
+            color: Colors.black.withOpacity(0.5),
+          ),
+          const SizedBox(width: 4),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selectedFont,
+              isDense: true,
+              icon: Icon(Icons.keyboard_arrow_down_rounded,
+                  size: 16, color: Colors.black.withOpacity(0.5)),
+              dropdownColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+              style: GoogleFonts.getFont(
+                selectedFont,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Colors.black.withOpacity(0.7),
+              ),
+              items: availableQuickNoteFonts
+                  .map((font) => DropdownMenuItem<String>(
+                        value: font,
+                        child: Text(
+                          font,
+                          style: GoogleFonts.getFont(
+                            font,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                            color: isDark ? Colors.white : const Color(0xFF05263E),
+                          ),
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (newFont) {
+                if (newFont != null) {
+                  ref.read(quickNoteFontProvider.notifier).state = newFont;
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
