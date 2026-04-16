@@ -8,6 +8,7 @@ import 'package:project_pm/src/features/today/widgets/task_config_modal.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/features/today/today_providers.dart';
+import 'review_task_dialog.dart';
 
 class DayPlanner extends HookConsumerWidget {
   const DayPlanner({super.key});
@@ -69,25 +70,33 @@ class DayPlanner extends HookConsumerWidget {
       ][selectedDate.month - 1]} ${selectedDate.day}";
     }
 
-    final horizontalPadding = MediaQuery.of(context).size.width < 600 ? 12.0 : 24.0;
+    final horizontalPadding =
+        MediaQuery.of(context).size.width < 600 ? 12.0 : 24.0;
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24),
+      padding:
+          EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.black.withOpacity(0.05),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.06),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0.02),
+            color: isDark
+                ? Colors.black.withOpacity(0.15)
+                : Colors.black.withOpacity(0.02),
             blurRadius: 2,
             offset: const Offset(0, 2),
           ),
@@ -125,19 +134,29 @@ class DayPlanner extends HookConsumerWidget {
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
+                          color: isDark
+                              ? const Color(0xFFFBBF24)
+                              : const Color(0xFFF97316),
                         ),
                       );
                     },
                     loading: () => Text(
                       "Total Hours : --",
                       style: GoogleFonts.inter(
-                          fontSize: 11, color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316), fontWeight: FontWeight.w600),
+                          fontSize: 11,
+                          color: isDark
+                              ? const Color(0xFFFBBF24)
+                              : const Color(0xFFF97316),
+                          fontWeight: FontWeight.w600),
                     ),
                     error: (_, __) => Text(
                       "Total Hours : --",
                       style: GoogleFonts.inter(
-                          fontSize: 11, color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316), fontWeight: FontWeight.w600),
+                          fontSize: 11,
+                          color: isDark
+                              ? const Color(0xFFFBBF24)
+                              : const Color(0xFFF97316),
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -179,8 +198,8 @@ class DayPlanner extends HookConsumerWidget {
                                       userId: userId,
                                     );
                                     ref.invalidate(apiTodayPlanProvider);
-                                    ref.invalidate(
-                                        apiPendingItemsProvider(selectedDateStr));
+                                    ref.invalidate(apiPendingItemsProvider(
+                                        selectedDateStr));
                                   } catch (e) {
                                     debugPrint('Error adding custom task: $e');
                                   }
@@ -198,8 +217,8 @@ class DayPlanner extends HookConsumerWidget {
           // Quadrants Stack
           Expanded(
             child: apiTodayPlanAsync.when(
-              data: (apiPlanItems) => _buildQuadrantList(context, apiPlanItems,
-                  isFinalized, pulseController.value),
+              data: (apiPlanItems) => _buildQuadrantList(
+                  context, apiPlanItems, isFinalized, pulseController.value),
               loading: () => _buildQuadrantList(
                   context, [], isFinalized, pulseController.value),
               error: (_, __) => _buildQuadrantList(
@@ -210,175 +229,185 @@ class DayPlanner extends HookConsumerWidget {
           const SizedBox(height: 12),
 
           // Fixed Pending Box with Overflow Protection
-          if (ref.watch(apiPendingItemsProvider(selectedDateStr)).maybeWhen(data: (items) => items.isNotEmpty, orElse: () => false)) ...[ if (isPendingBoxVisible.value)
-            Flexible(
-              child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.3, // Responsive height (30% of screen)
-              ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Pending Tasks",
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                            letterSpacing: 0.1,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
+          if (ref.watch(apiPendingItemsProvider(selectedDateStr)).maybeWhen(
+              data: (items) => items.isNotEmpty, orElse: () => false)) ...[
+            if (isPendingBoxVisible.value)
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height *
+                        0.3, // Responsive height (30% of screen)
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Pending Tasks",
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              letterSpacing: 0.1,
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            isPendingBoxVisible.value
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: Colors.grey,
+                          IconButton(
+                            icon: Icon(
+                              isPendingBoxVisible.value
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () {
+                              isPendingBoxVisible.value =
+                                  !isPendingBoxVisible.value;
+                            },
                           ),
-                          onPressed: () {
-                            isPendingBoxVisible.value =
-                                !isPendingBoxVisible.value;
-                          },
-                        ),
-                      ],
-                    ),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: _PendingBox(
-                          pendingAsync: ref
-                              .watch(apiPendingItemsProvider(selectedDateStr)),
-                          onDrop: (data) async {
-                            if (isFinalized) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text("Can't add - day has been started."),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                              return;
-                            }
-
-                            if (data is! Map<String, dynamic>) return;
-
-                            // Case 1: Existing TodayPlan item (move to inbox)
-                            if (data.containsKey('id') &&
-                                !data.containsKey('type')) {
-                              try {
-                                final apiService =
-                                    ref.read(taskApiServiceProvider);
-                                await apiService.updateTodayPlanItem(data['id'],
-                                    {'quadrant': 'inbox', 'status': 'PENDING'});
-                                ref.invalidate(apiTodayPlanProvider);
-                                ref.invalidate(
-                                    apiPendingItemsProvider(selectedDateStr));
-                              } catch (e) {
-                                debugPrint('Error moving to pending: $e');
+                        ],
+                      ),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: _PendingBox(
+                            pendingAsync: ref.watch(
+                                apiPendingItemsProvider(selectedDateStr)),
+                            onDrop: (data) async {
+                              if (isFinalized) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        "Can't add - day has been started."),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                return;
                               }
-                            }
-                            // Case 2: Catalog Item or Project Task (add to inbox)
-                            else if (data.containsKey('type')) {
-                              showDialog(
-                                context: context,
-                                builder: (context) => TaskConfigModal(
-                                  initialTitle: data['name'],
-                                  initialDescription: data['description'],
-                                  initialDuration:
-                                      ((data['duration'] as num?)?.toInt() ?? 60)
-                                          .clamp(15, 120),
-                                  onConfirm: ({
-                                    required String name,
-                                    required int duration,
-                                    String? description,
-                                    List<String>? selectedMilestoneIds,
-                                    String? quadrant,
-                                  }) async {
-                                    try {
-                                      final apiService =
-                                          ref.read(taskApiServiceProvider);
-                                      final userId =
-                                          ref.read(currentUserIdProvider);
-                                      final planDate = selectedDateStr;
 
-                                      if (data['type'] == 'catalog_item' &&
-                                          data['catalog_id'] != null) {
-                                        await apiService.addItemToTodayPlan(
-                                          itemType: 'catalog',
-                                          catalogId:
-                                              parseTaskId(data['catalog_id']),
-                                          planDate: planDate,
-                                          plannedDurationMinutes: duration,
-                                          description: description,
-                                          quadrant: 'inbox',
-                                          userId: userId,
-                                        );
-                                      } else {
-                                        await apiService.addItemToTodayPlan(
-                                          itemType: 'custom',
-                                          title: name,
-                                          planDate: planDate,
-                                          description: description,
-                                          plannedDurationMinutes: duration,
-                                          quadrant: 'inbox',
-                                          relatedTaskId: data['task_id'] != null
-                                              ? parseTaskId(data['task_id'])
-                                              : null,
-                                          userId: userId,
-                                        );
+                              if (data is! Map<String, dynamic>) return;
+
+                              // Case 1: Existing TodayPlan item (move to inbox)
+                              if (data.containsKey('id') &&
+                                  !data.containsKey('type')) {
+                                try {
+                                  final apiService =
+                                      ref.read(taskApiServiceProvider);
+                                  await apiService.updateTodayPlanItem(
+                                      data['id'], {
+                                    'quadrant': 'inbox',
+                                    'status': 'PENDING'
+                                  });
+                                  ref.invalidate(apiTodayPlanProvider);
+                                  ref.invalidate(
+                                      apiPendingItemsProvider(selectedDateStr));
+                                } catch (e) {
+                                  debugPrint('Error moving to pending: $e');
+                                }
+                              }
+                              // Case 2: Catalog Item or Project Task (add to inbox)
+                              else if (data.containsKey('type')) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => TaskConfigModal(
+                                    initialTitle: data['name'],
+                                    initialDescription: data['description'],
+                                    initialDuration:
+                                        ((data['duration'] as num?)?.toInt() ??
+                                                60)
+                                            .clamp(15, 120),
+                                    onConfirm: ({
+                                      required String name,
+                                      required int duration,
+                                      String? description,
+                                      List<String>? selectedMilestoneIds,
+                                      String? quadrant,
+                                    }) async {
+                                      try {
+                                        final apiService =
+                                            ref.read(taskApiServiceProvider);
+                                        final userId =
+                                            ref.read(currentUserIdProvider);
+                                        final planDate = selectedDateStr;
+
+                                        if (data['type'] == 'catalog_item' &&
+                                            data['catalog_id'] != null) {
+                                          await apiService.addItemToTodayPlan(
+                                            itemType: 'catalog',
+                                            catalogId:
+                                                parseTaskId(data['catalog_id']),
+                                            planDate: planDate,
+                                            plannedDurationMinutes: duration,
+                                            description: description,
+                                            quadrant: 'inbox',
+                                            userId: userId,
+                                          );
+                                        } else {
+                                          await apiService.addItemToTodayPlan(
+                                            itemType: 'custom',
+                                            title: name,
+                                            planDate: planDate,
+                                            description: description,
+                                            plannedDurationMinutes: duration,
+                                            quadrant: 'inbox',
+                                            relatedTaskId: data['task_id'] !=
+                                                    null
+                                                ? parseTaskId(data['task_id'])
+                                                : null,
+                                            userId: userId,
+                                          );
+                                        }
+
+                                        if (data['is_pending'] == true &&
+                                            data['pending_id'] != null) {
+                                          await apiService.deletePendingTask(
+                                              data['pending_id']);
+                                          ref.invalidate(
+                                              apiAllPendingItemsProvider);
+                                        }
+
+                                        ref.invalidate(apiTodayPlanProvider);
+                                        ref.invalidate(apiPendingItemsProvider(
+                                            selectedDateStr));
+                                      } catch (e) {
+                                        debugPrint('Error adding to inbox: $e');
                                       }
-
-                                      if (data['is_pending'] == true &&
-                                          data['pending_id'] != null) {
-                                        await apiService
-                                            .deletePendingTask(data['pending_id']);
-                                        ref.invalidate(
-                                            apiAllPendingItemsProvider);
-                                      }
-
-                                      ref.invalidate(apiTodayPlanProvider);
-                                      ref.invalidate(
-                                          apiPendingItemsProvider(selectedDateStr));
-                                    } catch (e) {
-                                      debugPrint('Error adding to inbox: $e');
-                                    }
-                                  },
-                                ),
-                              );
-                            }
-                          },
-                          selectedDateStr: selectedDateStr,
-                          isFinalized: isFinalized,
+                                    },
+                                  ),
+                                );
+                              }
+                            },
+                            selectedDateStr: selectedDateStr,
+                            isFinalized: isFinalized,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            // Header still visible when collapsed
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Pending Tasks",
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    letterSpacing: 0.1,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.visibility_off, color: Colors.grey),
-                  onPressed: () => isPendingBoxVisible.value = true,
-                ),
-              ],
-            ), ],
+              )
+            else
+              // Header still visible when collapsed
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Pending Tasks",
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      letterSpacing: 0.1,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.visibility_off, color: Colors.grey),
+                    onPressed: () => isPendingBoxVisible.value = true,
+                  ),
+                ],
+              ),
+          ],
 
           const SizedBox(height: 8),
 
@@ -423,9 +452,8 @@ class DayPlanner extends HookConsumerWidget {
                   backgroundColor: (isFinalized || isReadOnly)
                       ? Colors.grey.withOpacity(0.2)
                       : const Color(0xFF10B981), // Emerald Green
-                  foregroundColor: (isFinalized || isReadOnly)
-                      ? Colors.grey
-                      : Colors.white,
+                  foregroundColor:
+                      (isFinalized || isReadOnly) ? Colors.grey : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -475,7 +503,9 @@ class DayPlanner extends HookConsumerWidget {
             quadrant: 'Q1',
             title: 'Q1 Do First (Urgent & Important)',
             color: const Color(0xFFEF4444), // Red
-            apiItems: apiItems.where((i) => i['quadrant']?.toString().toUpperCase() == 'Q1').toList(),
+            apiItems: apiItems
+                .where((i) => i['quadrant']?.toString().toUpperCase() == 'Q1')
+                .toList(),
             isFinalized: isFinalized,
             pulse: pulse,
           ),
@@ -484,7 +514,9 @@ class DayPlanner extends HookConsumerWidget {
             quadrant: 'Q2',
             title: 'Q2 Schedule (Important, Not Urgent)',
             color: const Color(0xFFF97316), // Orange
-            apiItems: apiItems.where((i) => i['quadrant']?.toString().toUpperCase() == 'Q2').toList(),
+            apiItems: apiItems
+                .where((i) => i['quadrant']?.toString().toUpperCase() == 'Q2')
+                .toList(),
             isFinalized: isFinalized,
             pulse: pulse,
           ),
@@ -493,7 +525,9 @@ class DayPlanner extends HookConsumerWidget {
             quadrant: 'Q3',
             title: 'Q3 Delegate (Urgent, Not Important)',
             color: const Color(0xFFA855F7), // Purple
-            apiItems: apiItems.where((i) => i['quadrant']?.toString().toUpperCase() == 'Q3').toList(),
+            apiItems: apiItems
+                .where((i) => i['quadrant']?.toString().toUpperCase() == 'Q3')
+                .toList(),
             isFinalized: isFinalized,
             pulse: pulse,
           ),
@@ -502,7 +536,9 @@ class DayPlanner extends HookConsumerWidget {
             quadrant: 'Q4',
             title: 'Q4 Eliminate (Neither)',
             color: Colors.teal,
-            apiItems: apiItems.where((i) => i['quadrant']?.toString().toUpperCase() == 'Q4').toList(),
+            apiItems: apiItems
+                .where((i) => i['quadrant']?.toString().toUpperCase() == 'Q4')
+                .toList(),
             isFinalized: isFinalized,
             pulse: pulse,
           ),
@@ -586,7 +622,6 @@ class _QuadrantBox extends ConsumerWidget {
     final selectedDateStr =
         '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
     return DragTarget<Object>(
-
       onAcceptWithDetails: (details) async {
         if (isFinalized) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -601,8 +636,7 @@ class _QuadrantBox extends ConsumerWidget {
         final data = details.data as Map<String, dynamic>;
 
         // Handle moving an existing API item (Drag from another quadrant)
-        if (data.containsKey('id') &&
-            !data.containsKey('type')) {
+        if (data.containsKey('id') && !data.containsKey('type')) {
           final int itemId = data['id'];
           // If it's already in this quadrant, do nothing
           if (data['quadrant'] == quadrant ||
@@ -620,14 +654,14 @@ class _QuadrantBox extends ConsumerWidget {
             debugPrint('Error moving item: $e');
           }
         } else if (data.containsKey('type')) {
-
           // DIRECT ADD on Drag and Drop for modern flow
           try {
             final apiService = ref.read(taskApiServiceProvider);
             final userId = ref.read(currentUserIdProvider);
             final planDate = selectedDateStr;
 
-            final int duration = ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120);
+            final int duration =
+                ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120);
 
             // Case: today-inbox pending_item — already a TodayPlan row, just reassign quadrant
             if (data['type'] == 'pending_item' &&
@@ -642,7 +676,8 @@ class _QuadrantBox extends ConsumerWidget {
               ref.invalidate(apiTodayPlanProvider);
               ref.invalidate(apiPendingItemsProvider(refreshDateStr));
               ref.invalidate(apiAllPendingItemsProvider);
-            } else if ((data['type'] == 'catalog_item' || data['type'] == 'custom_template') &&
+            } else if ((data['type'] == 'catalog_item' ||
+                    data['type'] == 'custom_template') &&
                 (data['catalog_id'] != null || data['template_id'] != null)) {
               // Catalog item — add using the catalog endpoint
               await apiService.addItemToTodayPlan(
@@ -689,7 +724,9 @@ class _QuadrantBox extends ConsumerWidget {
                 quadrant: quadrant,
                 relatedTaskId: data['task_id'] != null
                     ? parseTaskId(data['task_id'])
-                    : (data['id'] != null && data['type'] == 'catalog_task' ? parseTaskId(data['id']) : null),
+                    : (data['id'] != null && data['type'] == 'catalog_task'
+                        ? parseTaskId(data['id'])
+                        : null),
                 userId: userId,
               );
 
@@ -729,7 +766,7 @@ class _QuadrantBox extends ConsumerWidget {
             }
           }
         }
-    },
+      },
       builder: (context, candidateData, rejectedData) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final isHovering = candidateData.isNotEmpty;
@@ -801,7 +838,9 @@ class _QuadrantBox extends ConsumerWidget {
                               Icon(
                                 Icons.assignment_outlined,
                                 size: 32,
-                                color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                color: isDark
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade200,
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -809,7 +848,9 @@ class _QuadrantBox extends ConsumerWidget {
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
-                                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                                  color: isDark
+                                      ? Colors.grey.shade500
+                                      : Colors.grey.shade400,
                                 ),
                               ),
                             ],
@@ -817,8 +858,65 @@ class _QuadrantBox extends ConsumerWidget {
                         ),
                       )
                     else
-                      ...apiItems.map((i) => _ApiPlannedItem(
-                          apiItem: i, isFinalized: isFinalized)),
+                      ...apiItems
+                          .map((i) => Draggable<Map<String, dynamic>>(
+                                  data: {
+                                    'source': 'today_plan',
+                                    'type': 'plan_item',
+                                    'id': i['id'],
+                                    'today_plan_id': i['id'],
+                                    'name': i['custom_title'] ??
+                                        i['catalog_name'] ??
+                                        i['name'] ??
+                                        'Task',
+                                    'duration':
+                                        i['planned_duration_minutes'] ?? 60,
+                                    'status': i['status'] ?? 'PLANNED',
+                                    'planned_start': i['planned_start'],
+                                  },
+                                  maxSimultaneousDrags:
+                                      ref.watch(isReadOnlyProvider) ? 0 : 1,
+                                  feedback: Material(
+                                    color: Colors.transparent,
+                                    child: Container(
+                                      width: MediaQuery.of(context).size.width *
+                                          0.3,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? const Color(0xFF1F2937)
+                                                .withOpacity(0.9)
+                                            : Colors.white.withOpacity(0.9),
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                              color:
+                                                  Colors.black.withOpacity(0.2),
+                                              blurRadius: 10)
+                                        ],
+                                      ),
+                                      child: Text(
+                                          (i['custom_title'] ??
+                                                  i['catalog_name'] ??
+                                                  i['name'] ??
+                                                  'Task')
+                                              .toUpperCase(),
+                                          style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue)),
+                                    ),
+                                  ),
+                                  childWhenDragging: Opacity(
+                                    opacity: 0.3,
+                                    child: _ApiPlannedItem(
+                                        apiItem: i, isFinalized: isFinalized),
+                                  ),
+                                  child: _ApiPlannedItem(
+                                      apiItem: i, isFinalized: isFinalized)))
+                          ,
                   ],
                 ),
               ),
@@ -1212,14 +1310,17 @@ class _ApiPlannedItem extends ConsumerWidget {
                 if (isFinalized) ...[
                   const SizedBox(width: 12),
                   InkWell(
-                    onTap: (hasActiveTask || isReadOnly || status == 'IN_ACTIVITY' || status == 'STARTED')
+                    onTap: (hasActiveTask ||
+                            isReadOnly ||
+                            status == 'IN_ACTIVITY' ||
+                            status == 'STARTED')
                         ? null
                         : () async {
                             // Start Task from API item
                             try {
                               final apiService =
                                   ref.read(taskApiServiceProvider);
-                              await apiService
+                              final targetItemInfo = await apiService
                                   .moveTodayPlanToActivityLog(itemId);
                               ref.invalidate(apiTodayPlanProvider);
                               ref.invalidate(apiActivityLogsProvider);
@@ -1234,6 +1335,21 @@ class _ApiPlannedItem extends ConsumerWidget {
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
+
+                                if (targetItemInfo.isNotEmpty) {
+                                  showReviewTaskDialog(
+                                      context, ref, targetItemInfo,
+                                      isEditMode: false);
+                                } else {
+                                  final actvTask =
+                                      await apiService.getActiveTask();
+                                  if (actvTask is Map<String, dynamic> &&
+                                      actvTask.containsKey('id') &&
+                                      context.mounted) {
+                                    showReviewTaskDialog(context, ref, actvTask,
+                                        isEditMode: false);
+                                  }
+                                }
                               }
                             } catch (e) {
                               if (context.mounted) {
@@ -1254,8 +1370,11 @@ class _ApiPlannedItem extends ConsumerWidget {
                               }
                             }
                           },
-                    child: Icon(Icons.play_circle_fill,
-                        color: (hasActiveTask || isReadOnly || status == 'IN_ACTIVITY' || status == 'STARTED')
+                    child: Icon(Icons.arrow_forward_rounded,
+                        color: (hasActiveTask ||
+                                isReadOnly ||
+                                status == 'IN_ACTIVITY' ||
+                                status == 'STARTED')
                             ? Colors.grey.withOpacity(0.5)
                             : const Color(0xFF10B981),
                         size: 24),
@@ -1267,7 +1386,6 @@ class _ApiPlannedItem extends ConsumerWidget {
         ));
   }
 }
-
 
 class DashedBorderPainter extends CustomPainter {
   final Color color;

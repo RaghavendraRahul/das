@@ -3501,6 +3501,201 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                 "pending": PendingSerializer(pending_task).data
             })
     
+    @action(detail=False, methods=['post'], url_path='bulk-stop')
+    def bulk_stop(self, request):
+        '''Stop all activity logs for the same task on the same day with synchronized status'''
+        from datetime import datetime, timedelta
+        try:
+            from zoneinfo import ZoneInfo
+        except ImportError:
+            from backports.zoneinfo import ZoneInfo
+        
+        # Get input parameters
+        today_plan_id = request.data.get('today_plan_id')
+        date_str = request.data.get('date')  # e.g., '2026-04-16'
+        is_completed = request.data.get('is_completed', False)
+        is_pending_selected = request.data.get('is_pending_selected', False)
+        work_notes = request.data.get('work_notes', '')
+        minutes_left = request.data.get('minutes_left', 0)
+        extra_minutes = request.data.get('extra_minutes') or 0
+        
+        # Debug logging
+        print(f'[BULK-STOP] Request data: today_plan_id={today_plan_id}, date={date_str}, is_completed={is_completed}, is_pending={is_pending_selected}')
+        
+        # Get custom start and end times if provided
+        start_time_str = request.data.get('start_time', '').strip()
+        end_time_str = request.data.get('end_time', '').strip()
+        
+        if not today_plan_id or not date_str:
+            error_msg = f"Missing required params: today_plan_id={today_plan_id}, date={date_str}"
+            print(f'[BULK-STOP] ERROR: {error_msg}')
+            return Response(
+                {"error": error_msg},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Try to get the plan
+        try:
+            today_plan = TodayPlan.objects.get(id=today_plan_id)
+            print(f'[BULK-STOP] Found TodayPlan: {today_plan}')
+        except TodayPlan.DoesNotExist:
+            error_msg = f"Today plan with id={today_plan_id} not found"
+            print(f'[BULK-STOP] ERROR: {error_msg}')
+            return Response(
+                {"error": error_msg},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Find ALL activity logs for this plan with IN_PROGRESS status
+        activity_logs = ActivityLog.objects.filter(
+            today_plan=today_plan,
+            status='IN_PROGRESS'
+        )
+        
+        print(f'[BULK-STOP] Found {activity_logs.count()} IN_PROGRESS logs for plan {today_plan_id}')
+        
+        if not activity_logs.exists():
+            error_msg = f"No in-progress activities found for plan {today_plan_id}. Available statuses: {ActivityLog.objects.filter(today_plan=today_plan).values_list('status', flat=True).distinct()}"
+            print(f'[BULK-STOP] ERROR: {error_msg}')
+            return Response(
+                {"error": error_msg},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Define timezone
+        try:
+            kolkata_tz = ZoneInfo('Asia/Kolkata')
+        except Exception:
+            kolkata_tz = timezone.get_current_timezone()
+        
+        current_kolkata_time = timezone.now().astimezone(kolkata_tz)
+        today_kolkata = current_kolkata_time.date()
+        
+        # Calculate total times
+        total_minutes_worked = 0
+        total_hours_worked = 0.0
+        
+        with transaction.atomic():
+            for activity_log in activity_logs:
+                print(f'[BULK-STOP] Processing log ID {activity_log.id}: current_status={activity_log.status}')
+                
+                # Update start time if provided
+                if start_time_str:
+                    try:
+                        start_time_obj = None
+                        for fmt in ['%I:%M %p', '%H:%M']:
+                            try:
+                                start_time_obj = datetime.strptime(start_time_str, fmt).time()
+                                break
+                            except ValueError:
+                                continue
+                        
+                        if start_time_obj:
+                            if activity_log.actual_start_time:
+                                base_date = activity_log.actual_start_time.astimezone(kolkata_tz).date()
+                            else:
+                                base_date = today_kolkata
+                            
+                            res_start_dt = datetime.combine(base_date, start_time_obj).replace(tzinfo=kolkata_tz)
+                            activity_log.actual_start_time = res_start_dt
+                    except Exception as e:
+                        print(f'Error updating start time: {e}')
+                
+                # Update end time if provided
+                if end_time_str:
+                    try:
+                        end_time_obj = None
+                        for fmt in ['%I:%M %p', '%H:%M']:
+                            try:
+                                end_time_obj = datetime.strptime(end_time_str, fmt).time()
+                                break
+                            except ValueError:
+                                continue
+                        
+                        if end_time_obj:
+                            start_local = activity_log.actual_start_time.astimezone(kolkata_tz)
+                            log_date = start_local.date()
+                            
+                            res_end_dt = datetime.combine(log_date, end_time_obj).replace(tzinfo=kolkata_tz)
+                            
+                            # If end time is earlier than start time, it means it spanned across midnight
+                            if res_end_dt < activity_log.actual_start_time:
+                                res_end_dt += timedelta(days=1)
+                            
+                            activity_log.actual_end_time = res_end_dt
+                    except (ValueError, TypeError) as e:
+                        print(f'Error updating end time: {e}')
+                        activity_log.actual_end_time = current_kolkata_time
+                else:
+                    activity_log.actual_end_time = current_kolkata_time
+                
+                # Calculate time worked
+                activity_log.calculate_time_worked()
+                
+                # Add extra minutes to all entries
+                activity_log.extra_minutes = extra_minutes
+                
+                # Update work notes
+                if work_notes:
+                    activity_log.work_notes = work_notes
+                
+                # Update status fields based on completion flag
+                activity_log.is_task_completed = is_completed
+                if is_completed:
+                    activity_log.status = 'COMPLETED'
+                elif is_pending_selected:
+                    activity_log.status = 'PENDING'
+                # else: keep current status (probably IN_PROGRESS or already PENDING)
+                activity_log.save()
+                print(f'[BULK-STOP] Saved log ID {activity_log.id}: new_status={activity_log.status}, completed={is_completed}, pending_selected={is_pending_selected}')
+                
+                total_minutes_worked += activity_log.minutes_worked
+            
+            # Calculate aggregated totals
+            total_hours_worked = round(total_minutes_worked / 60, 2)
+            
+            # Update today's plan status based on selection
+            if is_completed:
+                # User explicitly completed the task
+                today_plan.status = 'COMPLETED'
+                today_plan.save()
+            elif is_pending_selected:
+                # User explicitly marked as pending
+                existing_pending = Pending.objects.filter(
+                    today_plan=today_plan,
+                    user=request.user,
+                    created_at__date=today_kolkata
+                ).first()
+                
+                if not existing_pending:
+                    # Create a new pending entry (only ONE per task per day)
+                    Pending.objects.create(
+                        today_plan=today_plan,
+                        user=request.user,
+                        minutes_left=minutes_left or 0,
+                        extra_minutes=extra_minutes,
+                        original_plan_date=today_plan.plan_date,
+                        reason='Task moved to pending'
+                    )
+                
+                today_plan.status = 'MOVED_TO_PENDING'
+                today_plan.save()
+            else:
+                # User just saved times without selecting completion or pending
+                # Keep the task in its current status (IN_PROGRESS or last state)
+                pass
+        
+        return Response({
+            "message": f"Updated {activity_logs.count()} activity logs",
+            "total_time_worked": {
+                "minutes": total_minutes_worked,
+                "hours": total_hours_worked
+            },
+            "status": "COMPLETED" if is_completed else ("PENDING" if is_pending_selected else "UPDATED"),
+            "activity_count": activity_logs.count()
+        })
+        print(f'[BULK-STOP] ✅ Completed: Updated {activity_logs.count()} logs. Final status: {("COMPLETED" if is_completed else ("PENDING" if is_pending_selected else "UPDATED"))}')
+    
     @action(detail=False, methods=['get'])
     def my_logs(self, request):
         """Get current user's activity logs"""

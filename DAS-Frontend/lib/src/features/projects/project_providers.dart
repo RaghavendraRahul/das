@@ -149,7 +149,10 @@ final selectedAnalyticsEmployeeIdProvider = StateProvider<int?>((ref) => null);
 @riverpod
 Future<Map<String, dynamic>> analyticsData(AnalyticsDataRef ref) async {
   final apiService = ref.watch(taskApiServiceProvider);
-  final currentUser = ref.watch(currentUserProvider);
+  final currentUserAsync = ref.watch(currentUserProvider);
+  final currentUserIdStr = currentUserAsync.valueOrNull?.id;
+  final currentUserId =
+      currentUserIdStr != null ? int.tryParse(currentUserIdStr) : null;
   final selectedProjectId = ref.watch(selectedAnalyticsProjectIdProvider);
   final selectedEmployeeId = ref.watch(selectedAnalyticsEmployeeIdProvider);
 
@@ -157,7 +160,7 @@ Future<Map<String, dynamic>> analyticsData(AnalyticsDataRef ref) async {
   debugPrint('🔄╔════════════════════════════════════════════════════════════');
   debugPrint('🔄║ [ANALYTICS PROVIDER] analyticsData()');
   debugPrint('🔄║ CURRENT STATE:');
-  debugPrint('🔄║   User ID: ${currentUser?.id}');
+  debugPrint('🔄║   User ID: $currentUserId');
   debugPrint('🔄║   Project ID: $selectedProjectId  ← WATCH THIS');
   debugPrint('🔄║   Employee ID: $selectedEmployeeId  ← WATCH THIS');
   debugPrint('🔄╚════════════════════════════════════════════════════════════');
@@ -165,7 +168,7 @@ Future<Map<String, dynamic>> analyticsData(AnalyticsDataRef ref) async {
 
   try {
     final data = await apiService.getProjectAnalyticsHours(
-      userId: currentUser?.id,
+      userId: currentUserId,
       projectId: selectedProjectId,
       employeeId: selectedEmployeeId,
     );

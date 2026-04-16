@@ -206,12 +206,18 @@ class TaskApiService {
     }
   }
 
-  Future<void> moveTodayPlanToActivityLog(int plannedItemId) async {
+  Future<Map<String, dynamic>> moveTodayPlanToActivityLog(
+      int plannedItemId) async {
     try {
       print(
           '🔵 API Call: POST /today-plan/$plannedItemId/move_to_activity_log/');
-      await _dio.post('/today-plan/$plannedItemId/move_to_activity_log/');
+      final response =
+          await _dio.post('/today-plan/$plannedItemId/move_to_activity_log/');
       print('✅ Task started successfully');
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {};
     } on DioException catch (e) {
       print(
           '❌ API Error: POST /today-plan/$plannedItemId/move_to_activity_log/');
@@ -252,6 +258,57 @@ class TaskApiService {
       });
     } catch (e) {
       print('Mock: Stopped activity log $activityLogId (Backend error: $e)');
+    }
+  }
+
+  Future<Map<String, dynamic>> bulkStopActivityLogs({
+    required int todayPlanId,
+    required String date,
+    required bool isCompleted,
+    required bool isPendingSelected,
+    String? workNotes,
+    int? minutesLeft,
+    int? extraMinutes,
+    String? startTime,
+    String? endTime,
+  }) async {
+    try {
+      print(
+          '🔵 [bulkStopActivityLogs] Sending API Call: POST /activity-log/bulk-stop/');
+      print('   - todayPlanId: $todayPlanId');
+      print('   - date: $date');
+      print('   - isCompleted: $isCompleted');
+      print('   - isPendingSelected: $isPendingSelected');
+      print('   - startTime: $startTime');
+      print('   - endTime: $endTime');
+
+      final response = await _dio.post('/activity-log/bulk-stop/', data: {
+        'today_plan_id': todayPlanId,
+        'date': date,
+        'is_completed': isCompleted,
+        'is_pending_selected': isPendingSelected,
+        'work_notes': workNotes,
+        'minutes_left': minutesLeft,
+        'extra_minutes': extraMinutes,
+        'start_time': startTime,
+        'end_time': endTime,
+      });
+      print('✅ [bulkStopActivityLogs] Response received successfully');
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {'message': 'Updated activity logs'};
+    } on DioException catch (e) {
+      print('❌ [bulkStopActivityLogs] API Error: ${e.message}');
+      print('   - Status Code: ${e.response?.statusCode}');
+      print('   - Response: ${e.response?.data}');
+      String errorMessage = 'Failed to stop activity logs';
+      if (e.response?.data is Map) {
+        errorMessage = e.response?.data['error'] ??
+            e.response?.data['detail'] ??
+            errorMessage;
+      }
+      throw Exception(errorMessage);
     }
   }
 

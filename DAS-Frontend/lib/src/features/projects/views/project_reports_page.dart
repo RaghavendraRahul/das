@@ -1,7 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
@@ -490,9 +489,9 @@ class _ProjectAnalyticsSection extends HookConsumerWidget {
           ],
         );
       },
-      loading: () => _ChartCard(
+      loading: () => const _ChartCard(
         title: "Hours Breakdown by Task",
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(24),
           child: CircularProgressIndicator(),
         ),
@@ -565,7 +564,7 @@ class _ProjectDropdown extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<int?>(
-          value: selectedId,
+          initialValue: selectedId,
           decoration: InputDecoration(
             isDense: true,
             contentPadding:
@@ -593,7 +592,7 @@ class _ProjectDropdown extends StatelessWidget {
                 value: id,
                 child: Text(name),
               );
-            }).toList(),
+            }),
           ],
           onChanged: onChanged,
         ),
@@ -628,54 +627,60 @@ class _EmployeeDropdown extends StatelessWidget {
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<int?>(
-          value: selectedId,
-          enabled: !isLocked && projectSelected && employees.isNotEmpty,
-          decoration: InputDecoration(
-            isDense: true,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: !projectSelected || isLocked || employees.isEmpty
-                    ? Colors.grey.shade200
-                    : Colors.grey.shade300,
+        Builder(
+          builder: (context) {
+            final isEnabled =
+                !isLocked && projectSelected && employees.isNotEmpty;
+
+            return DropdownButtonFormField<int?>(
+              initialValue: selectedId,
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: !projectSelected || isLocked || employees.isEmpty
+                        ? Colors.grey.shade200
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                disabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
               ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-          ),
-          hint: Text(isLocked
-              ? 'You can only view your own hours'
-              : !projectSelected
-                  ? 'Select a project first'
-                  : employees.isEmpty
-                      ? 'No team members in this project'
-                      : 'Select team member...'),
-          items: [
-            if (projectSelected && !isLocked)
-              const DropdownMenuItem<int?>(
-                value: null,
-                child: Text('All Team Members'),
-              ),
-            ...employees.map<DropdownMenuItem<int?>>((emp) {
-              final employee = emp as Map<String, dynamic>;
-              final id = employee['id'] as int?;
-              final name = employee['name']?.toString() ?? 'Unknown';
-              return DropdownMenuItem<int?>(
-                value: id,
-                child: Text(name),
-              );
-            }).toList(),
-          ],
-          onChanged: onChanged,
+              hint: Text(isLocked
+                  ? 'You can only view your own hours'
+                  : !projectSelected
+                      ? 'Select a project first'
+                      : employees.isEmpty
+                          ? 'No team members in this project'
+                          : 'Select team member...'),
+              items: [
+                if (projectSelected && !isLocked)
+                  const DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('All Team Members'),
+                  ),
+                ...employees.map<DropdownMenuItem<int?>>((emp) {
+                  final employee = emp as Map<String, dynamic>;
+                  final id = employee['id'] as int?;
+                  final name = employee['name']?.toString() ?? 'Unknown';
+                  return DropdownMenuItem<int?>(
+                    value: id,
+                    child: Text(name),
+                  );
+                }),
+              ],
+              onChanged: isEnabled ? onChanged : null,
+            );
+          },
         ),
       ],
     );

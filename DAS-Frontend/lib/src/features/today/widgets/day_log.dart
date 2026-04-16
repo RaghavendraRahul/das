@@ -9,6 +9,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 
+import 'review_task_dialog.dart';
+
 class DayLog extends ConsumerWidget {
   const DayLog({super.key});
 
@@ -42,6 +44,86 @@ class DayLog extends ConsumerWidget {
           }
           // Check for active task at the very beginning
           final data = details.data;
+
+          // NEW: Handle dragged Today's Plan items directly
+          if (data['source'] == 'today_plan' && data['type'] == 'plan_item') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Starting task...'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+
+            try {
+              final apiService = ref.read(taskApiServiceProvider);
+              final plannedItemId = data['id'] as int;
+
+              // Move existing plan item to activity log
+              final targetItemInfo =
+                  await apiService.moveTodayPlanToActivityLog(plannedItemId);
+              debugPrint(
+                  '✅ Moved to activity log: ${targetItemInfo.isNotEmpty}');
+
+              // Refresh all data
+              ref.invalidate(apiTodayPlanProvider);
+              ref.invalidate(apiActivityLogsProvider(todayStr));
+              ref.invalidate(apiActiveTaskProvider);
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Task initiated. Target acquired.'),
+                    backgroundColor: Colors.blue,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+
+                debugPrint(
+                    '📋 Target item info: ${targetItemInfo.keys.toList()}');
+
+                if (targetItemInfo.isNotEmpty &&
+                    targetItemInfo.containsKey('id')) {
+                  debugPrint('🎯 Opening dialog with targetItemInfo');
+                  showReviewTaskDialog(context, ref, targetItemInfo,
+                      isEditMode: false);
+                } else {
+                  try {
+                    debugPrint('⏳ Fetching active task...');
+                    final actvTask = await apiService.getActiveTask();
+                    if (actvTask is Map<String, dynamic> &&
+                        actvTask.containsKey('id')) {
+                      if (context.mounted) {
+                        debugPrint('🎯 Opening dialog with active task');
+                        showReviewTaskDialog(context, ref, actvTask,
+                            isEditMode: false);
+                      }
+                    } else {
+                      debugPrint('⚠️ Active task not found or invalid');
+                    }
+                  } catch (e) {
+                    debugPrint('❌ Error fetching active task: $e');
+                  }
+                }
+              }
+            } catch (e) {
+              if (context.mounted) {
+                final errorMsg = e.toString().replaceAll('Exception: ', '');
+                final isActiveTaskError =
+                    errorMsg.contains('already have an active task');
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(errorMsg),
+                    backgroundColor:
+                        isActiveTaskError ? Colors.orange : Colors.red,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+              }
+            }
+            return;
+          }
+
           if (data['type'] == 'project_task' ||
               data['type'] == 'catalog_item' ||
               data['type'] == 'catalog_task' ||
@@ -182,7 +264,12 @@ class DayLog extends ConsumerWidget {
             }
 
             // 2. Start Task using API
-            await apiService.moveTodayPlanToActivityLog(plannedItemId);
+            debugPrint(
+                '🚀 [Drag Type 2] Calling moveTodayPlanToActivityLog for plannedItemId: $plannedItemId');
+            final targetItemInfo =
+                await apiService.moveTodayPlanToActivityLog(plannedItemId);
+            debugPrint(
+                '✅ [Drag Type 2] Moved to activity log: ${targetItemInfo.isNotEmpty}');
 
             // If it's a historical pending task (from Pending table), delete it
             // Don't delete for today inbox items — they are TodayPlan records, not Pending records
@@ -200,6 +287,37 @@ class DayLog extends ConsumerWidget {
             ref.invalidate(apiTodayPlanProvider);
             ref.invalidate(apiActivityLogsProvider(todayStr));
             ref.invalidate(apiActiveTaskProvider);
+
+            if (context.mounted) {
+              debugPrint(
+                  '📋 [Drag Type 2] Target item info keys: ${targetItemInfo.keys.toList()}');
+              if (targetItemInfo.isNotEmpty &&
+                  targetItemInfo.containsKey('id')) {
+                debugPrint(
+                    '🎯 [Drag Type 2] Opening review dialog with targetItemInfo');
+                showReviewTaskDialog(context, ref, targetItemInfo,
+                    isEditMode: false);
+              } else {
+                try {
+                  debugPrint('⏳ [Drag Type 2] Fetching active task...');
+                  final actvTask = await apiService.getActiveTask();
+                  if (actvTask is Map<String, dynamic> &&
+                      actvTask.containsKey('id')) {
+                    if (context.mounted) {
+                      debugPrint(
+                          '🎯 [Drag Type 2] Opening dialog with active task');
+                      showReviewTaskDialog(context, ref, actvTask,
+                          isEditMode: false);
+                    }
+                  } else {
+                    debugPrint(
+                        '⚠️ [Drag Type 2] Active task not found or invalid');
+                  }
+                } catch (e) {
+                  debugPrint('❌ [Drag Type 2] Error fetching active task: $e');
+                }
+              }
+            }
           }
         } catch (e) {
           debugPrint('Drag start error: $e');
@@ -215,17 +333,23 @@ class DayLog extends ConsumerWidget {
             color: isDark ? const Color(0xFF1F2937) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+              color: isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.black.withOpacity(0.05),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
+                color: isDark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.06),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
               BoxShadow(
-                color: isDark ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0.02),
+                color: isDark
+                    ? Colors.black.withOpacity(0.15)
+                    : Colors.black.withOpacity(0.02),
                 blurRadius: 2,
                 offset: const Offset(0, 2),
               ),
@@ -266,9 +390,12 @@ class DayLog extends ConsumerWidget {
                       data: (logs) {
                         // Merge active task if it's not already in the logs list
                         // This handles "stuck" tasks from previous days
-                        final List<Map<String, dynamic>> combinedLogs = [...logs];
+                        final List<Map<String, dynamic>> combinedLogs = [
+                          ...logs
+                        ];
                         if (activeTask != null && activeTask['id'] != null) {
-                          final bool isAlreadyInLogs = logs.any((l) => l['id'] == activeTask['id']);
+                          final bool isAlreadyInLogs =
+                              logs.any((l) => l['id'] == activeTask['id']);
                           if (!isAlreadyInLogs) {
                             combinedLogs.insert(0, activeTask);
                           }
@@ -289,7 +416,8 @@ class DayLog extends ConsumerWidget {
                           separatorBuilder: (c, i) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            return _ApiLoggedItemCard(item: combinedLogs[index]);
+                            return _ApiLoggedItemCard(
+                                item: combinedLogs[index]);
                           },
                         );
                       },
@@ -588,6 +716,63 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                                 ),
                               ),
                             ),
+                          // Status Badge - Show Completed or Pending
+                          if (status == 'COMPLETED')
+                            Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                    color: Colors.green.withOpacity(0.4)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.check_circle,
+                                      size: 12, color: Colors.green),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Completed',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (status == 'PENDING')
+                            Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                    color: Colors.orange.withOpacity(0.4)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.pause_circle,
+                                      size: 12, color: Colors.orange.shade700),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Pending',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.orange.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           Expanded(
                             child: Text(
                               taskName,
@@ -681,519 +866,21 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                 ),
 
                 // Action buttons
-                if (isRunning)
-                  IconButton(
-                    icon: Icon(Icons.stop_circle,
-                        color: isReadOnly ? Colors.grey : Colors.red),
-                    iconSize: 28,
-                    onPressed: isReadOnly
-                        ? null
-                        : () {
-                            _showStopDialog(context, ref, item);
-                          },
-                  ),
+                IconButton(
+                  icon: Icon(Icons.edit,
+                      color: isReadOnly ? Colors.grey : Colors.blue),
+                  iconSize: 28,
+                  onPressed: isReadOnly
+                      ? null
+                      : () {
+                          showReviewTaskDialog(context, ref, item,
+                              isEditMode: true);
+                        },
+                ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Extract time from ISO string without timezone conversion
-  String _extractTimeForDialog(String? isoString) {
-    if (isoString == null) return '';
-    try {
-      final timeStart = isoString.indexOf('T') + 1;
-      if (timeStart > 0 && timeStart + 5 <= isoString.length) {
-        return isoString.substring(timeStart, timeStart + 5); // HH:mm
-      }
-    } catch (e) {
-      debugPrint('Error extracting time: $e');
-    }
-    return '';
-  }
-
-  void _showStopDialog(
-      BuildContext context, WidgetRef ref, Map<String, dynamic> item) {
-    final activityLogId = item['id'] as int;
-    final todayPlan = item['today_plan'] as Map<String, dynamic>?;
-
-    // Get task name
-    String taskName = 'Unknown Task';
-    if (todayPlan != null) {
-      taskName = todayPlan['catalog_name'] as String? ?? 'Unknown Task';
-    }
-
-    // Extract times directly from ISO strings
-    final startStr = item['actual_start_time'] as String?;
-    final endStr = item['actual_end_time'] as String?;
-    final startTimeDisplay = _extractTimeForDialog(startStr);
-    final endTimeDisplay = _extractTimeForDialog(endStr);
-
-    // Still parse for duration calculation
-    DateTime? startTime;
-    DateTime? endTime;
-    try {
-      if (startStr != null) startTime = DateTime.parse(startStr);
-      if (endStr != null) endTime = DateTime.parse(endStr);
-    } catch (e) {
-      debugPrint('Error parsing times: $e');
-    }
-
-    // Calculate remaining time
-    final plannedMinutes = todayPlan?['planned_duration_minutes'] as int? ?? 0;
-    final workedMinutes = item['minutes_worked'] as int? ?? 0;
-    final remainingMinutes = (plannedMinutes - workedMinutes).clamp(0, 999999);
-
-    // State variables for the dialog
-    String selectedOption = 'completed';
-    final remainingController =
-        TextEditingController(text: remainingMinutes.toString());
-    final extraTimeController = TextEditingController(text: '0');
-    final startTimeController = TextEditingController(text: startTimeDisplay);
-    final endTimeController = TextEditingController(text: endTimeDisplay);
-    final remarkController = TextEditingController(text: item['work_notes'] as String? ?? '');
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Review Task'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('You worked on $taskName for'),
-                if (startTimeDisplay.isNotEmpty)
-                  Text(
-                    '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                const SizedBox(height: 20),
-                InkWell(
-                  onTap: () {
-                    setState(() => selectedOption = 'completed');
-                  },
-                  child: Row(
-                    children: [
-                      Radio<String>(
-                        value: 'completed',
-                        groupValue: selectedOption,
-                        onChanged: (value) {
-                          setState(() => selectedOption = value!);
-                        },
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Completed',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              'Task is done. No further work needed.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (selectedOption == 'completed')
-                        const Icon(Icons.check_circle, color: Colors.green),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: () {
-                    setState(() => selectedOption = 'pending');
-                  },
-                  child: Row(
-                    children: [
-                      Radio<String>(
-                        value: 'pending',
-                        groupValue: selectedOption,
-                        onChanged: (value) {
-                          setState(() => selectedOption = value!);
-                        },
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Still Pending',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              'Work remains. Move reminder to pending list.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (selectedOption == 'pending')
-                        const Icon(Icons.warning_amber, color: Colors.orange),
-                    ],
-                  ),
-                ),
-                // Remaining time field - only when "Still Pending" is selected
-                if (selectedOption == 'pending') ...[
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 48),
-                    child: Row(
-                      children: [
-                        const SizedBox(
-                          width: 140,
-                          child: Text(
-                            'Remaining time to work:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 80,
-                          child: TextField(
-                            controller: remainingController,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'mins',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 188),
-                    child: Text(
-                      'Original plan had ${plannedMinutes}m left.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                ],
-                // Schedule Details - Show for both Completed and Pending
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                const Text(
-                  'Schedule Details',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Start Time
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 120,
-                      child: Text(
-                        'Start Time:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: startTimeController,
-                        decoration: InputDecoration(
-                          hintText: 'HH:MM',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              Icons.access_time,
-                              color: Colors.grey[600],
-                            ),
-                            onPressed: () async {
-                              final TimeOfDay? picked = await showTimePicker(
-                                context: context,
-                                initialTime: startTime != null
-                                    ? TimeOfDay.fromDateTime(startTime)
-                                    : TimeOfDay.now(),
-                              );
-                              if (picked != null) {
-                                setState(() {
-                                  startTimeController.text =
-                                      picked.format(context);
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // End Time
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 120,
-                      child: Text(
-                        'End Time:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: endTimeController,
-                        decoration: InputDecoration(
-                          hintText: 'HH:MM',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              Icons.access_time,
-                              color: Colors.grey[600],
-                            ),
-                            onPressed: () async {
-                              final TimeOfDay? picked = await showTimePicker(
-                                context: context,
-                                initialTime: endTime != null
-                                    ? TimeOfDay.fromDateTime(endTime)
-                                    : TimeOfDay.now(),
-                              );
-                              if (picked != null) {
-                                setState(() {
-                                  endTimeController.text =
-                                      picked.format(context);
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Extra Time Worked - Show for both Completed and Pending
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 120,
-                      child: Text(
-                        'Extra time worked:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 80,
-                      child: TextField(
-                        controller: extraTimeController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: 'Enter here',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Colors.green, width: 2),
-                          ),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        onTap: () {
-                          // Clear field and select all text for easy entry
-                          if (extraTimeController.text == '0') {
-                            extraTimeController.clear();
-                          }
-                          extraTimeController.selection =
-                              TextSelection.fromPosition(
-                            TextPosition(
-                                offset: extraTimeController.text.length),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'mins',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Remarks / Work Notes:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: remarkController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    hintText: 'What did you work on?',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  try {
-                    final apiService = ref.read(taskApiServiceProvider);
-                    final isCompleted = selectedOption == 'completed';
-
-                    // Get remaining time and extra time
-                    int? minutesLeft;
-                    int? extraMinutes;
-
-                    // Extra minutes applies to both completed and pending
-                    final extra = int.tryParse(extraTimeController.text);
-                    if (extra != null && extra > 0) {
-                      extraMinutes = extra;
-                    }
-
-                    // Remaining time only for pending
-                    if (!isCompleted) {
-                      final remaining = int.tryParse(remainingController.text);
-                      if (remaining != null && remaining > 0) {
-                        minutesLeft = remaining;
-                      }
-                    }
-
-                    await apiService.stopActivityLog(
-                      activityLogId: activityLogId,
-                      isCompleted: isCompleted,
-                      reason: isCompleted ? 'Task completed' : 'Task paused',
-                      workNotes: remarkController.text,
-                      minutesLeft: minutesLeft,
-                      extraMinutes: extraMinutes,
-                      startTime: startTimeController.text,
-                      endTime: endTimeController.text,
-                    );
-
-                    // Calculate today's date string for invalidation
-                    final today = DateTime.now();
-                    final todayStr =
-                        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-                    ref.invalidate(apiActivityLogsProvider(todayStr));
-                    ref.invalidate(apiActiveTaskProvider);
-                    ref.invalidate(apiTodayPlanProvider);
-                    ref.invalidate(apiPendingItemsProvider(todayStr));
-                    ref.invalidate(apiAllPendingItemsProvider);
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(isCompleted
-                              ? 'Task completed successfully!'
-                              : 'Task paused and moved to pending'),
-                          backgroundColor:
-                              isCompleted ? Colors.green : Colors.orange,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: ${e.toString()}')),
-                      );
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedOption == 'completed'
-                      ? Colors.green
-                      : Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Confirm & Stop'),
-              ),
-            ],
-          );
-        },
       ),
     );
   }

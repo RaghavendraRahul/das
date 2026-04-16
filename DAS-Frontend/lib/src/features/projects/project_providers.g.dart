@@ -143,5 +143,24 @@ final pendingTemplatesProvider =
 
 typedef PendingTemplatesRef
     = AutoDisposeStreamProviderRef<List<ActivityTemplate>>;
+String _$analyticsDataHash() => r'dd5d3659c1eb0233d76a80e8ec89fbd2726bb2e4';
+
+/// Fetches project analytics hours with optional project and employee filters
+/// DEDICATED provider for analytics - does NOT use dashboard's date filters
+///
+/// Copied from [analyticsData].
+@ProviderFor(analyticsData)
+final analyticsDataProvider =
+    AutoDisposeFutureProvider<Map<String, dynamic>>.internal(
+  analyticsData,
+  name: r'analyticsDataProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$analyticsDataHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef AnalyticsDataRef = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member
