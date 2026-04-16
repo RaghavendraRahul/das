@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
@@ -258,14 +259,18 @@ class _ReportsView extends StatelessWidget {
                       color: Colors.green,
                       barWidth: 3,
                       belowBarData: BarAreaData(
-                          show: true,
-                          color: Colors.green.withOpacity(0.1)),
+                          show: true, color: Colors.green.withOpacity(0.1)),
                     ),
                   ],
                 ),
               ),
             ),
           ),
+
+          const SizedBox(height: 24),
+
+          // Project Analytics Hours Breakdown
+          const _ProjectAnalyticsSection(),
         ],
       ),
     );
@@ -294,6 +299,426 @@ class _ChartCard extends StatelessWidget {
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 16),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Project Analytics Hours breakdown with cascading project/employee filters
+class _ProjectAnalyticsSection extends HookConsumerWidget {
+  const _ProjectAnalyticsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final analyticsAsync = ref.watch(analyticsDataProvider);
+    final selectedProjectId = ref.watch(selectedAnalyticsProjectIdProvider);
+    final selectedEmployeeId = ref.watch(selectedAnalyticsEmployeeIdProvider);
+    final theme = Theme.of(context);
+
+    return analyticsAsync.when(
+      data: (analyticsData) {
+        debugPrint('═' * 60);
+        debugPrint('📊 ANALYTICS DATA RECEIVED FROM API');
+        debugPrint('═' * 60);
+        debugPrint('Raw data keys: ${analyticsData.keys.toList()}');
+
+        // Extract dropdowns - it's a dict with 'projects' and 'employees' keys
+        final dropdowns =
+            (analyticsData['dropdowns'] as Map<String, dynamic>?) ?? {};
+
+        debugPrint('Dropdowns type: ${dropdowns.runtimeType}');
+        debugPrint('Dropdowns keys: ${dropdowns.keys.toList()}');
+
+        final projects = (dropdowns['projects'] as List<dynamic>?) ?? [];
+        debugPrint('✅ Projects from API: ${projects.length}');
+        for (var p in projects) {
+          final name = (p as Map)['name'] ?? 'Unknown';
+          debugPrint('   - Project: $name (id: ${p['id']})');
+        }
+
+        // All employees from the API response
+        final allEmployeesFromApi =
+            (dropdowns['employees'] as List<dynamic>?) ?? [];
+        debugPrint('✅ All employees from API: ${allEmployeesFromApi.length}');
+        for (var e in allEmployeesFromApi) {
+          final name = (e as Map)['name'] ?? 'Unknown';
+          debugPrint('   - Employee: $name (id: ${e['id']})');
+        }
+
+        // Only show employees if a project has been selected
+        // Otherwise, pass empty list to show placeholder message
+        final filteredEmployees =
+            selectedProjectId != null ? allEmployeesFromApi : [];
+
+        debugPrint('Filtered employees shown: ${filteredEmployees.length}');
+        debugPrint('Selected projectId: $selectedProjectId');
+        debugPrint('Selected employeeId: $selectedEmployeeId');
+
+        final tasks = (analyticsData['tasks'] as List<dynamic>?) ?? [];
+        final totals = (analyticsData['totals'] as Map<String, dynamic>?) ??
+            {
+              'planned_hours': 0,
+              'achieved_hours': 0,
+            };
+        final isEmployeeLocked =
+            analyticsData['is_employee_locked'] as bool? ?? false;
+
+        final plannedHours = (totals['planned_hours'] as num?)?.toDouble() ?? 0;
+        final achievedHours =
+            (totals['achieved_hours'] as num?)?.toDouble() ?? 0;
+
+        debugPrint('═' * 60);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '📊 Project Hours Analytics',
+              style: theme.textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _ChartCard(
+              title: "Hours Breakdown by Task",
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Filters
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ProjectDropdown(
+                          projects: projects,
+                          selectedId: selectedProjectId,
+                          onChanged: (projectId) {
+                            debugPrint(
+                                '📌 Project selected: $projectId (previously was $selectedProjectId)');
+                            // Reset employee FIRST when project changes
+                            ref
+                                .read(selectedAnalyticsEmployeeIdProvider
+                                    .notifier)
+                                .state = null;
+                            // Set new project state
+                            ref
+                                .read(
+                                    selectedAnalyticsProjectIdProvider.notifier)
+                                .state = projectId;
+                            // Invalidate AFTER setting state so the new values are read
+                            Future.microtask(() {
+                              ref.invalidate(analyticsDataProvider);
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _EmployeeDropdown(
+                          employees: filteredEmployees,
+                          selectedId: selectedEmployeeId,
+                          isLocked: isEmployeeLocked,
+                          projectSelected: selectedProjectId != null,
+                          onChanged: (employeeId) {
+                            debugPrint(
+                                '👤 Employee selected: $employeeId (project filter: $selectedProjectId)');
+                            // Set state FIRST, then invalidate
+                            ref
+                                .read(selectedAnalyticsEmployeeIdProvider
+                                    .notifier)
+                                .state = employeeId;
+                            // Invalidate AFTER setting state so the new values are read
+                            Future.microtask(() {
+                              ref.invalidate(analyticsDataProvider);
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Doughnut Chart
+                  if (tasks.isNotEmpty)
+                    AspectRatio(
+                      aspectRatio: 1.3,
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 0,
+                          centerSpaceRadius: 40,
+                          sections: _buildTaskSections(tasks),
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'No tasks available for selected filters',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.grey),
+                      ),
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // Totals
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _TotalCard(
+                        label: 'Planned Hours',
+                        value: plannedHours.toStringAsFixed(1),
+                        color: Colors.blue,
+                      ),
+                      _TotalCard(
+                        label: 'Achieved Hours',
+                        value: achievedHours.toStringAsFixed(1),
+                        color: Colors.green,
+                      ),
+                      _TotalCard(
+                        label: 'Remaining',
+                        value:
+                            (plannedHours - achievedHours).toStringAsFixed(1),
+                        color: Colors.orange,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => _ChartCard(
+        title: "Hours Breakdown by Task",
+        child: const Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (err, stack) => _ChartCard(
+        title: "Hours Breakdown by Task",
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Error loading analytics: $err'),
+        ),
+      ),
+    );
+  }
+
+  List<PieChartSectionData> _buildTaskSections(List<dynamic> tasks) {
+    final colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.red,
+      Colors.purple,
+      Colors.teal,
+      Colors.pink,
+      Colors.indigo,
+    ];
+
+    return List.generate(
+      tasks.length,
+      (index) {
+        final task = tasks[index] as Map<String, dynamic>;
+        final title = task['title']?.toString() ?? 'Task ${index + 1}';
+        final plannedHours = (task['planned_hours'] as num?)?.toDouble() ?? 0;
+
+        return PieChartSectionData(
+          color: colors[index % colors.length],
+          value: plannedHours > 0 ? plannedHours : 1,
+          title: title.length > 10 ? '${title.substring(0, 10)}...' : title,
+          radius: 50,
+          titleStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Project dropdown for analytics filter
+class _ProjectDropdown extends StatelessWidget {
+  final List<dynamic> projects;
+  final int? selectedId;
+  final Function(int?) onChanged;
+
+  const _ProjectDropdown({
+    required this.projects,
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Project',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<int?>(
+          value: selectedId,
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          hint: const Text('Select project...'),
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('All Projects'),
+            ),
+            ...projects.map<DropdownMenuItem<int?>>((p) {
+              final project = p as Map<String, dynamic>;
+              final id = project['id'] as int?;
+              final name = project['name']?.toString() ?? 'Unknown';
+              return DropdownMenuItem<int?>(
+                value: id,
+                child: Text(name),
+              );
+            }).toList(),
+          ],
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+/// Employee dropdown for analytics filter (cascading based on project)
+class _EmployeeDropdown extends StatelessWidget {
+  final List<dynamic> employees;
+  final int? selectedId;
+  final bool isLocked;
+  final bool projectSelected;
+  final Function(int?) onChanged;
+
+  const _EmployeeDropdown({
+    required this.employees,
+    required this.selectedId,
+    required this.isLocked,
+    required this.projectSelected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Team Member',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<int?>(
+          value: selectedId,
+          enabled: !isLocked && projectSelected && employees.isNotEmpty,
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: !projectSelected || isLocked || employees.isEmpty
+                    ? Colors.grey.shade200
+                    : Colors.grey.shade300,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+          ),
+          hint: Text(isLocked
+              ? 'You can only view your own hours'
+              : !projectSelected
+                  ? 'Select a project first'
+                  : employees.isEmpty
+                      ? 'No team members in this project'
+                      : 'Select team member...'),
+          items: [
+            if (projectSelected && !isLocked)
+              const DropdownMenuItem<int?>(
+                value: null,
+                child: Text('All Team Members'),
+              ),
+            ...employees.map<DropdownMenuItem<int?>>((emp) {
+              final employee = emp as Map<String, dynamic>;
+              final id = employee['id'] as int?;
+              final name = employee['name']?.toString() ?? 'Unknown';
+              return DropdownMenuItem<int?>(
+                value: id,
+                child: Text(name),
+              );
+            }).toList(),
+          ],
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+/// Total hours display card
+class _TotalCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _TotalCard({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
