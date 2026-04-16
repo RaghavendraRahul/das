@@ -411,7 +411,7 @@ class _DateRangeFilterButton extends StatelessWidget {
                   : 'Overall data',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w900,
                 color: hasRange
                     ? Colors.white
                     : (isDark ? Colors.white70 : const Color(0xFF05263E)),
@@ -476,7 +476,7 @@ class _ProjectTypeButton extends StatelessWidget {
               label,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                 color: isSelected ? Colors.white : inactiveColor,
                 letterSpacing: 0.2,
               ),

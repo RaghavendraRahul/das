@@ -73,12 +73,12 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                   decoration: BoxDecoration(
                     color: isToday 
                         ? Colors.transparent 
-                        : Colors.blue.withOpacity(0.1),
+                        : const Color(0xFF05263E).withOpacity(0.08),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isToday 
                           ? (isDark ? Colors.white12 : Colors.grey.shade200)
-                          : Colors.blue.withOpacity(0.3),
+                          : const Color(0xFF05263E).withOpacity(0.2),
                     ),
                   ),
                   child: Row(
@@ -88,7 +88,7 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                         size: 16,
                         color: isToday 
                             ? (isDark ? Colors.white54 : const Color(0xFF05263E))
-                            : Colors.blue,
+                            : const Color(0xFF05263E),
                       ),
                       const SizedBox(width: 8),
                       Text(

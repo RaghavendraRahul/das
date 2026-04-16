@@ -190,9 +190,9 @@ class _Header extends ConsumerWidget {
               'Project Work Status',
               style: GoogleFonts.inter(
                 fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w900,
                 color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
-                letterSpacing: -0.2,
+                letterSpacing: -0.5,
               ),
             ),
           ],
@@ -312,7 +312,7 @@ class _KpiRow extends StatelessWidget {
             _StatCard(
               title: 'Planned Hours',
               value: '${planned.toStringAsFixed(1)}',
-              color: const Color(0xFF6366F1), // Indigo
+              color: const Color(0xFF05263E),
               icon: Icons.timer_rounded,
               width: cardWidth,
               isDark: isDark,
@@ -321,7 +321,7 @@ class _KpiRow extends StatelessWidget {
             _StatCard(
               title: 'Achieved Hours',
               value: '${achieved.toStringAsFixed(1)}',
-              color: const Color(0xFF10B981), // Emerald Green
+              color: const Color(0xFF05263E),
               icon: Icons.check_circle_rounded,
               width: cardWidth,
               isDark: isDark,
@@ -330,7 +330,7 @@ class _KpiRow extends StatelessWidget {
             _StatCard(
               title: 'Remaining Hours',
               value: '${remaining.toStringAsFixed(1)}',
-              color: const Color(0xFFF59E0B), // Amber
+              color: const Color(0xFF05263E),
               icon: Icons.pending_actions_rounded,
               width: cardWidth,
               isDark: isDark,
@@ -547,8 +547,9 @@ class _DonutSection extends StatelessWidget {
                 'Work Distribution & Progress',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                   color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
+                  letterSpacing: -0.2,
                 ),
               ),
             ],
@@ -683,8 +684,8 @@ class _DonutChart extends HookWidget {
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A),
-                    letterSpacing: 1.5,
+                    color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E),
+                    letterSpacing: 1.2,
                   ),
                 ),
               ],
