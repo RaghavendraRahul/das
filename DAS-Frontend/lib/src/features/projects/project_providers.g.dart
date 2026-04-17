@@ -143,7 +143,7 @@ final pendingTemplatesProvider =
 
 typedef PendingTemplatesRef
     = AutoDisposeStreamProviderRef<List<ActivityTemplate>>;
-String _$analyticsDataHash() => r'dd5d3659c1eb0233d76a80e8ec89fbd2726bb2e4';
+String _$analyticsDataHash() => r'daf09fd70acbea68961ffc0fee1b5ae1e54ba3f9';
 
 /// Fetches project analytics hours with optional project and employee filters
 /// DEDICATED provider for analytics - does NOT use dashboard's date filters

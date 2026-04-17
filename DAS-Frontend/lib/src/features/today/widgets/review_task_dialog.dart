@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
+import 'package:intl/intl.dart';
 
 /// Extract time from ISO string without timezone conversion
 String _extractTimeForDialog(String? isoString) {
@@ -19,7 +21,8 @@ String _extractTimeForDialog(String? isoString) {
 void showReviewTaskDialog(
     BuildContext context, WidgetRef ref, Map<String, dynamic> item,
     {bool isEditMode = false}) {
-  final activityLogId = item['id'] as int;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final activityLogId = item['id'] as int? ?? 0;
   final todayPlan = item['today_plan'] as Map<String, dynamic>?;
 
   debugPrint('📋 [ReviewTaskDialog] Received item:');
@@ -51,43 +54,125 @@ void showReviewTaskDialog(
       TextEditingController(text: remainingMinutes.toString());
   final extraTimeController = TextEditingController(text: '0');
 
-  // Timing controllers are not going to be editable
+  // Timing controllers - ENABLED for manual entry as per user requirement
   final startTimeController = TextEditingController(text: startTimeDisplay);
   final endTimeController = TextEditingController(text: endTimeDisplay);
 
   final plannedRemark = todayPlan?['notes'] as String? ?? '';
-  final remarkController =
-      TextEditingController(text: item['work_notes'] as String? ?? '');
+  final initialWorkNotes = item['work_notes'] as String? ?? '';
+  final remarkController = TextEditingController(text: initialWorkNotes);
+
+  // Initial minutes worked from item
+  final initialMinutesWorked = item['minutes_worked'] as int? ?? 0;
+  final workedMinutesController =
+      TextEditingController(text: initialMinutesWorked.toString());
+
+  // Helper to pick time
+  Future<void> selectTime(
+      BuildContext context,
+      TextEditingController controller,
+      StateSetter setDialogState,
+      {required bool isStart}) async {
+    final currentText = controller.text;
+    TimeOfDay initialTime = TimeOfDay.now();
+
+    if (currentText.isNotEmpty) {
+      final parts = currentText.split(':');
+      if (parts.length >= 2) {
+        initialTime = TimeOfDay(
+          hour: int.tryParse(parts[0]) ?? initialTime.hour,
+          minute: int.tryParse(parts[1]) ?? initialTime.minute,
+        );
+      }
+    }
+
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+
+    if (picked != null) {
+      final formatted =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      setDialogState(() {
+        controller.text = formatted;
+        
+        // Auto-calculate minutes if both exist
+        if (startTimeController.text.isNotEmpty &&
+            endTimeController.text.isNotEmpty) {
+          try {
+            final now = DateTime.now();
+            final sParts = startTimeController.text.split(':');
+            final eParts = endTimeController.text.split(':');
+            
+            final start = DateTime(now.year, now.month, now.day, 
+                int.parse(sParts[0]), int.parse(sParts[1]));
+            var end = DateTime(now.year, now.month, now.day, 
+                int.parse(eParts[0]), int.parse(eParts[1]));
+            
+            if (end.isBefore(start)) {
+              end = end.add(const Duration(days: 1));
+            }
+            
+            final diff = end.difference(start).inMinutes;
+            workedMinutesController.text = diff.toString();
+          } catch (e) {
+            debugPrint('Error auto-calculating time: $e');
+          }
+        }
+      });
+    }
+  }
 
   showDialog(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) {
         return AlertDialog(
-          title: const Text('Review Task'),
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Review Task',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('You worked on $taskName for'),
+                Text(
+                  'You worked on $taskName for',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
                 if (startTimeDisplay.isNotEmpty)
-                  Text(
-                    '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: Colors.blue.shade600,
+                      ),
                     ),
                   ),
                 const SizedBox(height: 20),
 
                 if (plannedRemark.isNotEmpty) ...[
-                  const Text(
-                    'Planned Remark:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.grey,
+                  Text(
+                    'PLANNED REMARK',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                      letterSpacing: 1.0,
+                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -115,12 +200,16 @@ void showReviewTaskDialog(
                   spacing: 10,
                   children: [
                     ChoiceChip(
-                      label: const Row(
+                      label: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle, size: 16),
-                          SizedBox(width: 4),
-                          Text('Completed'),
+                          const Icon(Icons.check_circle, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Completed',
+                            style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
                         ],
                       ),
                       selected: selectedOption == 'completed',
@@ -129,15 +218,23 @@ void showReviewTaskDialog(
                           selectedOption = selected ? 'completed' : null;
                         });
                       },
-                      selectedColor: Colors.green.withOpacity(0.3),
+                      selectedColor: Colors.green.withValues(alpha: 0.2),
+                      backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      side: BorderSide.none,
                     ),
                     ChoiceChip(
-                      label: const Row(
+                      label: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.warning_amber, size: 16),
-                          SizedBox(width: 4),
-                          Text('Still Pending'),
+                          const Icon(Icons.warning_amber, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Still Pending',
+                            style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
                         ],
                       ),
                       selected: selectedOption == 'pending',
@@ -146,7 +243,11 @@ void showReviewTaskDialog(
                           selectedOption = selected ? 'pending' : null;
                         });
                       },
-                      selectedColor: Colors.orange.withOpacity(0.3),
+                      selectedColor: Colors.orange.withValues(alpha: 0.2),
+                      backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      side: BorderSide.none,
                     ),
                   ],
                 ),
@@ -212,11 +313,14 @@ void showReviewTaskDialog(
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
-                const Text(
-                  'Schedule Details',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                const SizedBox(height: 24),
+                Text(
+                  'SCHEDULE DETAILS',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    letterSpacing: 1.0,
+                    color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -236,8 +340,7 @@ void showReviewTaskDialog(
                     Expanded(
                       child: TextField(
                         controller: startTimeController,
-                        enabled:
-                            !isEditMode, // Editable only when drag-dropping, disabled when editing
+                        enabled: true,
                         keyboardType: TextInputType.datetime,
                         decoration: InputDecoration(
                           hintText: 'HH:MM',
@@ -279,8 +382,7 @@ void showReviewTaskDialog(
                     Expanded(
                       child: TextField(
                         controller: endTimeController,
-                        enabled:
-                            !isEditMode, // Editable only when drag-dropping, disabled when editing
+                        enabled: true,
                         keyboardType: TextInputType.datetime,
                         decoration: InputDecoration(
                           hintText: 'HH:MM',
@@ -357,83 +459,166 @@ void showReviewTaskDialog(
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'mins',
-                      style: TextStyle(fontSize: 14),
+                    const Text('mins'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Time Pickers
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Start Time',
+                              style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () => selectTime(
+                                context, startTimeController, setState,
+                                isStart: true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
+                                border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.access_time, 
+                                      size: 16, 
+                                      color: isDark ? Colors.blue.shade300 : Colors.blue.shade600),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    startTimeController.text.isEmpty
+                                        ? 'Select'
+                                        : startTimeController.text,
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('End Time',
+                              style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () => selectTime(
+                                context, endTimeController, setState,
+                                isStart: false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
+                                border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.access_time, 
+                                      size: 16, 
+                                      color: isDark ? Colors.blue.shade300 : Colors.blue.shade600),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    endTimeController.text.isEmpty
+                                        ? 'Select'
+                                        : endTimeController.text,
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 16),
-                const Text(
-                  'Achieved Remark:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                const Divider(),
+                const SizedBox(height: 8),
+                Text(
+                  'ACHIEVED REMARK',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                    letterSpacing: 1.0,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: remarkController,
                   maxLines: 2,
+                  style: GoogleFonts.inter(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'What did you work on?',
+                    hintStyle: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
+                    filled: true,
+                    fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade300),
                     ),
                   ),
-                  style: const TextStyle(fontSize: 14),
                 ),
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Cancel'),
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                try {
-                  final apiService = ref.read(taskApiServiceProvider);
-
-                  // Selected Option is optional now
-                  final isCompleted = selectedOption == 'completed';
-
-                  // Get remaining time and extra time
-                  int? minutesLeft;
-                  int? extraMinutes;
-
-                  // Extra minutes applies to both completed and pending
-                  final extra = int.tryParse(extraTimeController.text);
-                  if (extra != null && extra > 0) {
-                    extraMinutes = extra;
-                  }
-
-                  // Remaining time only for pending
-                  if (!isCompleted && selectedOption != null) {
-                    final remaining = int.tryParse(remainingController.text);
-                    if (remaining != null && remaining > 0) {
-                      minutesLeft = remaining;
+            Padding(
+              padding: const EdgeInsets.only(right: 8, bottom: 8),
+              child: ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  try {
+                    final apiService = ref.read(taskApiServiceProvider);
+                    final isCompleted = selectedOption == 'completed';
+                    final manualMinutes = int.tryParse(workedMinutesController.text);
+                    
+                    int? minutesLeft;
+                    if (!isCompleted && selectedOption == 'pending') {
+                      minutesLeft = int.tryParse(remainingController.text);
                     }
-                  }
 
-                  // Get today's date
-                  final today = DateTime.now();
-                  final todayStr =
-                      '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-                  // Get todayPlanId from the item
-                  final todayPlanId = todayPlan?['id'] as int? ?? 0;
+                    final today = DateTime.now();
+                    final todayStr = DateFormat('yyyy-MM-dd').format(today);
+                    final todayPlanId = todayPlan?['id'] as int? ?? 0;
 
                   if (todayPlanId > 0) {
-                    // Use bulk stop to update ALL instances of this task on this day
                     await apiService.bulkStopActivityLogs(
                       todayPlanId: todayPlanId,
                       date: todayStr,
@@ -441,23 +626,19 @@ void showReviewTaskDialog(
                       isPendingSelected: selectedOption == 'pending',
                       workNotes: remarkController.text,
                       minutesLeft: minutesLeft,
-                      extraMinutes: extraMinutes,
+                      // Pass manual minutes if changed, otherwise API handles via start/end
+                      extraMinutes: manualMinutes != initialMinutesWorked ? manualMinutes : null,
                       startTime: startTimeController.text,
                       endTime: endTimeController.text,
                     );
-                  } else {
-                    // Fallback to single stop if todayPlanId not available
+                  } else if (activityLogId > 0) {
                     await apiService.stopActivityLog(
                       activityLogId: activityLogId,
                       isCompleted: isCompleted,
-                      reason: isCompleted
-                          ? 'Task completed'
-                          : (selectedOption != null
-                              ? 'Task paused'
-                              : 'Task updated'),
+                      reason: isCompleted ? 'Task completed' : 'Task paused',
                       workNotes: remarkController.text,
                       minutesLeft: minutesLeft,
-                      extraMinutes: extraMinutes,
+                      extraMinutes: manualMinutes != initialMinutesWorked ? manualMinutes : null,
                       startTime: startTimeController.text,
                       endTime: endTimeController.text,
                     );
@@ -466,40 +647,48 @@ void showReviewTaskDialog(
                   ref.invalidate(apiActivityLogsProvider(todayStr));
                   ref.invalidate(apiActiveTaskProvider);
                   ref.invalidate(apiTodayPlanProvider);
-                  ref.invalidate(apiPendingItemsProvider(todayStr));
-                  ref.invalidate(apiAllPendingItemsProvider);
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(isCompleted
-                            ? 'Task completed successfully!'
-                            : 'Task updated!'),
-                        backgroundColor:
-                            isCompleted ? Colors.green : Colors.blue,
+                        content: Text(isCompleted ? 'Task completed!' : 'Updated!'),
+                        backgroundColor: isCompleted ? Colors.green : Colors.blue,
                       ),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${e.toString()}')),
+                      SnackBar(content: Text('Error: $e')),
                     );
                   }
                 }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedOption == 'completed'
-                    ? Colors.green
-                    : (selectedOption == 'pending'
-                        ? Colors.orange
-                        : Colors.blue),
-              ),
-              child: Text(selectedOption == 'completed'
-                  ? 'Confirm & Complete'
-                  : 'Save Edit'),
-            ),
-          ],
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedOption == 'completed'
+                          ? Colors.green.shade600
+                          : (selectedOption == 'pending'
+                              ? Colors.orange.shade700
+                              : Colors.blue.shade700),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      selectedOption == 'completed'
+                          ? 'Confirm & Complete'
+                          : 'Save Progress',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
         );
       },
     ),

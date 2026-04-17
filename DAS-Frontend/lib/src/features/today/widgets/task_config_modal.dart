@@ -111,7 +111,9 @@ class TaskConfigModal extends HookConsumerWidget {
     final descriptionController =
         useTextEditingController(text: effectiveDescription);
     final duration = useState(effectiveDuration);
-    final selectedQuadrant = useState<String>(initialQuadrant ?? 'Q1');
+    final selectedQuadrant = useState<String>(
+      showQuadrantSelector ? (initialQuadrant ?? 'Q1') : (initialQuadrant ?? ''),
+    );
 
     // Links State
     final githubLink = useState(effectiveGithubLink);
@@ -633,21 +635,29 @@ class TaskConfigModal extends HookConsumerWidget {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (onConfirm != null) {
-                          String finalName = nameController.text.trim();
-                          if ((finalName == 'New Task' || finalName.isEmpty) &&
-                              descriptionController.text.trim().isNotEmpty) {
-                            finalName = descriptionController.text.trim();
-                          }
-                          if (finalName.isEmpty) finalName = 'New Task';
+                        String finalName = nameController.text.trim();
+                        if ((finalName == 'New Task' || finalName.isEmpty) &&
+                            descriptionController.text.trim().isNotEmpty) {
+                          finalName = descriptionController.text.trim();
+                        }
+                        if (finalName.isEmpty) finalName = 'New Task';
 
+                        final capturedDescription = descriptionController.text;
+                        final capturedDuration = duration.value;
+                        final capturedMilestones =
+                            selectedMilestoneIds.value.toList();
+                        final capturedQuadrant = selectedQuadrant.value;
+
+                        // Pop FIRST to ensure dialog is closed before any subsequent actions
+                        if (context.mounted) Navigator.pop(context);
+
+                        if (onConfirm != null) {
                           onConfirm!(
                             name: finalName,
-                            duration: duration.value,
-                            description: descriptionController.text,
-                            selectedMilestoneIds:
-                                selectedMilestoneIds.value.toList(),
-                            quadrant: selectedQuadrant.value,
+                            duration: capturedDuration,
+                            description: capturedDescription,
+                            selectedMilestoneIds: capturedMilestones,
+                            quadrant: capturedQuadrant,
                           );
                         } else if (plannedItem != null) {
                           try {
@@ -655,21 +665,14 @@ class TaskConfigModal extends HookConsumerWidget {
                             await repo.updatePlannedItem(
                               plannedItem!.id,
                               PlannedItemsCompanion(
-                                description:
-                                    drift.Value(descriptionController.text),
-                                durationMinutes: drift.Value(duration.value),
+                                description: drift.Value(capturedDescription),
+                                durationMinutes: drift.Value(capturedDuration),
                               ),
                             );
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text('Failed to update task: $e')),
-                              );
-                            }
+                            debugPrint('Failed to update task: $e');
                           }
                         }
-                        if (context.mounted) Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),

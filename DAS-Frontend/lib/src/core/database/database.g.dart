@@ -2058,6 +2058,14 @@ class $PlannedItemsTable extends PlannedItems
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("is_completed" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _orderIndexMeta =
+      const VerificationMeta('orderIndex');
+  @override
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+      'order_index', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -2068,7 +2076,8 @@ class $PlannedItemsTable extends PlannedItems
         durationMinutes,
         relatedTaskId,
         startTime,
-        isCompleted
+        isCompleted,
+        orderIndex
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2131,6 +2140,12 @@ class $PlannedItemsTable extends PlannedItems
           isCompleted.isAcceptableOrUnknown(
               data['is_completed']!, _isCompletedMeta));
     }
+    if (data.containsKey('order_index')) {
+      context.handle(
+          _orderIndexMeta,
+          orderIndex.isAcceptableOrUnknown(
+              data['order_index']!, _orderIndexMeta));
+    }
     return context;
   }
 
@@ -2158,6 +2173,8 @@ class $PlannedItemsTable extends PlannedItems
           .read(DriftSqlType.dateTime, data['${effectivePrefix}start_time']),
       isCompleted: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_completed'])!,
+      orderIndex: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}order_index'])!,
     );
   }
 
@@ -2177,6 +2194,7 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
   final String? relatedTaskId;
   final DateTime? startTime;
   final bool isCompleted;
+  final int orderIndex;
   const PlannedItem(
       {required this.id,
       required this.dailyLogId,
@@ -2186,7 +2204,8 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
       required this.durationMinutes,
       this.relatedTaskId,
       this.startTime,
-      required this.isCompleted});
+      required this.isCompleted,
+      required this.orderIndex});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2203,6 +2222,7 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
       map['start_time'] = Variable<DateTime>(startTime);
     }
     map['is_completed'] = Variable<bool>(isCompleted);
+    map['order_index'] = Variable<int>(orderIndex);
     return map;
   }
 
@@ -2221,6 +2241,7 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
           ? const Value.absent()
           : Value(startTime),
       isCompleted: Value(isCompleted),
+      orderIndex: Value(orderIndex),
     );
   }
 
@@ -2237,6 +2258,7 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
       relatedTaskId: serializer.fromJson<String?>(json['relatedTaskId']),
       startTime: serializer.fromJson<DateTime?>(json['startTime']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
     );
   }
   @override
@@ -2252,6 +2274,7 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
       'relatedTaskId': serializer.toJson<String?>(relatedTaskId),
       'startTime': serializer.toJson<DateTime?>(startTime),
       'isCompleted': serializer.toJson<bool>(isCompleted),
+      'orderIndex': serializer.toJson<int>(orderIndex),
     };
   }
 
@@ -2264,7 +2287,8 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
           int? durationMinutes,
           Value<String?> relatedTaskId = const Value.absent(),
           Value<DateTime?> startTime = const Value.absent(),
-          bool? isCompleted}) =>
+          bool? isCompleted,
+          int? orderIndex}) =>
       PlannedItem(
         id: id ?? this.id,
         dailyLogId: dailyLogId ?? this.dailyLogId,
@@ -2276,6 +2300,7 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
             relatedTaskId.present ? relatedTaskId.value : this.relatedTaskId,
         startTime: startTime.present ? startTime.value : this.startTime,
         isCompleted: isCompleted ?? this.isCompleted,
+        orderIndex: orderIndex ?? this.orderIndex,
       );
   PlannedItem copyWithCompanion(PlannedItemsCompanion data) {
     return PlannedItem(
@@ -2295,6 +2320,8 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
       startTime: data.startTime.present ? data.startTime.value : this.startTime,
       isCompleted:
           data.isCompleted.present ? data.isCompleted.value : this.isCompleted,
+      orderIndex:
+          data.orderIndex.present ? data.orderIndex.value : this.orderIndex,
     );
   }
 
@@ -2309,14 +2336,15 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
           ..write('durationMinutes: $durationMinutes, ')
           ..write('relatedTaskId: $relatedTaskId, ')
           ..write('startTime: $startTime, ')
-          ..write('isCompleted: $isCompleted')
+          ..write('isCompleted: $isCompleted, ')
+          ..write('orderIndex: $orderIndex')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, dailyLogId, name, description, quadrant,
-      durationMinutes, relatedTaskId, startTime, isCompleted);
+      durationMinutes, relatedTaskId, startTime, isCompleted, orderIndex);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2329,7 +2357,8 @@ class PlannedItem extends DataClass implements Insertable<PlannedItem> {
           other.durationMinutes == this.durationMinutes &&
           other.relatedTaskId == this.relatedTaskId &&
           other.startTime == this.startTime &&
-          other.isCompleted == this.isCompleted);
+          other.isCompleted == this.isCompleted &&
+          other.orderIndex == this.orderIndex);
 }
 
 class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
@@ -2342,6 +2371,7 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
   final Value<String?> relatedTaskId;
   final Value<DateTime?> startTime;
   final Value<bool> isCompleted;
+  final Value<int> orderIndex;
   final Value<int> rowid;
   const PlannedItemsCompanion({
     this.id = const Value.absent(),
@@ -2353,6 +2383,7 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
     this.relatedTaskId = const Value.absent(),
     this.startTime = const Value.absent(),
     this.isCompleted = const Value.absent(),
+    this.orderIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PlannedItemsCompanion.insert({
@@ -2365,6 +2396,7 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
     this.relatedTaskId = const Value.absent(),
     this.startTime = const Value.absent(),
     this.isCompleted = const Value.absent(),
+    this.orderIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         dailyLogId = Value(dailyLogId),
@@ -2379,6 +2411,7 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
     Expression<String>? relatedTaskId,
     Expression<DateTime>? startTime,
     Expression<bool>? isCompleted,
+    Expression<int>? orderIndex,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2391,6 +2424,7 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
       if (relatedTaskId != null) 'related_task_id': relatedTaskId,
       if (startTime != null) 'start_time': startTime,
       if (isCompleted != null) 'is_completed': isCompleted,
+      if (orderIndex != null) 'order_index': orderIndex,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2405,6 +2439,7 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
       Value<String?>? relatedTaskId,
       Value<DateTime?>? startTime,
       Value<bool>? isCompleted,
+      Value<int>? orderIndex,
       Value<int>? rowid}) {
     return PlannedItemsCompanion(
       id: id ?? this.id,
@@ -2416,6 +2451,7 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
       relatedTaskId: relatedTaskId ?? this.relatedTaskId,
       startTime: startTime ?? this.startTime,
       isCompleted: isCompleted ?? this.isCompleted,
+      orderIndex: orderIndex ?? this.orderIndex,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2450,6 +2486,9 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
     if (isCompleted.present) {
       map['is_completed'] = Variable<bool>(isCompleted.value);
     }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2468,6 +2507,7 @@ class PlannedItemsCompanion extends UpdateCompanion<PlannedItem> {
           ..write('relatedTaskId: $relatedTaskId, ')
           ..write('startTime: $startTime, ')
           ..write('isCompleted: $isCompleted, ')
+          ..write('orderIndex: $orderIndex, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5749,6 +5789,7 @@ typedef $$PlannedItemsTableCreateCompanionBuilder = PlannedItemsCompanion
   Value<String?> relatedTaskId,
   Value<DateTime?> startTime,
   Value<bool> isCompleted,
+  Value<int> orderIndex,
   Value<int> rowid,
 });
 typedef $$PlannedItemsTableUpdateCompanionBuilder = PlannedItemsCompanion
@@ -5762,6 +5803,7 @@ typedef $$PlannedItemsTableUpdateCompanionBuilder = PlannedItemsCompanion
   Value<String?> relatedTaskId,
   Value<DateTime?> startTime,
   Value<bool> isCompleted,
+  Value<int> orderIndex,
   Value<int> rowid,
 });
 
@@ -5843,6 +5885,9 @@ class $$PlannedItemsTableFilterComposer
 
   ColumnFilters<bool> get isCompleted => $composableBuilder(
       column: $table.isCompleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+      column: $table.orderIndex, builder: (column) => ColumnFilters(column));
 
   $$DailyLogsTableFilterComposer get dailyLogId {
     final $$DailyLogsTableFilterComposer composer = $composerBuilder(
@@ -5937,6 +5982,9 @@ class $$PlannedItemsTableOrderingComposer
   ColumnOrderings<bool> get isCompleted => $composableBuilder(
       column: $table.isCompleted, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+      column: $table.orderIndex, builder: (column) => ColumnOrderings(column));
+
   $$DailyLogsTableOrderingComposer get dailyLogId {
     final $$DailyLogsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -6007,6 +6055,9 @@ class $$PlannedItemsTableAnnotationComposer
 
   GeneratedColumn<bool> get isCompleted => $composableBuilder(
       column: $table.isCompleted, builder: (column) => column);
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+      column: $table.orderIndex, builder: (column) => column);
 
   $$DailyLogsTableAnnotationComposer get dailyLogId {
     final $$DailyLogsTableAnnotationComposer composer = $composerBuilder(
@@ -6103,6 +6154,7 @@ class $$PlannedItemsTableTableManager extends RootTableManager<
             Value<String?> relatedTaskId = const Value.absent(),
             Value<DateTime?> startTime = const Value.absent(),
             Value<bool> isCompleted = const Value.absent(),
+            Value<int> orderIndex = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PlannedItemsCompanion(
@@ -6115,6 +6167,7 @@ class $$PlannedItemsTableTableManager extends RootTableManager<
             relatedTaskId: relatedTaskId,
             startTime: startTime,
             isCompleted: isCompleted,
+            orderIndex: orderIndex,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -6127,6 +6180,7 @@ class $$PlannedItemsTableTableManager extends RootTableManager<
             Value<String?> relatedTaskId = const Value.absent(),
             Value<DateTime?> startTime = const Value.absent(),
             Value<bool> isCompleted = const Value.absent(),
+            Value<int> orderIndex = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PlannedItemsCompanion.insert(
@@ -6139,6 +6193,7 @@ class $$PlannedItemsTableTableManager extends RootTableManager<
             relatedTaskId: relatedTaskId,
             startTime: startTime,
             isCompleted: isCompleted,
+            orderIndex: orderIndex,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

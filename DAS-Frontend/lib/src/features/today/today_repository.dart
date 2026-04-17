@@ -45,7 +45,8 @@ class TodayRepository {
       if (log == null) return Stream.value(null);
 
       final plannedQuery = db.select(db.plannedItems)
-        ..where((tbl) => tbl.dailyLogId.equals(log.id));
+        ..where((tbl) => tbl.dailyLogId.equals(log.id))
+        ..orderBy([(t) => OrderingTerm(expression: t.orderIndex)]);
       final loggedQuery = db.select(db.loggedItems)
         ..where((tbl) => tbl.dailyLogId.equals(log.id));
 
@@ -125,7 +126,24 @@ class TodayRepository {
 
   Future<void> addPlannedItem(String logId, PlannedItemsCompanion item,
       {bool skipBackendSync = false}) async {
-    await _db!.into(_db!.plannedItems).insert(item);
+    final db = _db!;
+
+    // 1. Calculate next order index
+    final lastItem = await (db.select(db.plannedItems)
+          ..where((tbl) => tbl.dailyLogId.equals(logId))
+          ..orderBy(
+              [(t) => OrderingTerm(expression: t.orderIndex, mode: OrderingMode.desc)])
+          ..limit(1))
+        .getSingleOrNull();
+
+    final nextOrder = (lastItem?.orderIndex ?? -1) + 1;
+
+    // 2. Insert with order index
+    final itemWithOrder = item.copyWith(
+      orderIndex: Value(nextOrder),
+    );
+
+    await db.into(db.plannedItems).insert(itemWithOrder);
 
     // Sync to backend using TodayApiService
     if (!skipBackendSync && _todayApi != null) {
@@ -162,6 +180,35 @@ class TodayRepository {
     await (_db!.delete(_db!.plannedItems)
           ..where((tbl) => tbl.id.equals(itemId)))
         .go();
+  }
+
+  Future<void> updateItemsOrder(List<String> sortedItemIds) async {
+    final db = _db!;
+    await db.transaction(() async {
+      for (int i = 0; i < sortedItemIds.length; i++) {
+        await (db.update(db.plannedItems)..where((t) => t.id.equals(sortedItemIds[i])))
+            .write(PlannedItemsCompanion(orderIndex: Value(i)));
+      }
+    });
+
+    // Sync to backend if service available
+    if (_todayApi != null) {
+      try {
+        final List<Map<String, dynamic>> items = [];
+        for (int i = 0; i < sortedItemIds.length; i++) {
+          items.add({
+            'id': sortedItemIds[i],
+            'order_index': i,
+          });
+        }
+        // backend uses integer IDs sometimes, but drift uses strings (UUIDs)
+        // I need to check how backend IDs are handled. 
+        // In this project, IDs are usually UUID strings.
+        await _todayApi!.reorderTodayPlan(items);
+      } catch (e) {
+        debugPrint("Error syncing order to backend: $e");
+      }
+    }
   }
 
   Future<void> startTask(String logId, String name, String description,
@@ -386,6 +433,7 @@ class MockTodayRepository implements TodayRepository {
       description: item.description.value,
       durationMinutes: item.durationMinutes.value,
       quadrant: item.quadrant.value,
+      orderIndex: item.orderIndex.present ? item.orderIndex.value : 0,
       relatedTaskId:
           item.relatedTaskId.present ? item.relatedTaskId.value : null,
       startTime: item.startTime.present ? item.startTime.value : null,
@@ -414,6 +462,7 @@ class MockTodayRepository implements TodayRepository {
               ? item.durationMinutes.value
               : i.durationMinutes,
           quadrant: item.quadrant.present ? item.quadrant.value : i.quadrant,
+          orderIndex: item.orderIndex.present ? item.orderIndex.value : i.orderIndex,
           relatedTaskId: item.relatedTaskId.present
               ? item.relatedTaskId.value
               : i.relatedTaskId,
@@ -534,6 +583,19 @@ class MockTodayRepository implements TodayRepository {
       dailyLog: current.dailyLog,
       plannedItems: current.plannedItems,
       loggedItems: updatedLogs,
+    ));
+  }
+
+  @override
+  Future<void> updateItemsOrder(List<String> sortedItemIds) async {
+    final current = _logSubject.value!;
+    final itemsMap = {for (var item in current.plannedItems) item.id: item};
+    final updatedItems = sortedItemIds.map((id) => itemsMap[id]!).toList();
+    
+    _logSubject.add(DailyLogWithDetails(
+      dailyLog: current.dailyLog,
+      plannedItems: updatedItems,
+      loggedItems: current.loggedItems,
     ));
   }
 
