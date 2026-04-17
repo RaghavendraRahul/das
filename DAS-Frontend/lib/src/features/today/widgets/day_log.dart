@@ -731,7 +731,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.check_circle,
+                                  const Icon(Icons.check_circle,
                                       size: 12, color: Colors.green),
                                   const SizedBox(width: 3),
                                   Text(
