@@ -589,6 +589,12 @@ class _AppBarProjectSelector extends ConsumerWidget {
     final allProjectsAsync = ref.watch(projectsWithTasksProvider);
     final allProjects = allProjectsAsync.valueOrNull ?? [];
 
+    // Text colors adapt to the container background:
+    // Dark mode: dark container → white text
+    // Light mode: light container → dark text
+    final textColor = isDark ? Colors.white : const Color(0xFF05263E);
+    final labelColor = isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B);
+
     if (allProjects.length <= 1) {
       return Text(
         "PROJECT: ${project.name.toUpperCase()}",
@@ -619,7 +625,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: isMobile ? 11 : 12,
-              color: Colors.white.withOpacity(0.6),
+              color: labelColor,
             ),
           ),
           const SizedBox(width: 8),
@@ -628,16 +634,34 @@ class _AppBarProjectSelector extends ConsumerWidget {
               child: DropdownButton<String>(
                 value: project.id,
                 isDense: true,
-                icon: const Icon(Icons.arrow_drop_down,
+                icon: Icon(Icons.arrow_drop_down,
                     size: 24,
-                    color: Colors.white),
+                    color: textColor),
                 dropdownColor: isDark ? const Color(0xFF1F2937) : Colors.white,
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: isMobile ? 16 : 18,
                   letterSpacing: -0.5,
-                  color: Colors.white,
+                  color: textColor,
                 ),
+                selectedItemBuilder: (context) {
+                  return allProjects.map((p) {
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        p.project.name.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: isMobile ? 16 : 18,
+                          letterSpacing: -0.5,
+                          color: textColor,
+                        ),
+                      ),
+                    );
+                  }).toList();
+                },
                 items: allProjects
                     .map((p) => DropdownMenuItem<String>(
                           value: p.project.id,
@@ -645,6 +669,12 @@ class _AppBarProjectSelector extends ConsumerWidget {
                             p.project.name.toUpperCase(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: isMobile ? 16 : 18,
+                              letterSpacing: -0.5,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
                           ),
                         ))
                     .toList(),
