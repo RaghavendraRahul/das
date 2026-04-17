@@ -959,6 +959,20 @@ class _PlanItemCard extends StatelessWidget {
                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
                   ),
                 ),
+                if (item['notes'] != null && item['notes'].toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      item['notes'],
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1248,6 +1262,67 @@ class _ActivityLogItem extends StatelessWidget {
                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                   ),
                 ),
+                // Planned Remark
+                if (log['today_plan'] != null &&
+                    log['today_plan']['notes'] != null &&
+                    log['today_plan']['notes'].toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Planned Remark: ',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade300,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            log['today_plan']['notes'],
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                // Achieved Remark
+                if (log['work_notes'] != null &&
+                    log['work_notes'].toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Achieved Remark: ',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade300,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            log['work_notes'],
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

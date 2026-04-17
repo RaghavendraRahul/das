@@ -55,6 +55,7 @@ void showReviewTaskDialog(
   final startTimeController = TextEditingController(text: startTimeDisplay);
   final endTimeController = TextEditingController(text: endTimeDisplay);
 
+  final plannedRemark = todayPlan?['notes'] as String? ?? '';
   final remarkController =
       TextEditingController(text: item['work_notes'] as String? ?? '');
 
@@ -79,6 +80,35 @@ void showReviewTaskDialog(
                     ),
                   ),
                 const SizedBox(height: 20),
+
+                if (plannedRemark.isNotEmpty) ...[
+                  const Text(
+                    'Planned Remark:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    child: Text(
+                      plannedRemark,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Optional completion chips
                 Wrap(
@@ -335,7 +365,7 @@ void showReviewTaskDialog(
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Remarks / Work Notes:',
+                  'Achieved Remark:',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

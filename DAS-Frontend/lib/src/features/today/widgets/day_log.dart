@@ -10,6 +10,7 @@ import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 
 import 'review_task_dialog.dart';
+import 'task_config_modal.dart';
 
 class DayLog extends ConsumerWidget {
   const DayLog({super.key});
@@ -130,194 +131,169 @@ class DayLog extends ConsumerWidget {
               data['type'] == 'custom_template' ||
               data['type'] == 'custom' ||
               data['type'] == 'pending_item') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Starting task...'),
-                duration: Duration(seconds: 1),
+            // SHOW DIALOG to capture Planned Remark before starting unplanned task
+            showDialog(
+              context: context,
+              builder: (context) => TaskConfigModal(
+                initialTitle: data['name'] ?? 'New Unplanned Task',
+                initialDescription: data['description'],
+                initialDuration:
+                    ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                showQuadrantSelector: false,
+                onConfirm: ({
+                  required String name,
+                  required int duration,
+                  String? description,
+                  List<String>? selectedMilestoneIds,
+                  String? quadrant,
+                }) async {
+                  try {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Initializing unplanned task...'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+
+                    final apiService = ref.read(taskApiServiceProvider);
+                    final userId = ref.read(currentUserIdProvider);
+                    final planDate = todayStr;
+
+                    int? plannedItemId;
+
+                    // 1. Create the Plan Item (marked as unplanned)
+                    if (data['type'] == 'project_task') {
+                      final planItem = await apiService.addItemToTodayPlan(
+                        itemType: 'custom',
+                        title: name,
+                        planDate: planDate,
+                        plannedDurationMinutes: duration,
+                        quadrant: 'Q1',
+                        description: description,
+                        relatedTaskId: data['task_id'] != null
+                            ? parseTaskId(data['task_id'])
+                            : null,
+                        isUnplanned: true,
+                        userId: userId,
+                      );
+                      plannedItemId = planItem['id'] as int;
+                    } else if (data['type'] == 'catalog_item' &&
+                        data['catalog_id'] != null) {
+                      final planItem = await apiService.addItemToTodayPlan(
+                        itemType: 'catalog',
+                        catalogId: parseTaskId(data['catalog_id']),
+                        planDate: planDate,
+                        plannedDurationMinutes: duration,
+                        description: description,
+                        quadrant: 'Q1',
+                        isUnplanned: true,
+                        userId: userId,
+                      );
+                      plannedItemId = planItem['id'] as int;
+                    } else if (data['type'] == 'catalog_task' &&
+                        data['task_id'] != null) {
+                      final planItem = await apiService.addItemToTodayPlan(
+                        itemType: 'custom',
+                        title: name,
+                        planDate: planDate,
+                        plannedDurationMinutes: duration,
+                        quadrant: 'Q1',
+                        description: description,
+                        relatedTaskId: parseTaskId(data['task_id']),
+                        isUnplanned: true,
+                        userId: userId,
+                      );
+                      plannedItemId = planItem['id'] as int;
+                    } else if (data['type'] == 'custom_template') {
+                      final planItem = await apiService.addItemToTodayPlan(
+                        itemType: 'custom',
+                        title: name,
+                        planDate: planDate,
+                        plannedDurationMinutes: duration,
+                        quadrant: 'Q1',
+                        description: description,
+                        isUnplanned: true,
+                        userId: userId,
+                      );
+                      plannedItemId = planItem['id'] as int;
+                    } else if (data['type'] == 'pending_item') {
+                      if (data['is_today_inbox'] == true) {
+                        plannedItemId = data['id'] as int;
+                        await apiService.updateTodayPlanItem(plannedItemId, {
+                          'is_unplanned': true,
+                          'notes': description,
+                          'planned_duration_minutes': duration,
+                          'custom_title': name,
+                        });
+                      } else {
+                        final planItem = await apiService.addItemToTodayPlan(
+                          itemType: 'custom',
+                          title: name,
+                          planDate: planDate,
+                          plannedDurationMinutes: duration,
+                          quadrant: 'Q1',
+                          description: description,
+                          relatedTaskId: data['catalog_id'] != null
+                              ? parseTaskId(data['catalog_id'])
+                              : null,
+                          isUnplanned: true,
+                          userId: userId,
+                        );
+                        plannedItemId = planItem['id'] as int;
+                      }
+                    } else {
+                      final planItem = await apiService.addItemToTodayPlan(
+                        itemType: 'custom',
+                        title: name,
+                        planDate: planDate,
+                        plannedDurationMinutes: duration,
+                        quadrant: 'Q1',
+                        description: description,
+                        isUnplanned: true,
+                        userId: userId,
+                      );
+                      plannedItemId = planItem['id'] as int;
+                    }
+
+                    // 2. Start Task immediately
+                    final targetItemInfo = await apiService
+                        .moveTodayPlanToActivityLog(plannedItemId);
+
+                    // Clean up pending if applicable
+                    if (data['is_pending'] == true &&
+                        data['pending_id'] != null &&
+                        data['is_today_inbox'] != true) {
+                      await apiService.deletePendingTask(data['pending_id']);
+                    }
+
+                    // Refresh providers
+                    ref.invalidate(apiPendingItemsProvider(todayStr));
+                    ref.invalidate(apiAllPendingItemsProvider);
+                    ref.invalidate(apiTodayPlanProvider);
+                    ref.invalidate(apiActivityLogsProvider(todayStr));
+                    ref.invalidate(apiActiveTaskProvider);
+
+                    if (context.mounted) {
+                      if (targetItemInfo.isNotEmpty &&
+                          targetItemInfo.containsKey('id')) {
+                        showReviewTaskDialog(context, ref, targetItemInfo,
+                            isEditMode: false);
+                      }
+                    }
+                  } catch (e) {
+                    debugPrint('Error starting unplanned task: $e');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to start task: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
               ),
             );
-
-            final apiService = ref.read(taskApiServiceProvider);
-            final userId = ref.read(currentUserIdProvider);
-            final now = DateTime.now();
-            final planDate =
-                '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-
-            int? plannedItemId;
-            String taskName = data['name'] ?? 'Unnamed Task';
-            int duration = 60;
-
-            // Items dragged directly to activity log are marked as unplanned
-
-            // 1. Create Plan Item
-            if (data['type'] == 'project_task') {
-              taskName = data['name'];
-              duration = (data['duration'] as num?)?.toInt() ?? 60;
-              final description =
-                  'Unplanned task from \'${data['project_name'] ?? 'Project'}\'';
-
-              final planItem = await apiService.addItemToTodayPlan(
-                itemType: 'custom',
-                title: taskName,
-                planDate: planDate,
-                plannedDurationMinutes: duration,
-                quadrant: 'Q1',
-                description: description,
-                relatedTaskId: data['task_id'] != null
-                    ? parseTaskId(data['task_id'])
-                    : null,
-                isUnplanned: true,
-                userId: userId,
-              );
-              plannedItemId = planItem['id'] as int;
-            } else if (data['type'] == 'catalog_item' &&
-                data['catalog_id'] != null) {
-              taskName = data['name'];
-              duration = (data['duration'] as num?)?.toInt() ?? 60;
-              final planItem = await apiService.addItemToTodayPlan(
-                itemType: 'catalog',
-                catalogId: parseTaskId(data['catalog_id']),
-                planDate: planDate,
-                plannedDurationMinutes: duration,
-                quadrant: 'Q1',
-                description: 'Unplanned - started directly from catalog',
-                isUnplanned: true,
-                userId: userId,
-              );
-              plannedItemId = planItem['id'] as int;
-            } else if (data['type'] == 'catalog_task' &&
-                data['task_id'] != null) {
-              taskName = data['name'];
-              duration = (data['duration'] as num?)?.toInt() ?? 60;
-              final planItem = await apiService.addItemToTodayPlan(
-                itemType: 'custom',
-                title: taskName,
-                planDate: planDate,
-                plannedDurationMinutes: duration,
-                quadrant: 'Q1',
-                description:
-                    'Unplanned task started directly from task catalog',
-                relatedTaskId: parseTaskId(data['task_id']),
-                isUnplanned: true,
-                userId: userId,
-              );
-              plannedItemId = planItem['id'] as int;
-            } else if (data['type'] == 'custom_template') {
-              taskName = data['name'];
-              duration = (data['duration'] as num?)?.toInt() ?? 60;
-              final planItem = await apiService.addItemToTodayPlan(
-                itemType: 'custom',
-                title: taskName,
-                planDate: planDate,
-                plannedDurationMinutes: duration,
-                quadrant: 'Q1',
-                description: data['description']?.isNotEmpty == true
-                    ? data['description']
-                    : 'Unplanned task from custom template',
-                isUnplanned: true,
-                userId: userId,
-              );
-              plannedItemId = planItem['id'] as int;
-            } else if (data['type'] == 'pending_item') {
-              if (data['is_today_inbox'] == true) {
-                // Today inbox item — already exists as a TodayPlan record
-                // Just move it directly to activity log (no need to create a new plan item)
-                taskName = data['name'] ?? 'Pending Task';
-                duration = (data['duration'] as num?)?.toInt() ?? 60;
-                plannedItemId = data['id'] as int;
-                // Mark as unplanned before moving
-                await apiService.updateTodayPlanItem(plannedItemId, {
-                  'is_unplanned': true,
-                });
-              } else {
-                // Historical pending task - must be created as a new plan item
-                taskName = data['name'] ?? 'Pending Task';
-                duration = (data['duration'] as num?)?.toInt() ?? 60;
-                final planItem = await apiService.addItemToTodayPlan(
-                  itemType: 'custom',
-                  title: taskName,
-                  planDate: planDate,
-                  plannedDurationMinutes: duration,
-                  quadrant: 'Q1',
-                  description: data['description'] ?? 'Unplanned pending task',
-                  relatedTaskId: data['catalog_id'] != null
-                      ? parseTaskId(data['catalog_id'])
-                      : null,
-                  isUnplanned: true,
-                  userId: userId,
-                );
-                plannedItemId = planItem['id'] as int;
-              }
-            } else {
-              taskName = data['name'];
-              final planItem = await apiService.addItemToTodayPlan(
-                itemType: 'custom',
-                title: taskName,
-                planDate: planDate,
-                plannedDurationMinutes: 60,
-                quadrant: 'Q1',
-                description: 'Unplanned task started directly from catalog',
-                isUnplanned: true,
-                userId: userId,
-              );
-              plannedItemId = planItem['id'] as int;
-            }
-
-            // 2. Start Task using API
-            debugPrint(
-                '🚀 [Drag Type 2] Calling moveTodayPlanToActivityLog for plannedItemId: $plannedItemId');
-            final targetItemInfo =
-                await apiService.moveTodayPlanToActivityLog(plannedItemId);
-            debugPrint(
-                '✅ [Drag Type 2] Moved to activity log: ${targetItemInfo.isNotEmpty}');
-
-            // If it's a historical pending task (from Pending table), delete it
-            // Don't delete for today inbox items — they are TodayPlan records, not Pending records
-            if (data['is_pending'] == true &&
-                data['pending_id'] != null &&
-                data['is_today_inbox'] != true) {
-              await apiService.deletePendingTask(data['pending_id']);
-            }
-
-            // Refresh all pending and plan data
-            ref.invalidate(apiPendingItemsProvider(todayStr));
-            ref.invalidate(apiAllPendingItemsProvider);
-
-            // Invalidate to refresh UI
-            ref.invalidate(apiTodayPlanProvider);
-            ref.invalidate(apiActivityLogsProvider(todayStr));
-            ref.invalidate(apiActiveTaskProvider);
-
-            if (context.mounted) {
-              debugPrint(
-                  '📋 [Drag Type 2] Target item info keys: ${targetItemInfo.keys.toList()}');
-              if (targetItemInfo.isNotEmpty &&
-                  targetItemInfo.containsKey('id')) {
-                debugPrint(
-                    '🎯 [Drag Type 2] Opening review dialog with targetItemInfo');
-                showReviewTaskDialog(context, ref, targetItemInfo,
-                    isEditMode: false);
-              } else {
-                try {
-                  debugPrint('⏳ [Drag Type 2] Fetching active task...');
-                  final actvTask = await apiService.getActiveTask();
-                  if (actvTask is Map<String, dynamic> &&
-                      actvTask.containsKey('id')) {
-                    if (context.mounted) {
-                      debugPrint(
-                          '🎯 [Drag Type 2] Opening dialog with active task');
-                      showReviewTaskDialog(context, ref, actvTask,
-                          isEditMode: false);
-                    }
-                  } else {
-                    debugPrint(
-                        '⚠️ [Drag Type 2] Active task not found or invalid');
-                  }
-                } catch (e) {
-                  debugPrint('❌ [Drag Type 2] Error fetching active task: $e');
-                }
-              }
-            }
           }
         } catch (e) {
           debugPrint('Drag start error: $e');
@@ -819,6 +795,65 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                             ),
                         ],
                       ),
+                      // Planned Remark
+                      if (todayPlan != null &&
+                          todayPlan['notes'] != null &&
+                          todayPlan['notes'].toString().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.blue.withOpacity(0.1)
+                                : Colors.blue.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.blue.withOpacity(0.2)
+                                  : Colors.blue.withOpacity(0.1),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.lightbulb_outline,
+                                  size: 12,
+                                  color: isDark
+                                      ? Colors.blue.shade300
+                                      : Colors.blue.shade700),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Planned Remark:',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                                      ),
+                                    ),
+                                    Text(
+                                      todayPlan['notes'],
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontStyle: FontStyle.italic,
+                                        color: isDark
+                                            ? Colors.blue.shade100
+                                            : Colors.blue.shade900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Achieved Remark
                       if (item['work_notes'] != null &&
                           (item['work_notes'] as String).isNotEmpty) ...[
                         const SizedBox(height: 8),
@@ -846,15 +881,28 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                                       : Colors.grey.shade600),
                               const SizedBox(width: 6),
                               Expanded(
-                                child: Text(
-                                  item['work_notes'],
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontStyle: FontStyle.italic,
-                                    color: isDark
-                                        ? Colors.grey.shade300
-                                        : Colors.grey.shade700,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Achieved Remark:',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    Text(
+                                      item['work_notes'],
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontStyle: FontStyle.italic,
+                                        color: isDark
+                                            ? Colors.grey.shade300
+                                            : Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

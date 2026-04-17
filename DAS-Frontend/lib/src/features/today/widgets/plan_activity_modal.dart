@@ -269,8 +269,8 @@ class PlanActivityModal extends HookConsumerWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // Description
-                    Text("Description / Strategy", style: labelStyle),
+                    // Planned Remark
+                    Text("Planned Remark", style: labelStyle),
                     const SizedBox(height: 8),
                     TextField(
                       controller: descriptionController,

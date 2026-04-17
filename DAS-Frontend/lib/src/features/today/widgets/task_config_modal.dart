@@ -61,6 +61,7 @@ class TaskConfigModal extends HookConsumerWidget {
   final String? initialTitle;
   final String? initialDescription;
   final int? initialDuration;
+  final bool showQuadrantSelector;
 
   const TaskConfigModal({
     super.key,
@@ -74,6 +75,7 @@ class TaskConfigModal extends HookConsumerWidget {
     this.initialDescription,
     this.initialDuration,
     this.initialQuadrant,
+    this.showQuadrantSelector = true,
   });
 
   @override
@@ -485,7 +487,7 @@ class TaskConfigModal extends HookConsumerWidget {
                     // Action Plan / Strategy
                     SpeechInputField(
                       controller: descriptionController,
-                      labelText: 'Action Plan / Strategy',
+                      labelText: 'Planned Remark',
                       hintText:
                           'What specifically will you do to achieve these milestones?',
                       maxLines: 3,
@@ -493,59 +495,60 @@ class TaskConfigModal extends HookConsumerWidget {
 
                     const SizedBox(height: 20),
 
-                    // Quadrant Selector
-                    Text(
-                      'Add to Quadrant:',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: isDark ? Colors.grey.shade300 : const Color(0xFF05263E),
+                     if (showQuadrantSelector) ...[
+                      Text(
+                        'Add to Quadrant:',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: isDark ? Colors.grey.shade300 : const Color(0xFF05263E),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final q in [
-                          ('Q1', 'Q1 Do First', Colors.red),
-                          ('Q2', 'Q2 Schedule', Colors.orange),
-                          ('Q3', 'Q3 Delegate', Colors.purple),
-                          ('Q4', 'Q4 Eliminate', Colors.green),
-                        ])
-                          GestureDetector(
-                            onTap: () => selectedQuadrant.value = q.$1,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: selectedQuadrant.value == q.$1
-                                    ? q.$3.withOpacity(0.3)
-                                    : Colors.transparent,
-                                border: Border.all(
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final q in [
+                            ('Q1', 'Q1 Do First', Colors.red),
+                            ('Q2', 'Q2 Schedule', Colors.orange),
+                            ('Q3', 'Q3 Delegate', Colors.purple),
+                            ('Q4', 'Q4 Eliminate', Colors.green),
+                          ])
+                            GestureDetector(
+                              onTap: () => selectedQuadrant.value = q.$1,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
                                   color: selectedQuadrant.value == q.$1
-                                      ? q.$3
-                                      : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                                  width: selectedQuadrant.value == q.$1 ? 2 : 1,
+                                      ? q.$3.withOpacity(0.3)
+                                      : Colors.transparent,
+                                  border: Border.all(
+                                    color: selectedQuadrant.value == q.$1
+                                        ? q.$3
+                                        : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                                    width: selectedQuadrant.value == q.$1 ? 2 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                q.$2,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: selectedQuadrant.value == q.$1
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: selectedQuadrant.value == q.$1
-                                      ? q.$3
-                                      : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                child: Text(
+                                  q.$2,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: selectedQuadrant.value == q.$1
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: selectedQuadrant.value == q.$1
+                                        ? q.$3
+                                        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                     // Duration Slider
                     Row(

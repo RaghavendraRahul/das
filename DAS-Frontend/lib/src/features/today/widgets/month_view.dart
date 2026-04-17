@@ -743,12 +743,20 @@ class MonthView extends HookConsumerWidget {
                         ),
                       ),
                       if (desc.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Planned Remark:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                          ),
+                        ),
                         Text(
                           desc,
                           style: TextStyle(
                             fontSize: 12,
-                            color: chip.subText,
+                            color: isDark ? Colors.grey.shade300 : Colors.black87,
                           ),
                         ),
                       ],

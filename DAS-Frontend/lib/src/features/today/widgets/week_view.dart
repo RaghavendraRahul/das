@@ -695,8 +695,19 @@ class _EventCard extends HookConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (description.isNotEmpty) Text(description),
-                  const SizedBox(height: 8),
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Planned Remark:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                      ),
+                    ),
+                    Text(description),
+                  ],
+                  const SizedBox(height: 12),
                   Text('Duration: ${durationMinutes}min'),
                   if (item['quadrant'] != null)
                     Text('Quadrant: ${item['quadrant']}'),

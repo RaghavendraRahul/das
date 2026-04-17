@@ -654,116 +654,106 @@ class _QuadrantBox extends ConsumerWidget {
             debugPrint('Error moving item: $e');
           }
         } else if (data.containsKey('type')) {
-          // DIRECT ADD on Drag and Drop for modern flow
-          try {
-            final apiService = ref.read(taskApiServiceProvider);
-            final userId = ref.read(currentUserIdProvider);
-            final planDate = selectedDateStr;
-
-            final int duration =
-                ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120);
-
-            // Case: today-inbox pending_item — already a TodayPlan row, just reassign quadrant
-            if (data['type'] == 'pending_item' &&
-                data['is_today_inbox'] == true) {
+          if (data['type'] == 'pending_item' && data['is_today_inbox'] == true) {
+            // Special Case: already a TodayPlan record, just needs quadrant update
+            try {
+              final apiService = ref.read(taskApiServiceProvider);
               await apiService.updateTodayPlanItem(data['id'], {
                 'quadrant': quadrant,
                 'status': 'PLANNED',
               });
-              final selectedDate = ref.read(selectedDateProvider);
-              final refreshDateStr =
-                  '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
               ref.invalidate(apiTodayPlanProvider);
-              ref.invalidate(apiPendingItemsProvider(refreshDateStr));
-              ref.invalidate(apiAllPendingItemsProvider);
-            } else if ((data['type'] == 'catalog_item' ||
-                    data['type'] == 'custom_template') &&
-                (data['catalog_id'] != null || data['template_id'] != null)) {
-              // Catalog item — add using the catalog endpoint
-              await apiService.addItemToTodayPlan(
-                itemType: 'catalog',
-                catalogId: data['catalog_id'] != null
-                    ? parseTaskId(data['catalog_id'])
-                    : parseTaskId(data['template_id']),
-                planDate: planDate,
-                plannedDurationMinutes: duration,
-                description: data['description'],
-                quadrant: quadrant,
-                userId: userId,
-              );
-
-              // Clean up pending if applicable
-              if (data['is_pending'] == true && data['pending_id'] != null) {
-                await apiService.deletePendingTask(data['pending_id']);
-                final selectedDate = ref.read(selectedDateProvider);
-                final refreshDateStr =
-                    '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-                ref.invalidate(apiPendingItemsProvider(refreshDateStr));
-                ref.invalidate(apiAllPendingItemsProvider);
-              }
-
-              ref.invalidate(apiTodayPlanProvider);
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Added "${data['name']}" to $quadrant'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-              }
-            } else {
-              // Project task, catalog_task, or custom — add as custom item
-              await apiService.addItemToTodayPlan(
-                itemType: 'custom',
-                title: data['name'] ?? 'New Task',
-                planDate: planDate,
-                description: data['description'],
-                plannedDurationMinutes: duration,
-                quadrant: quadrant,
-                relatedTaskId: data['task_id'] != null
-                    ? parseTaskId(data['task_id'])
-                    : (data['id'] != null && data['type'] == 'catalog_task'
-                        ? parseTaskId(data['id'])
-                        : null),
-                userId: userId,
-              );
-
-              // Clean up pending if applicable
-              if (data['is_pending'] == true &&
-                  data['pending_id'] != null &&
-                  data['is_today_inbox'] != true) {
-                await apiService.deletePendingTask(data['pending_id']);
-                final selectedDate = ref.read(selectedDateProvider);
-                final refreshDateStr =
-                    '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-                ref.invalidate(apiPendingItemsProvider(refreshDateStr));
-                ref.invalidate(apiAllPendingItemsProvider);
-              }
-
-              ref.invalidate(apiTodayPlanProvider);
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Added "${data['name']}" to $quadrant'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-              }
+              ref.invalidate(apiPendingItemsProvider(selectedDateStr));
+            } catch (e) {
+              debugPrint('Error updating pending item quadrant: $e');
             }
-          } catch (e) {
-            debugPrint('Error direct adding item: $e');
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to add: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
+          } else {
+            // Normal Catalog/Task Item Drag - OPEN DIALOG to capture Planned Remark
+            showDialog(
+              context: context,
+              builder: (context) => TaskConfigModal(
+                initialTitle: data['name'] ?? 'New Task',
+                initialDescription: data['description'],
+                initialDuration:
+                    ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                showQuadrantSelector: false, // Box determines quadrant
+                onConfirm: ({
+                  required String name,
+                  required int duration,
+                  String? description,
+                  List<String>? selectedMilestoneIds,
+                  String? quadrant,
+                }) async {
+                  try {
+                    final apiService = ref.read(taskApiServiceProvider);
+                    final userId = ref.read(currentUserIdProvider);
+                    final planDate = selectedDateStr;
+
+                    if ((data['type'] == 'catalog_item' ||
+                            data['type'] == 'custom_template') &&
+                        (data['catalog_id'] != null ||
+                            data['template_id'] != null)) {
+                      await apiService.addItemToTodayPlan(
+                        itemType: 'catalog',
+                        catalogId: data['catalog_id'] != null
+                            ? parseTaskId(data['catalog_id'])
+                            : parseTaskId(data['template_id']),
+                        planDate: planDate,
+                        plannedDurationMinutes: duration,
+                        description: description,
+                        quadrant: quadrant,
+                        userId: userId,
+                      );
+                    } else {
+                      await apiService.addItemToTodayPlan(
+                        itemType: 'custom',
+                        title: name,
+                        planDate: planDate,
+                        description: description,
+                        plannedDurationMinutes: duration,
+                        quadrant: quadrant,
+                        relatedTaskId: data['task_id'] != null
+                            ? parseTaskId(data['task_id'])
+                            : (data['id'] != null &&
+                                    data['type'] == 'catalog_task'
+                                ? parseTaskId(data['id'])
+                                : null),
+                        userId: userId,
+                      );
+                    }
+
+                    if (data['is_pending'] == true &&
+                        data['pending_id'] != null) {
+                      await apiService.deletePendingTask(data['pending_id']);
+                      ref.invalidate(apiPendingItemsProvider(planDate));
+                      ref.invalidate(apiAllPendingItemsProvider);
+                    }
+
+                    ref.invalidate(apiTodayPlanProvider);
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Added "$name" to $quadrant'),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    debugPrint('Error adding item from drag: $e');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to add: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            );
           }
         }
       },
@@ -1254,6 +1244,21 @@ class _ApiPlannedItem extends ConsumerWidget {
                               letterSpacing: 1,
                             ),
                           ),
+                        ),
+                      ),
+                    if (apiItem['notes'] != null &&
+                        apiItem['notes'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          apiItem['notes'],
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.grey.shade500,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                   ],
