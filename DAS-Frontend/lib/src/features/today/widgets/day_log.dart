@@ -110,30 +110,45 @@ class DayLog extends ConsumerWidget {
                     int? plannedItemId;
 
                     // Create the Plan Item (marked as unplanned)
-                    if (data['type'] == 'project_task' || data['type'] == 'catalog_task') {
+                    debugPrint('📦 [DayLog] Creating unplanned task for log: type=${data['type']}, name=$name');
+
+                    if (data['type'] == 'catalog_item' || 
+                        data['type'] == 'template' || 
+                        data['type'] == 'custom_template') {
+                      // Standard catalog items
+                      final catalogId = data['catalog_id'] ?? data['id'] ?? data['template_id'];
+                      debugPrint('   - Using catalog path: id=$catalogId');
+                      
                       final planItem = await apiService.addItemToTodayPlan(
-                        itemType: data['type'] == 'project_task' ? 'custom' : 'custom',
+                        itemType: 'catalog',
+                        catalogId: catalogId,
+                        planDate: planDate,
+                        plannedDurationMinutes: duration,
+                        description: description,
+                        isUnplanned: true,
+                        quadrant: 'inbox',
+                        userId: userId,
+                      );
+                      plannedItemId = planItem['id'] as int;
+                    } else if (data['type'] == 'project_task' || data['type'] == 'catalog_task') {
+                      // Tasks linked to project/backend tasks
+                      final taskId = data['task_id'] != null ? parseTaskId(data['task_id']) : (data['id'] != null ? parseTaskId(data['id']) : null);
+                      debugPrint('   - Using task path: taskId=$taskId');
+
+                      final planItem = await apiService.addItemToTodayPlan(
+                        itemType: 'custom',
                         title: name,
                         planDate: planDate,
                         plannedDurationMinutes: duration,
                         description: description,
-                        relatedTaskId: data['task_id'] != null ? parseTaskId(data['task_id']) : null,
+                        relatedTaskId: taskId,
                         isUnplanned: true,
-                        userId: userId,
-                      );
-                      plannedItemId = planItem['id'] as int;
-                    } else if (data['type'] == 'catalog_item') {
-                      final planItem = await apiService.addItemToTodayPlan(
-                        itemType: 'catalog',
-                        catalogId: parseTaskId(data['catalog_id']),
-                        planDate: planDate,
-                        plannedDurationMinutes: duration,
-                        description: description,
-                        isUnplanned: true,
+                        quadrant: 'inbox',
                         userId: userId,
                       );
                       plannedItemId = planItem['id'] as int;
                     } else if (data['type'] == 'pending_item') {
+                      debugPrint('   - Using pending path: id=${data['id']}, is_today_inbox=${data['is_today_inbox']}');
                       if (data['is_today_inbox'] == true) {
                         plannedItemId = data['id'] as int;
                         await apiService.updateTodayPlanItem(plannedItemId!, {
@@ -149,11 +164,14 @@ class DayLog extends ConsumerWidget {
                           plannedDurationMinutes: duration,
                           description: description,
                           isUnplanned: true,
+                          quadrant: 'inbox',
                           userId: userId,
                         );
                         plannedItemId = planItem['id'] as int;
                       }
                     } else {
+                      // Generic custom items
+                      debugPrint('   - Using generic custom path');
                       final planItem = await apiService.addItemToTodayPlan(
                         itemType: 'custom',
                         title: name,
@@ -161,16 +179,20 @@ class DayLog extends ConsumerWidget {
                         plannedDurationMinutes: duration,
                         description: description,
                         isUnplanned: true,
+                        quadrant: 'inbox',
                         userId: userId,
                       );
                       plannedItemId = planItem['id'] as int;
                     }
 
+                    debugPrint('   - Created plannedItemId: $plannedItemId');
                     if (plannedItemId != null) {
                       // Clean up pending if applicable
                       if (data['is_pending'] == true && data['pending_id'] != null && data['is_today_inbox'] != true) {
                         await apiService.deletePendingTask(data['pending_id']);
                       }
+                      
+                      debugPrint('   - Opening manual review for $plannedItemId');
                       await openManualReview(plannedItemId, {
                         ...data,
                         'name': name,
@@ -180,7 +202,9 @@ class DayLog extends ConsumerWidget {
                       description: description, 
                       duration: duration);
                     }
-                  } catch (e) {
+                  } catch (e, stack) {
+                    debugPrint('❌ [DayLog] Failed to create unplanned item: $e');
+                    debugPrint(stack.toString());
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to start task: $e'), backgroundColor: Colors.red));
                     }
@@ -191,15 +215,32 @@ class DayLog extends ConsumerWidget {
           }
         } catch (e) {
           debugPrint('Drag start error: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to start task: $e')),
-          );
         }
       },
+      onWillAcceptWithDetails: (details) {
+        if (isReadOnly) return false;
+        final data = details.data;
+        if (data is! Map<String, dynamic>) return false;
+        
+        // Accept from today_plan or catalog/unplanned sources
+        return data['source'] == 'today_plan' || 
+               data['source'] == 'catalog' ||
+               data['source'] == 'pending' ||
+               data['type'] == 'project_task' ||
+               data['type'] == 'catalog_item' ||
+               data['type'] == 'catalog_task' ||
+               data['type'] == 'custom_template' ||
+               data['type'] == 'template';
+      },
       builder: (context, candidateData, rejectedData) {
+        final isHovering = candidateData.isNotEmpty;
         return Container(
+          height: double.infinity,
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1F2937) : Colors.white,
+            color: isHovering 
+                ? (isDark ? Colors.blue.withOpacity(0.05) : Colors.blue.shade50.withOpacity(0.3))
+                : (isDark ? const Color(0xFF1F2937) : Colors.white),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isDark

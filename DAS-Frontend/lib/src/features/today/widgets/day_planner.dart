@@ -494,6 +494,9 @@ class _ApiListView extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isReadOnly = ref.watch(isReadOnlyProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     // Optimistic local state for reordering
     final localItems = useState<List<Map<String, dynamic>>>(apiItems);
 
@@ -503,41 +506,12 @@ class _ApiListView extends HookConsumerWidget {
       return null;
     }, [apiItems]);
 
-    if (localItems.value.isEmpty) {
-      return Center(
-        child: Opacity(
-          opacity: 0.1,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.assignment_turned_in_rounded,
-                size: 120,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : const Color(0xFF05263E),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "NO TASKS PLANNED",
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : const Color(0xFF05263E),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return DragTarget<Object>(
+      onWillAcceptWithDetails: (details) {
+        if (isReadOnly || isFinalized) return false;
+        return details.data is Map<String, dynamic>;
+      },
       onAcceptWithDetails: (details) async {
-
         if (details.data is! Map<String, dynamic>) return;
         final data = details.data as Map<String, dynamic>;
 
@@ -564,19 +538,23 @@ class _ApiListView extends HookConsumerWidget {
                   final planDate =
                       '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
 
+                  int? plannedItemId;
                   if (data['type'] == 'catalog_item' ||
-                      data['type'] == 'catalog_task') {
-                    await apiService.addItemToTodayPlan(
+                      data['type'] == 'catalog_task' ||
+                      data['type'] == 'template' ||
+                      data['type'] == 'custom_template') {
+                    final planItem = await apiService.addItemToTodayPlan(
                       itemType: 'catalog',
-                      catalogId: data['id'],
+                      catalogId: data['catalog_id'] ?? data['id'] ?? data['template_id'],
                       planDate: planDate,
                       plannedDurationMinutes: duration,
                       description: description,
                       quadrant: 'inbox',
                       userId: userId,
                     );
+                    plannedItemId = planItem['id'] as int?;
                   } else {
-                    await apiService.addItemToTodayPlan(
+                    final planItem = await apiService.addItemToTodayPlan(
                       itemType: 'custom',
                       title: name,
                       planDate: planDate,
@@ -588,8 +566,27 @@ class _ApiListView extends HookConsumerWidget {
                           : null,
                       userId: userId,
                     );
+                    plannedItemId = planItem['id'] as int?;
                   }
+                  
                   ref.invalidate(apiTodayPlanProvider);
+
+                  // Open Review Dialog (Step 2)
+                  if (context.mounted && plannedItemId != null) {
+                    final Map<String, dynamic> shellItem = {
+                      'id': 0,
+                      'today_plan': {
+                        'id': plannedItemId,
+                        'catalog_name': name,
+                        'planned_duration_minutes': duration,
+                        'notes': description ?? '',
+                      },
+                      'actual_start_time': null,
+                      'actual_end_time': null,
+                      'minutes_worked': 0,
+                    };
+                    showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
+                  }
                 } catch (e) {
                   debugPrint('Error adding task in list view: $e');
                 }
@@ -599,42 +596,87 @@ class _ApiListView extends HookConsumerWidget {
         }
       },
       builder: (context, candidateData, rejectedData) {
-        return ReorderableListView(
-          buildDefaultDragHandles: false,
-          onReorder: (oldIndex, newIndex) async {
-            if (newIndex > oldIndex) {
-              newIndex -= 1;
-            }
-            // Update local state IMMEDIATELY for optimistic feel
-            final items = List<Map<String, dynamic>>.from(localItems.value);
-            final item = items.removeAt(oldIndex);
-            items.insert(newIndex, item);
-            localItems.value = items;
+        final isHovering = candidateData.isNotEmpty;
+        
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            color: isHovering 
+              ? (isDark ? Colors.blue.withOpacity(0.05) : Colors.blue.shade50.withOpacity(0.3))
+              : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: localItems.value.isEmpty
+              ? Center(
+                  child: Opacity(
+                    opacity: 0.1,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.assignment_turned_in_rounded,
+                          size: 120,
+                          color: isDark ? Colors.white : const Color(0xFF05263E),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "NO TASKS PLANNED",
+                          style: GoogleFonts.outfit(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                            color: isDark ? Colors.white : const Color(0xFF05263E),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "DROP ITEMS HERE TO START PLANNING",
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.0,
+                            color: isDark ? Colors.white : const Color(0xFF05263E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : ReorderableListView(
+                  buildDefaultDragHandles: false,
+                  padding: const EdgeInsets.only(bottom: 100), // Extra space at bottom to facilitate drops
+                  onReorder: (oldIndex, newIndex) async {
+                    if (newIndex > oldIndex) {
+                      newIndex -= 1;
+                    }
+                    final items = List<Map<String, dynamic>>.from(localItems.value);
+                    final item = items.removeAt(oldIndex);
+                    items.insert(newIndex, item);
+                    localItems.value = items;
 
-            try {
-              // Trigger backend sync and WAIT for it
-              final sortedIds = items.map((e) => e['id'].toString()).toList();
-              await ref.read(todayRepositoryProvider).updateItemsOrder(sortedIds);
-              // REFETCH from server to sync state
-              ref.invalidate(apiTodayPlanProvider);
-            } catch (e) {
-              debugPrint('Error reordering items: $e');
-              // Optionally revert localItems if failed
-            }
-          },
-          children: localItems.value.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
-            return Padding(
-              key: ValueKey(item['id']),
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: _ApiPlannedItem(
-                apiItem: item,
-                isFinalized: isFinalized,
-                index: index,
-              ),
-            );
-          }).toList(),
+                    try {
+                      final sortedIds = items.map((e) => e['id'].toString()).toList();
+                      await ref.read(todayRepositoryProvider).updateItemsOrder(sortedIds);
+                      ref.invalidate(apiTodayPlanProvider);
+                    } catch (e) {
+                      debugPrint('Error reordering items: $e');
+                    }
+                  },
+                  children: localItems.value.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+                    return Padding(
+                      key: ValueKey(item['id']),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: _ApiPlannedItem(
+                        apiItem: item,
+                        isFinalized: isFinalized,
+                        index: index,
+                      ),
+                    );
+                  }).toList(),
+                ),
         );
       },
     );
@@ -711,6 +753,9 @@ class _QuadrantBox extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isReadOnly = ref.watch(isReadOnlyProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     // Optimistic local state for reordering within this quadrant
     final localItems = useState<List<Map<String, dynamic>>>(apiItems);
 
@@ -734,6 +779,10 @@ class _QuadrantBox extends HookConsumerWidget {
     final selectedDateStr =
         '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
     return DragTarget<Object>(
+      onWillAcceptWithDetails: (details) {
+        if (isReadOnly || isFinalized) return false;
+        return details.data is Map<String, dynamic>;
+      },
       onAcceptWithDetails: (details) async {
 
         if (details.data is! Map<String, dynamic>) return;
@@ -793,23 +842,28 @@ class _QuadrantBox extends HookConsumerWidget {
                     final userId = ref.read(currentUserIdProvider);
                     final planDate = selectedDateStr;
 
+                    int? plannedItemId;
                     if ((data['type'] == 'catalog_item' ||
-                            data['type'] == 'custom_template') &&
+                            data['type'] == 'custom_template' ||
+                            data['type'] == 'template' ||
+                            data['type'] == 'catalog_task') &&
                         (data['catalog_id'] != null ||
-                            data['template_id'] != null)) {
-                      await apiService.addItemToTodayPlan(
+                            data['template_id'] != null ||
+                            data['id'] != null)) {
+                      final planItem = await apiService.addItemToTodayPlan(
                         itemType: 'catalog',
-                        catalogId: data['catalog_id'] != null
-                            ? parseTaskId(data['catalog_id'])
-                            : parseTaskId(data['template_id']),
+                        catalogId: data['catalog_id'] ?? 
+                                  data['template_id'] ?? 
+                                  data['id'],
                         planDate: planDate,
                         plannedDurationMinutes: duration,
                         description: description,
                         quadrant: quadrant,
                         userId: userId,
                       );
+                      plannedItemId = planItem['id'] as int?;
                     } else {
-                      await apiService.addItemToTodayPlan(
+                      final planItem = await apiService.addItemToTodayPlan(
                         itemType: 'custom',
                         title: name,
                         planDate: planDate,
@@ -824,6 +878,7 @@ class _QuadrantBox extends HookConsumerWidget {
                                 : null),
                         userId: userId,
                       );
+                      plannedItemId = planItem['id'] as int?;
                     }
 
                     if (data['is_pending'] == true &&
@@ -835,14 +890,21 @@ class _QuadrantBox extends HookConsumerWidget {
 
                     ref.invalidate(apiTodayPlanProvider);
 
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Added "$name" to $quadrant'),
-                          backgroundColor: Colors.green,
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
+                    // Open Review Dialog (Step 2)
+                    if (context.mounted && plannedItemId != null) {
+                      final Map<String, dynamic> shellItem = {
+                        'id': 0,
+                        'today_plan': {
+                          'id': plannedItemId,
+                          'catalog_name': name,
+                          'planned_duration_minutes': duration,
+                          'notes': description ?? '',
+                        },
+                        'actual_start_time': null,
+                        'actual_end_time': null,
+                        'minutes_worked': 0,
+                      };
+                      showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
                     }
                   } catch (e) {
                     debugPrint('Error adding item from drag: $e');
@@ -862,7 +924,6 @@ class _QuadrantBox extends HookConsumerWidget {
         }
       },
       builder: (context, candidateData, rejectedData) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final isHovering = candidateData.isNotEmpty;
         final selectedQuadrant = ref.watch(selectedQuadrantProvider);
         final isSelected = selectedQuadrant == quadrant;

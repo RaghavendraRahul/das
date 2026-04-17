@@ -3555,11 +3555,18 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         print(f'[BULK-STOP] Found {activity_logs.count()} IN_PROGRESS logs for plan {today_plan_id}')
         
         if not activity_logs.exists():
-            error_msg = f"No in-progress activities found for plan {today_plan_id}. Available statuses: {ActivityLog.objects.filter(today_plan=today_plan).values_list('status', flat=True).distinct()}"
-            print(f'[BULK-STOP] ERROR: {error_msg}')
-            return Response(
-                {"error": error_msg},
-                status=status.HTTP_400_BAD_REQUEST
+            print(f'[BULK-STOP] No in-progress activities found for plan {today_plan_id}. Creating a new manual log entry.')
+            # Create a new activity log entry for this plan and user
+            ActivityLog.objects.create(
+                user=request.user,
+                today_plan=today_plan,
+                status='IN_PROGRESS',
+                actual_start_time=timezone.now()
+            )
+            # Re-fetch the activity_logs queryset
+            activity_logs = ActivityLog.objects.filter(
+                today_plan=today_plan,
+                status='IN_PROGRESS'
             )
         
         # Define timezone

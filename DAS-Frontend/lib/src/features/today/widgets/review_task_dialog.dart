@@ -324,90 +324,6 @@ void showReviewTaskDialog(
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Start Time (Editable only on drag-drop, disabled on edit)
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 120,
-                      child: Text(
-                        'Start Time:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: startTimeController,
-                        enabled: true,
-                        keyboardType: TextInputType.datetime,
-                        decoration: InputDecoration(
-                          hintText: 'HH:MM',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Colors.blue, width: 2),
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isEditMode ? Colors.grey : Colors.black,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // End Time (Editable only on drag-drop, disabled on edit)
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 120,
-                      child: Text(
-                        'End Time:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: endTimeController,
-                        enabled: true,
-                        keyboardType: TextInputType.datetime,
-                        decoration: InputDecoration(
-                          hintText: 'HH:MM',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Colors.blue, width: 2),
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isEditMode ? Colors.grey : Colors.black,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
                 // Extra Time Worked - Show for both Completed and Pending
                 Row(
                   children: [
@@ -603,7 +519,6 @@ void showReviewTaskDialog(
               padding: const EdgeInsets.only(right: 8, bottom: 8),
               child: ElevatedButton(
                 onPressed: () async {
-                  Navigator.pop(context);
                   try {
                     final apiService = ref.read(taskApiServiceProvider);
                     final isCompleted = selectedOption == 'completed';
@@ -616,79 +531,107 @@ void showReviewTaskDialog(
 
                     final today = DateTime.now();
                     final todayStr = DateFormat('yyyy-MM-dd').format(today);
-                    final todayPlanId = todayPlan?['id'] as int? ?? 0;
+                    
+                    // Robust ID extraction
+                    final todayPlanId = int.tryParse(todayPlan?['id']?.toString() ?? '') ?? 0;
+                    
+                    debugPrint('💾 [ReviewTaskDialog] Saving task progress:');
+                    debugPrint('   - todayPlanId: $todayPlanId');
+                    debugPrint('   - activityLogId: $activityLogId');
+                    debugPrint('   - isCompleted: $isCompleted');
+                    debugPrint('   - selectedOption: $selectedOption');
 
-                  if (todayPlanId > 0) {
-                    await apiService.bulkStopActivityLogs(
-                      todayPlanId: todayPlanId,
-                      date: todayStr,
-                      isCompleted: isCompleted,
-                      isPendingSelected: selectedOption == 'pending',
-                      workNotes: remarkController.text,
-                      minutesLeft: minutesLeft,
-                      // Pass manual minutes if changed, otherwise API handles via start/end
-                      extraMinutes: manualMinutes != initialMinutesWorked ? manualMinutes : null,
-                      startTime: startTimeController.text,
-                      endTime: endTimeController.text,
-                    );
-                  } else if (activityLogId > 0) {
-                    await apiService.stopActivityLog(
-                      activityLogId: activityLogId,
-                      isCompleted: isCompleted,
-                      reason: isCompleted ? 'Task completed' : 'Task paused',
-                      workNotes: remarkController.text,
-                      minutesLeft: minutesLeft,
-                      extraMinutes: manualMinutes != initialMinutesWorked ? manualMinutes : null,
-                      startTime: startTimeController.text,
-                      endTime: endTimeController.text,
-                    );
-                  }
+                    bool apiCalled = false;
+                    if (todayPlanId > 0) {
+                      debugPrint('   - Calling bulkStopActivityLogs...');
+                      await apiService.bulkStopActivityLogs(
+                        todayPlanId: todayPlanId,
+                        date: todayStr,
+                        isCompleted: isCompleted,
+                        isPendingSelected: selectedOption == 'pending',
+                        workNotes: remarkController.text,
+                        minutesLeft: minutesLeft,
+                        extraMinutes: manualMinutes != initialMinutesWorked ? manualMinutes : null,
+                        startTime: startTimeController.text,
+                        endTime: endTimeController.text,
+                      );
+                      apiCalled = true;
+                    } else if (activityLogId > 0) {
+                      debugPrint('   - Calling stopActivityLog...');
+                      await apiService.stopActivityLog(
+                        activityLogId: activityLogId,
+                        isCompleted: isCompleted,
+                        reason: isCompleted ? 'Task completed' : 'Task paused',
+                        workNotes: remarkController.text,
+                        minutesLeft: minutesLeft,
+                        extraMinutes: manualMinutes != initialMinutesWorked ? manualMinutes : null,
+                        startTime: startTimeController.text,
+                        endTime: endTimeController.text,
+                      );
+                      apiCalled = true;
+                    }
 
-                  ref.invalidate(apiActivityLogsProvider(todayStr));
-                  ref.invalidate(apiActiveTaskProvider);
-                  ref.invalidate(apiTodayPlanProvider);
+                    if (apiCalled) {
+                      ref.invalidate(apiActivityLogsProvider(todayStr));
+                      ref.invalidate(apiActiveTaskProvider);
+                      ref.invalidate(apiTodayPlanProvider);
 
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(isCompleted ? 'Task completed!' : 'Updated!'),
-                        backgroundColor: isCompleted ? Colors.green : Colors.blue,
-                      ),
-                    );
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isCompleted ? 'Task completed!' : 'Updated!'),
+                            backgroundColor: isCompleted ? Colors.green : Colors.blue,
+                          ),
+                        );
+                      }
+                    } else {
+                      debugPrint('⚠️ [ReviewTaskDialog] No valid ID found to stop. todayPlanId=$todayPlanId, activityLogId=$activityLogId');
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Warning: No task ID found to update.'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e, stack) {
+                    debugPrint('❌ [ReviewTaskDialog] Error saving: $e');
+                    debugPrint(stack.toString());
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: $e')),
+                      );
+                    }
                   }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
-                    );
-                  }
-                }
-              },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedOption == 'completed'
-                          ? Colors.green.shade600
-                          : (selectedOption == 'pending'
-                              ? Colors.orange.shade700
-                              : Colors.blue.shade700),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Text(
-                      selectedOption == 'completed'
-                          ? 'Confirm & Complete'
-                          : 'Save Progress',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
-                    ),
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: selectedOption == 'completed'
+                      ? Colors.green.shade600
+                      : (selectedOption == 'pending'
+                          ? Colors.orange.shade700
+                          : Colors.blue.shade700),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-              ],
+                child: Text(
+                  selectedOption == 'completed'
+                      ? 'Confirm & Complete'
+                      : 'Save Progress',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
       },
     ),
