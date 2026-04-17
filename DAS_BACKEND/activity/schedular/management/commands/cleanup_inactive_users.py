@@ -16,8 +16,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--hrm-url',
             type=str,
-            default='http://localhost:8000',
-            help='HRM server URL (default: http://localhost:8000)'
+            default='http://localhost:8003',
+            help='HRM server URL (default: http://localhost:8003)'
         )
         parser.add_argument(
             '--dry-run',
