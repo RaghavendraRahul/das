@@ -1078,14 +1078,26 @@ class TaskApiService {
             await _dio.get('/today-plan/', queryParameters: queryParams);
         if (response.statusCode == 200) {
           final List<dynamic> data = response.data;
-          return data.cast<Map<String, dynamic>>();
+          final list = data.cast<Map<String, dynamic>>();
+          list.sort((a, b) {
+            final aOrder = (a['order_index'] as num?)?.toInt() ?? 0;
+            final bOrder = (b['order_index'] as num?)?.toInt() ?? 0;
+            return aOrder.compareTo(bOrder);
+          });
+          return list;
         }
       } else {
         final response =
             await _dio.get('/today-plan/today/', queryParameters: queryParams);
         if (response.statusCode == 200) {
           final List<dynamic> data = response.data;
-          return data.cast<Map<String, dynamic>>();
+          final list = data.cast<Map<String, dynamic>>();
+          list.sort((a, b) {
+            final aOrder = (a['order_index'] as num?)?.toInt() ?? 0;
+            final bOrder = (b['order_index'] as num?)?.toInt() ?? 0;
+            return aOrder.compareTo(bOrder);
+          });
+          return list;
         }
       }
       return [];

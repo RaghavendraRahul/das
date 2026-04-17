@@ -15,6 +15,7 @@ import 'package:project_pm/src/features/today/widgets/week_view.dart';
 import 'package:project_pm/src/features/today/modals/send_instructions_modal.dart';
 import 'package:project_pm/src/features/today/widgets/instruction_inbox_view.dart';
 import 'package:project_pm/src/features/today/services/instruction_service.dart';
+import 'package:project_pm/src/features/settings/planner_settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 @RoutePage()
@@ -228,7 +229,21 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                         ],
                       ),
 
-                      // 5. Calendar Popup Icon
+                      // 5. Layout Toggle (Quadrant vs List)
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final isQuadrantView = ref.watch(plannerSettingsProvider);
+                          return _IconButton(
+                            icon: isQuadrantView ? Icons.grid_view_rounded : Icons.view_list_rounded,
+                            onTap: () {
+                              ref.read(plannerSettingsProvider.notifier).toggleLayout();
+                            },
+                            tooltip: isQuadrantView ? 'Switch to List View' : 'Switch to Quadrant View',
+                          );
+                        },
+                      ),
+
+                      // 6. Calendar Popup Icon
                       _IconButton(
                         icon: Icons.calendar_month_rounded,
                         onTap: () {
@@ -458,8 +473,9 @@ class _PillButton extends StatelessWidget {
 class _IconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final String? tooltip;
 
-  const _IconButton({required this.icon, required this.onTap});
+  const _IconButton({required this.icon, required this.onTap, this.tooltip});
 
   @override
   Widget build(BuildContext context) {
@@ -467,23 +483,26 @@ class _IconButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            )
-          ],
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: isDark ? Colors.white : const Color(0xFF05263E),
+      child: Tooltip(
+        message: tooltip ?? '',
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              )
+            ],
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: isDark ? Colors.white : const Color(0xFF05263E),
+          ),
         ),
       ),
     );

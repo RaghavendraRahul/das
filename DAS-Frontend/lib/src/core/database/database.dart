@@ -75,6 +75,7 @@ class PlannedItems extends Table {
   TextColumn get relatedTaskId => text().nullable().references(Tasks, #id)();
   DateTimeColumn get startTime => dateTime().nullable()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+  IntColumn get orderIndex => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -150,7 +151,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 14; // Bumped for Project completedDate column
+  int get schemaVersion => 15; // Bumped for PlannedItem orderIndex column
 
   @override
   MigrationStrategy get migration {
@@ -213,6 +214,12 @@ class AppDatabase extends _$AppDatabase {
           // Add completedDate to projects
           try {
             await m.addColumn(projects, projects.completedDate);
+          } catch (_) {}
+        }
+        if (from < 15) {
+          // Add orderIndex to plannedItems
+          try {
+            await m.addColumn(plannedItems, plannedItems.orderIndex);
           } catch (_) {}
         }
       },

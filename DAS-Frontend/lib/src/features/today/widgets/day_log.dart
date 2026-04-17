@@ -25,192 +25,109 @@ class DayLog extends ConsumerWidget {
 
     final apiActivityLogsAsync = ref.watch(apiActivityLogsProvider(todayStr));
     final activeTaskAsync = ref.watch(apiActiveTaskProvider);
-    final hasActiveTask =
-        activeTaskAsync.value != null && activeTaskAsync.value!['id'] != null;
-
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return DragTarget<Map<String, dynamic>>(
       onAcceptWithDetails: (details) async {
         if (isReadOnly) return;
         try {
-          if (hasActiveTask) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Already a task is running, stop it first.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-            return;
-          }
           // Check for active task at the very beginning
           final data = details.data;
 
-          // NEW: Handle dragged Today's Plan items directly
-          if (data['source'] == 'today_plan' && data['type'] == 'plan_item') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Starting task...'),
-                duration: Duration(seconds: 1),
-              ),
-            );
-
+          // Helper to handle manual review directly (No automatic timer start)
+          Future<void> openManualReview(int plannedItemId, Map<String, dynamic> sourceData, {String? description, int? duration}) async {
             try {
-              final apiService = ref.read(taskApiServiceProvider);
-              final plannedItemId = data['id'] as int;
-
-              // Move existing plan item to activity log
-              final targetItemInfo =
-                  await apiService.moveTodayPlanToActivityLog(plannedItemId);
-              debugPrint(
-                  '✅ Moved to activity log: ${targetItemInfo.isNotEmpty}');
-
-              // Refresh all data
+              // Refresh today plan to ensure the UI knows about any new unplanned additions
               ref.invalidate(apiTodayPlanProvider);
-              ref.invalidate(apiActivityLogsProvider(todayStr));
-              ref.invalidate(apiActiveTaskProvider);
-
+              
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Task initiated. Target acquired.'),
-                    backgroundColor: Colors.blue,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-
-                debugPrint(
-                    '📋 Target item info: ${targetItemInfo.keys.toList()}');
-
-                if (targetItemInfo.isNotEmpty &&
-                    targetItemInfo.containsKey('id')) {
-                  debugPrint('🎯 Opening dialog with targetItemInfo');
-                  showReviewTaskDialog(context, ref, targetItemInfo,
-                      isEditMode: false);
-                } else {
-                  try {
-                    debugPrint('⏳ Fetching active task...');
-                    final actvTask = await apiService.getActiveTask();
-                    if (actvTask is Map<String, dynamic> &&
-                        actvTask.containsKey('id')) {
-                      if (context.mounted) {
-                        debugPrint('🎯 Opening dialog with active task');
-                        showReviewTaskDialog(context, ref, actvTask,
-                            isEditMode: false);
-                      }
-                    } else {
-                      debugPrint('⚠️ Active task not found or invalid');
-                    }
-                  } catch (e) {
-                    debugPrint('❌ Error fetching active task: $e');
-                  }
-                }
+                // Construct a shell item that ReviewTaskDialog can use to call bulkStopActivityLogs
+                final Map<String, dynamic> shellItem = {
+                  'id': 0, // Not started in backend work logs
+                  'today_plan': {
+                    'id': plannedItemId,
+                    'catalog_name': sourceData['catalog_name'] ?? sourceData['name'] ?? 'Task',
+                    'planned_duration_minutes': duration ?? sourceData['planned_duration_minutes'] ?? 60,
+                    'notes': description ?? sourceData['notes'] ?? '',
+                  },
+                  'actual_start_time': null,
+                  'actual_end_time': null,
+                  'minutes_worked': 0,
+                };
+                
+                showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
               }
             } catch (e) {
               if (context.mounted) {
-                final errorMsg = e.toString().replaceAll('Exception: ', '');
-                final isActiveTaskError =
-                    errorMsg.contains('already have an active task');
-
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(errorMsg),
-                    backgroundColor:
-                        isActiveTaskError ? Colors.orange : Colors.red,
-                    duration: const Duration(seconds: 4),
-                  ),
+                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
                 );
               }
             }
+          }
+
+          // Case 1: Planned Items (from today's plan column)
+          if (data['source'] == 'today_plan' && data['type'] == 'plan_item') {
+            final plannedItemId = data['id'] as int;
+            showDialog(
+              context: context,
+              builder: (ctx) => TaskConfigModal(
+                initialTitle: data['catalog_name'] ?? 'Task',
+                initialDescription: data['notes'],
+                initialDuration: ((data['planned_duration_minutes'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                showQuadrantSelector: false,
+                onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
+                  await openManualReview(plannedItemId, data, 
+                    description: description, 
+                    duration: duration
+                  );
+                },
+              ),
+            );
             return;
           }
 
+          // Case 2: Unplanned Items (Catalog, Project Task, etc.)
           if (data['type'] == 'project_task' ||
               data['type'] == 'catalog_item' ||
               data['type'] == 'catalog_task' ||
               data['type'] == 'custom_template' ||
               data['type'] == 'custom' ||
               data['type'] == 'pending_item') {
-            // SHOW DIALOG to capture Planned Remark before starting unplanned task
+            
             showDialog(
               context: context,
-              builder: (context) => TaskConfigModal(
+              builder: (ctx) => TaskConfigModal(
                 initialTitle: data['name'] ?? 'New Unplanned Task',
                 initialDescription: data['description'],
-                initialDuration:
-                    ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                initialDuration: ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
                 showQuadrantSelector: false,
-                onConfirm: ({
-                  required String name,
-                  required int duration,
-                  String? description,
-                  List<String>? selectedMilestoneIds,
-                  String? quadrant,
-                }) async {
+                onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
                   try {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Initializing unplanned task...'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-
                     final apiService = ref.read(taskApiServiceProvider);
                     final userId = ref.read(currentUserIdProvider);
                     final planDate = todayStr;
-
                     int? plannedItemId;
 
-                    // 1. Create the Plan Item (marked as unplanned)
-                    if (data['type'] == 'project_task') {
+                    // Create the Plan Item (marked as unplanned)
+                    if (data['type'] == 'project_task' || data['type'] == 'catalog_task') {
                       final planItem = await apiService.addItemToTodayPlan(
-                        itemType: 'custom',
+                        itemType: data['type'] == 'project_task' ? 'custom' : 'custom',
                         title: name,
                         planDate: planDate,
                         plannedDurationMinutes: duration,
-                        quadrant: 'Q1',
                         description: description,
-                        relatedTaskId: data['task_id'] != null
-                            ? parseTaskId(data['task_id'])
-                            : null,
+                        relatedTaskId: data['task_id'] != null ? parseTaskId(data['task_id']) : null,
                         isUnplanned: true,
                         userId: userId,
                       );
                       plannedItemId = planItem['id'] as int;
-                    } else if (data['type'] == 'catalog_item' &&
-                        data['catalog_id'] != null) {
+                    } else if (data['type'] == 'catalog_item') {
                       final planItem = await apiService.addItemToTodayPlan(
                         itemType: 'catalog',
                         catalogId: parseTaskId(data['catalog_id']),
                         planDate: planDate,
                         plannedDurationMinutes: duration,
-                        description: description,
-                        quadrant: 'Q1',
-                        isUnplanned: true,
-                        userId: userId,
-                      );
-                      plannedItemId = planItem['id'] as int;
-                    } else if (data['type'] == 'catalog_task' &&
-                        data['task_id'] != null) {
-                      final planItem = await apiService.addItemToTodayPlan(
-                        itemType: 'custom',
-                        title: name,
-                        planDate: planDate,
-                        plannedDurationMinutes: duration,
-                        quadrant: 'Q1',
-                        description: description,
-                        relatedTaskId: parseTaskId(data['task_id']),
-                        isUnplanned: true,
-                        userId: userId,
-                      );
-                      plannedItemId = planItem['id'] as int;
-                    } else if (data['type'] == 'custom_template') {
-                      final planItem = await apiService.addItemToTodayPlan(
-                        itemType: 'custom',
-                        title: name,
-                        planDate: planDate,
-                        plannedDurationMinutes: duration,
-                        quadrant: 'Q1',
                         description: description,
                         isUnplanned: true,
                         userId: userId,
@@ -219,11 +136,10 @@ class DayLog extends ConsumerWidget {
                     } else if (data['type'] == 'pending_item') {
                       if (data['is_today_inbox'] == true) {
                         plannedItemId = data['id'] as int;
-                        await apiService.updateTodayPlanItem(plannedItemId, {
+                        await apiService.updateTodayPlanItem(plannedItemId!, {
                           'is_unplanned': true,
                           'notes': description,
                           'planned_duration_minutes': duration,
-                          'custom_title': name,
                         });
                       } else {
                         final planItem = await apiService.addItemToTodayPlan(
@@ -231,11 +147,7 @@ class DayLog extends ConsumerWidget {
                           title: name,
                           planDate: planDate,
                           plannedDurationMinutes: duration,
-                          quadrant: 'Q1',
                           description: description,
-                          relatedTaskId: data['catalog_id'] != null
-                              ? parseTaskId(data['catalog_id'])
-                              : null,
                           isUnplanned: true,
                           userId: userId,
                         );
@@ -247,7 +159,6 @@ class DayLog extends ConsumerWidget {
                         title: name,
                         planDate: planDate,
                         plannedDurationMinutes: duration,
-                        quadrant: 'Q1',
                         description: description,
                         isUnplanned: true,
                         userId: userId,
@@ -255,40 +166,23 @@ class DayLog extends ConsumerWidget {
                       plannedItemId = planItem['id'] as int;
                     }
 
-                    // 2. Start Task immediately
-                    final targetItemInfo = await apiService
-                        .moveTodayPlanToActivityLog(plannedItemId);
-
-                    // Clean up pending if applicable
-                    if (data['is_pending'] == true &&
-                        data['pending_id'] != null &&
-                        data['is_today_inbox'] != true) {
-                      await apiService.deletePendingTask(data['pending_id']);
-                    }
-
-                    // Refresh providers
-                    ref.invalidate(apiPendingItemsProvider(todayStr));
-                    ref.invalidate(apiAllPendingItemsProvider);
-                    ref.invalidate(apiTodayPlanProvider);
-                    ref.invalidate(apiActivityLogsProvider(todayStr));
-                    ref.invalidate(apiActiveTaskProvider);
-
-                    if (context.mounted) {
-                      if (targetItemInfo.isNotEmpty &&
-                          targetItemInfo.containsKey('id')) {
-                        showReviewTaskDialog(context, ref, targetItemInfo,
-                            isEditMode: false);
+                    if (plannedItemId != null) {
+                      // Clean up pending if applicable
+                      if (data['is_pending'] == true && data['pending_id'] != null && data['is_today_inbox'] != true) {
+                        await apiService.deletePendingTask(data['pending_id']);
                       }
+                      await openManualReview(plannedItemId, {
+                        ...data,
+                        'name': name,
+                        'notes': description,
+                        'planned_duration_minutes': duration,
+                      }, 
+                      description: description, 
+                      duration: duration);
                     }
                   } catch (e) {
-                    debugPrint('Error starting unplanned task: $e');
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to start task: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to start task: $e'), backgroundColor: Colors.red));
                     }
                   }
                 },
@@ -303,29 +197,28 @@ class DayLog extends ConsumerWidget {
         }
       },
       builder: (context, candidateData, rejectedData) {
-        final isHovering = candidateData.isNotEmpty;
         return Container(
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1F2937) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isDark
-                  ? Colors.white.withOpacity(0.08)
-                  : Colors.black.withOpacity(0.05),
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.05),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: isDark
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.06),
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.06),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
               BoxShadow(
                 color: isDark
-                    ? Colors.black.withOpacity(0.15)
-                    : Colors.black.withOpacity(0.02),
+                    ? Colors.black.withValues(alpha: 0.15)
+                    : Colors.black.withValues(alpha: 0.02),
                 blurRadius: 2,
                 offset: const Offset(0, 2),
               ),
@@ -334,18 +227,29 @@ class DayLog extends ConsumerWidget {
           child: Column(
             children: [
               // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF05263E),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       "ACTIVITY LOG",
                       style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                        color: isDark ? Colors.white : const Color(0xFF05263E),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                        color: Colors.white,
                       ),
                     ),
                     apiActivityLogsAsync.when(
@@ -356,7 +260,6 @@ class DayLog extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Divider(height: 1, thickness: 1, color: Color(0xFFF3F4F6)),
 
               // List
               Expanded(
@@ -459,52 +362,23 @@ class DayLog extends ConsumerWidget {
 }
 
 // Timer widget for API-based activity logs
-class _TotalWorkedTimerAPI extends StatefulWidget {
+class _TotalWorkedTimerAPI extends StatelessWidget {
   final List<Map<String, dynamic>> logs;
   const _TotalWorkedTimerAPI({required this.logs});
 
   @override
-  State<_TotalWorkedTimerAPI> createState() => _TotalWorkedTimerAPIState();
-}
-
-class _TotalWorkedTimerAPIState extends State<_TotalWorkedTimerAPI> {
-  late Timer _timer;
-  int _totalSeconds = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _calculateTotal();
-    _timer =
-        Timer.periodic(const Duration(seconds: 1), (_) => _calculateTotal());
-  }
-
-  @override
-  void didUpdateWidget(_TotalWorkedTimerAPI oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.logs != widget.logs) {
-      _calculateTotal();
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  void _calculateTotal() {
+  Widget build(BuildContext context) {
     int totalMillis = 0;
     final now = DateTime.now();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    for (var log in widget.logs) {
+    for (var log in logs) {
       try {
         final startStr = log['actual_start_time'] as String?;
         final endStr = log['actual_end_time'] as String?;
 
         if (startStr != null) {
-          final start = DateTime.parse(
-              startStr); // Already in correct timezone from backend
+          final start = DateTime.parse(startStr);
           final end = endStr != null ? DateTime.parse(endStr) : now;
           totalMillis += end.difference(start).inMilliseconds;
         }
@@ -513,16 +387,9 @@ class _TotalWorkedTimerAPIState extends State<_TotalWorkedTimerAPI> {
       }
     }
 
-    if (mounted) {
-      setState(() => _totalSeconds = (totalMillis / 1000).floor());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hours = _totalSeconds ~/ 3600;
-    final minutes = (_totalSeconds % 3600) ~/ 60;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final totalSeconds = (totalMillis / 1000).floor();
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -545,7 +412,7 @@ class _TotalWorkedTimerAPIState extends State<_TotalWorkedTimerAPI> {
           Text(
             "${hours}h ${minutes}m",
             style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.bold,
                 fontSize: 13,
                 color:
                     isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
@@ -596,7 +463,6 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
       taskName = todayPlan['catalog_name'] as String? ?? 'Unknown Task';
       isUnplanned = todayPlan['is_unplanned'] == true;
       if (isUnplanned) {
-        // Clean up the display name if it still has the prefix (for backward compatibility or if backend adds it)
         taskName = taskName.replaceFirst('[Unplanned] ', '');
       }
     }
@@ -609,10 +475,8 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
 
     // Still parse for duration calculation
     DateTime? startTime;
-    DateTime? endTime;
     try {
       if (startStr != null) startTime = DateTime.parse(startStr);
-      if (endStr != null) endTime = DateTime.parse(endStr);
     } catch (e) {
       debugPrint('Error parsing times: $e');
     }
@@ -629,7 +493,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: isRunning
-            ? Border.all(color: Colors.blue.withOpacity(0.3))
+            ? Border.all(color: Colors.blue.withValues(alpha: 0.3))
             : Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
         color: isDark ? Colors.grey.shade800 : Colors.white,
       ),
@@ -656,7 +520,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                     boxShadow: isRunning
                         ? [
                             BoxShadow(
-                              color: accentColor.withOpacity(0.5),
+                              color: accentColor.withValues(alpha: 0.5),
                               blurRadius: 4,
                               spreadRadius: 1,
                             )
@@ -678,10 +542,10 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.15),
+                                color: Colors.orange.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
-                                    color: Colors.orange.withOpacity(0.4)),
+                                    color: Colors.orange.withValues(alpha: 0.4)),
                               ),
                               child: Text(
                                 'Unplanned',
@@ -699,10 +563,10 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.15),
+                                color: Colors.green.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
-                                    color: Colors.green.withOpacity(0.4)),
+                                    color: Colors.green.withValues(alpha: 0.4)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -727,10 +591,10 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.15),
+                                color: Colors.orange.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
-                                    color: Colors.orange.withOpacity(0.4)),
+                                    color: Colors.orange.withValues(alpha: 0.4)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -752,161 +616,211 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                           Expanded(
                             child: Text(
                               taskName,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.outfit(
                                 fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: isDark ? Colors.white : Colors.black87,
+                                fontSize: 15,
+                                letterSpacing: 0.3,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
                               ),
                             ),
                           ),
                           if (isRunning)
-                            _LiveTimer(startTime: startTime ?? DateTime.now()),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                'WORKING',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.blue,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.schedule,
+                          Icon(Icons.access_time_filled,
                               size: 14,
-                              color: isDark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600),
-                          const SizedBox(width: 4),
+                              color: accentColor.withValues(alpha: 0.7)),
+                          const SizedBox(width: 6),
                           Text(
                             startTimeDisplay.isNotEmpty
                                 ? '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}'
-                                : 'Unknown time',
-                            style: GoogleFonts.inter(
+                                : 'Session not started',
+                            style: GoogleFonts.outfit(
                               fontSize: 12,
+                              fontWeight: FontWeight.w500,
                               color: isDark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
                             ),
                           ),
                           const Spacer(),
                           if (!isRunning)
-                            Text(
-                              '${workedHours}h ${workedMins}m',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.green,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${workedHours}h ${workedMins}m',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.green.shade600,
+                                ),
                               ),
                             ),
                         ],
                       ),
-                      // Planned Remark
-                      if (todayPlan != null &&
-                          todayPlan['notes'] != null &&
-                          todayPlan['notes'].toString().isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.blue.withOpacity(0.1)
-                                : Colors.blue.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.blue.withOpacity(0.2)
-                                  : Colors.blue.withOpacity(0.1),
-                            ),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.lightbulb_outline,
-                                  size: 12,
-                                  color: isDark
-                                      ? Colors.blue.shade300
-                                      : Colors.blue.shade700),
-                              const SizedBox(width: 6),
+                      // Remarks Section (Side by Side)
+                      if ((todayPlan != null &&
+                              todayPlan['notes'] != null &&
+                              todayPlan['notes'].toString().isNotEmpty) ||
+                          (item['work_notes'] != null &&
+                              (item['work_notes'] as String).isNotEmpty)) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Planned Remarks column
+                            if (todayPlan != null &&
+                                todayPlan['notes'] != null &&
+                                todayPlan['notes'].toString().isNotEmpty)
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Planned Remark:',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
-                                      ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? Colors.blue.withValues(alpha: 0.08)
+                                        : Colors.blue.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? Colors.blue.withValues(alpha: 0.2)
+                                          : Colors.blue.withValues(alpha: 0.1),
                                     ),
-                                    Text(
-                                      todayPlan['notes'],
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontStyle: FontStyle.italic,
-                                        color: isDark
-                                            ? Colors.blue.shade100
-                                            : Colors.blue.shade900,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(Icons.lightbulb_outline,
+                                              size: 14,
+                                              color: isDark
+                                                  ? Colors.blue.shade300
+                                                  : Colors.blue.shade700),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'PLANNED',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 0.5,
+                                              color: isDark
+                                                  ? Colors.blue.shade300
+                                                  : Colors.blue.shade700,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        todayPlan['notes'],
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          height: 1.3,
+                                          color: isDark
+                                              ? Colors.blue.shade100
+                                              : Colors.blue.shade900,
+                                        ),
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ],
 
-                      // Achieved Remark
-                      if (item['work_notes'] != null &&
-                          (item['work_notes'] as String).isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.05)
-                                : Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.white.withOpacity(0.1)
-                                  : Colors.grey.shade200,
-                            ),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.notes,
-                                  size: 12,
-                                  color: isDark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600),
-                              const SizedBox(width: 6),
+                            if (todayPlan != null &&
+                                todayPlan['notes'] != null &&
+                                todayPlan['notes'].toString().isNotEmpty &&
+                                item['work_notes'] != null &&
+                                (item['work_notes'] as String).isNotEmpty)
+                              const SizedBox(width: 10),
+
+                            // Achieved Remarks column
+                            if (item['work_notes'] != null &&
+                                (item['work_notes'] as String).isNotEmpty)
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Achieved Remark:',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                      ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? Colors.green.withValues(alpha: 0.08)
+                                        : Colors.green.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? Colors.green.withValues(alpha: 0.2)
+                                          : Colors.green.withValues(alpha: 0.1),
                                     ),
-                                    Text(
-                                      item['work_notes'],
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontStyle: FontStyle.italic,
-                                        color: isDark
-                                            ? Colors.grey.shade300
-                                            : Colors.grey.shade700,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(Icons.task_alt,
+                                              size: 14,
+                                              color: isDark
+                                                  ? Colors.green.shade300
+                                                  : Colors.green.shade700),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'ACHIEVED',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 0.5,
+                                              color: isDark
+                                                  ? Colors.green.shade300
+                                                  : Colors.green.shade700,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        item['work_notes'],
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          height: 1.3,
+                                          color: isDark
+                                              ? Colors.green.shade100
+                                              : Colors.green.shade900,
+                                        ),
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
+                          ],
                         ),
                       ],
                     ],
@@ -934,45 +848,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
   }
 }
 
-// Live timer widget for running tasks
-class _LiveTimer extends HookWidget {
-  final DateTime startTime;
-  const _LiveTimer({required this.startTime});
 
-  @override
-  Widget build(BuildContext context) {
-    final elapsed = useState(DateTime.now().difference(startTime));
-
-    useEffect(() {
-      final timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        elapsed.value = DateTime.now().difference(startTime);
-      });
-      return timer.cancel;
-    }, [startTime]);
-
-    final hours = elapsed.value.inHours;
-    final minutes = elapsed.value.inMinutes % 60;
-    final seconds = elapsed.value.inSeconds % 60;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
-      ),
-      child: Text(
-        '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Colors.blue,
-          fontFeatures: [const FontFeature.tabularFigures()],
-        ),
-      ),
-    );
-  }
-}
 
 int parseTaskId(dynamic id) {
   final str = id.toString();

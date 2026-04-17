@@ -136,22 +136,27 @@ class TodayApiService {
     }
   }
 
-  /// Delete a plan item from today's plan
-  Future<void> deletePlanItem(int id) async {
+  /// Reorder items in the today plan
+  Future<void> reorderTodayPlan(List<Map<String, dynamic>> items) async {
     try {
-      print('🔵 API Call: DELETE /today-plan/$id/');
+      print('🔵 API Call: POST /today-plan/reorder/');
+      print('📤 Items: $items');
 
-      final response = await _dio.delete('/today-plan/$id/');
+      final response = await _dio.post('/today-plan/reorder/', data: {
+        'items': items,
+      });
 
-      print('✅ Plan item deleted successfully');
+      print('✅ Items reordered successfully');
       print('📥 Response status: ${response.statusCode}');
     } on DioException catch (e) {
-      print('❌ API Error: DELETE /today-plan/$id/');
+      print('❌ API Error: POST /today-plan/reorder/');
       print('❌ Error Details: ${e.message}');
       print('❌ Response: ${e.response?.data}');
-      throw Exception('Failed to delete plan item: ${e.message}');
+      // Don't throw for reorder sync - local state is usually ahead
     }
   }
+
+  /// Delete a plan item from today's plan
 
   /// Start the work day session
   Future<Map<String, dynamic>> startDay() async {
