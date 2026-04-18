@@ -41,7 +41,7 @@ final apiProjectsProvider =
 
 typedef ApiProjectsRef = AutoDisposeFutureProviderRef<List<ProjectModel>>;
 String _$dashboardApiProjectsHash() =>
-    r'862021bdbe65ead7a87f833fb8e7e6d2df9d6b0e';
+    r'364a261967e55941f5fd61fba33bb19bd5807d2c';
 
 /// Fetch only authorized projects for the dashboard to avoid 401 errors
 ///
@@ -61,7 +61,7 @@ final dashboardApiProjectsProvider =
 typedef DashboardApiProjectsRef
     = AutoDisposeFutureProviderRef<List<ProjectModel>>;
 String _$apiPaginatedProjectsHash() =>
-    r'eedea76bdae514ec07956a62c32eae96c9eb66af';
+    r'edd16e6649bd3bc220ee69b20485b0bd7a83287f';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -98,10 +98,12 @@ class ApiPaginatedProjectsFamily
   ApiPaginatedProjectsProvider call({
     required int page,
     String? filter,
+    String? search,
   }) {
     return ApiPaginatedProjectsProvider(
       page: page,
       filter: filter,
+      search: search,
     );
   }
 
@@ -112,6 +114,7 @@ class ApiPaginatedProjectsFamily
     return call(
       page: provider.page,
       filter: provider.filter,
+      search: provider.search,
     );
   }
 
@@ -137,11 +140,13 @@ class ApiPaginatedProjectsProvider
   ApiPaginatedProjectsProvider({
     required int page,
     String? filter,
+    String? search,
   }) : this._internal(
           (ref) => apiPaginatedProjects(
             ref as ApiPaginatedProjectsRef,
             page: page,
             filter: filter,
+            search: search,
           ),
           from: apiPaginatedProjectsProvider,
           name: r'apiPaginatedProjectsProvider',
@@ -154,6 +159,7 @@ class ApiPaginatedProjectsProvider
               ApiPaginatedProjectsFamily._allTransitiveDependencies,
           page: page,
           filter: filter,
+          search: search,
         );
 
   ApiPaginatedProjectsProvider._internal(
@@ -165,10 +171,12 @@ class ApiPaginatedProjectsProvider
     required super.from,
     required this.page,
     required this.filter,
+    required this.search,
   }) : super.internal();
 
   final int page;
   final String? filter;
+  final String? search;
 
   @override
   Override overrideWith(
@@ -187,6 +195,7 @@ class ApiPaginatedProjectsProvider
         debugGetCreateSourceHash: null,
         page: page,
         filter: filter,
+        search: search,
       ),
     );
   }
@@ -201,7 +210,8 @@ class ApiPaginatedProjectsProvider
   bool operator ==(Object other) {
     return other is ApiPaginatedProjectsProvider &&
         other.page == page &&
-        other.filter == filter;
+        other.filter == filter &&
+        other.search == search;
   }
 
   @override
@@ -209,6 +219,7 @@ class ApiPaginatedProjectsProvider
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
     hash = _SystemHash.combine(hash, page.hashCode);
     hash = _SystemHash.combine(hash, filter.hashCode);
+    hash = _SystemHash.combine(hash, search.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -221,6 +232,9 @@ mixin ApiPaginatedProjectsRef
 
   /// The parameter `filter` of this provider.
   String? get filter;
+
+  /// The parameter `search` of this provider.
+  String? get search;
 }
 
 class _ApiPaginatedProjectsProviderElement
@@ -232,10 +246,12 @@ class _ApiPaginatedProjectsProviderElement
   int get page => (origin as ApiPaginatedProjectsProvider).page;
   @override
   String? get filter => (origin as ApiPaginatedProjectsProvider).filter;
+  @override
+  String? get search => (origin as ApiPaginatedProjectsProvider).search;
 }
 
 String _$paginatedDashboardProjectsHash() =>
-    r'3281b13dfb7303da1870d03f7dc1c404735f2754';
+    r'd90a3ebe98051b6e39946ceb71c7afb1007dc5a0';
 
 /// Fetch projects with tasks pre-mapped (for simple listing cases)
 ///
@@ -259,10 +275,12 @@ class PaginatedDashboardProjectsFamily
   PaginatedDashboardProjectsProvider call({
     required int page,
     String? filter,
+    String? search,
   }) {
     return PaginatedDashboardProjectsProvider(
       page: page,
       filter: filter,
+      search: search,
     );
   }
 
@@ -273,6 +291,7 @@ class PaginatedDashboardProjectsFamily
     return call(
       page: provider.page,
       filter: provider.filter,
+      search: provider.search,
     );
   }
 
@@ -302,11 +321,13 @@ class PaginatedDashboardProjectsProvider
   PaginatedDashboardProjectsProvider({
     required int page,
     String? filter,
+    String? search,
   }) : this._internal(
           (ref) => paginatedDashboardProjects(
             ref as PaginatedDashboardProjectsRef,
             page: page,
             filter: filter,
+            search: search,
           ),
           from: paginatedDashboardProjectsProvider,
           name: r'paginatedDashboardProjectsProvider',
@@ -319,6 +340,7 @@ class PaginatedDashboardProjectsProvider
               PaginatedDashboardProjectsFamily._allTransitiveDependencies,
           page: page,
           filter: filter,
+          search: search,
         );
 
   PaginatedDashboardProjectsProvider._internal(
@@ -330,10 +352,12 @@ class PaginatedDashboardProjectsProvider
     required super.from,
     required this.page,
     required this.filter,
+    required this.search,
   }) : super.internal();
 
   final int page;
   final String? filter;
+  final String? search;
 
   @override
   Override overrideWith(
@@ -352,6 +376,7 @@ class PaginatedDashboardProjectsProvider
         debugGetCreateSourceHash: null,
         page: page,
         filter: filter,
+        search: search,
       ),
     );
   }
@@ -366,7 +391,8 @@ class PaginatedDashboardProjectsProvider
   bool operator ==(Object other) {
     return other is PaginatedDashboardProjectsProvider &&
         other.page == page &&
-        other.filter == filter;
+        other.filter == filter &&
+        other.search == search;
   }
 
   @override
@@ -374,6 +400,7 @@ class PaginatedDashboardProjectsProvider
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
     hash = _SystemHash.combine(hash, page.hashCode);
     hash = _SystemHash.combine(hash, filter.hashCode);
+    hash = _SystemHash.combine(hash, search.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -386,6 +413,9 @@ mixin PaginatedDashboardProjectsRef
 
   /// The parameter `filter` of this provider.
   String? get filter;
+
+  /// The parameter `search` of this provider.
+  String? get search;
 }
 
 class _PaginatedDashboardProjectsProviderElement
@@ -398,10 +428,12 @@ class _PaginatedDashboardProjectsProviderElement
   int get page => (origin as PaginatedDashboardProjectsProvider).page;
   @override
   String? get filter => (origin as PaginatedDashboardProjectsProvider).filter;
+  @override
+  String? get search => (origin as PaginatedDashboardProjectsProvider).search;
 }
 
 String _$projectsPageProjectsHash() =>
-    r'725a3b39a07a4ffec70dbecb2ba49e5865cccce5';
+    r'4cdac35a7831f819ce334ee3056f1b40970f00c4';
 
 /// Independent provider for the Projects Page (My Projects / Team Projects).
 /// Completely separate from [paginatedDashboardProjectsProvider] so that
@@ -1959,7 +1991,7 @@ class _AdminEmployeeStickyNotesProviderElement
 }
 
 String _$adminEmployeeProjectsHash() =>
-    r'df5b3f4de499ff20c3c23ecc532a8b3f355537fc';
+    r'03b10e46c4ebd0afae2f10a0e902788ae51897f8';
 
 /// [Admin only] Fetch a specific employee's projects via the paginated endpoint.
 /// Re-uses paginatedDashboardProjectsProvider but scoped to a specific user_id.
@@ -2264,7 +2296,7 @@ class _AdminEmployeeDashboardProviderElement
 }
 
 String _$monthlyCompletedProjectsHash() =>
-    r'6c4a455e07610c81adafca162d3375270abd3ad2';
+    r'63da39c15d5d3ffcd8348218765129f2f6b61fb0';
 
 /// See also [monthlyCompletedProjects].
 @ProviderFor(monthlyCompletedProjects)
@@ -2400,7 +2432,7 @@ class _MonthlyCompletedProjectsProviderElement
 }
 
 String _$monthlyCompletedTasksHash() =>
-    r'9622388742150085de8a5f7b813fdf88832abab7';
+    r'68304fd1b8c8601410e8f925562680761cf1cba5';
 
 /// See also [monthlyCompletedTasks].
 @ProviderFor(monthlyCompletedTasks)

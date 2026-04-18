@@ -75,8 +75,10 @@ Future<List<ProjectModel>> apiProjects(ApiProjectsRef ref) async {
 @riverpod
 Future<List<ProjectModel>> dashboardApiProjects(DashboardApiProjectsRef ref) async {
   final apiService = ref.watch(taskApiServiceProvider);
+  final search = ref.watch(dashboardSearchQueryProvider);
   try {
-    return await apiService.getProjects(allProjects: true);
+    return await apiService.getProjects(
+        allProjects: true, params: {if (search.isNotEmpty) 'search': search});
   } catch (e) {
     throw Exception('Failed to fetch dashboard projects: $e');
   }
@@ -86,12 +88,16 @@ Future<List<ProjectModel>> dashboardApiProjects(DashboardApiProjectsRef ref) asy
 Future<PaginatedResponse<ProjectModel>> apiPaginatedProjects(
     ApiPaginatedProjectsRef ref,
     {required int page,
-    String? filter}) async {
+    String? filter,
+    String? search}) async {
   ref.keepAlive(); // Cache paginated results per page/filter combo
   final apiService = ref.watch(taskApiServiceProvider);
   try {
-    // Pass filter as query param if present
-    final params = filter != null ? {'filter': filter} : null;
+    // Pass filter and search as query params if present
+    final params = <String, dynamic>{};
+    if (filter != null) params['filter'] = filter;
+    if (search != null && search.isNotEmpty) params['search'] = search;
+    
     return await apiService.getPaginatedProjects(page, params);
   } catch (e) {
     throw Exception('Failed to fetch paginated projects: $e');
@@ -103,12 +109,14 @@ Future<PaginatedResponse<ProjectModel>> apiPaginatedProjects(
 Future<PaginatedResponse<ProjectWithTasks>> paginatedDashboardProjects(
     PaginatedDashboardProjectsRef ref,
     {required int page,
-    String? filter}) async {
+    String? filter,
+    String? search}) async {
   ref.keepAlive(); // Proper state management: Prevent auto-disposing to ensure instant reload speeds.
 
   // Use the same task source as Project Plan page for consistent task lists.
-  final keys = await ref
-      .watch(apiPaginatedProjectsProvider(page: page, filter: filter).future);
+  final PaginatedResponse<ProjectModel> keys = await ref.watch(
+      apiPaginatedProjectsProvider(page: page, filter: filter, search: search)
+          .future) as PaginatedResponse<ProjectModel>;
   final allTasks = await ref.watch(apiTasksProvider.future);
   // Using allUsersForProjectsProvider to ensure we get ALL users for assignee resolution
   final allUsers = await ref.watch(allUsersForProjectsProvider.future);
@@ -775,6 +783,7 @@ Future<Map<String, dynamic>> adminEmployeeDashboard(
 @riverpod
 Future<List<ProjectModel>> monthlyCompletedProjects(
     MonthlyCompletedProjectsRef ref, String monthYear) async {
+  final search = ref.watch(dashboardSearchQueryProvider);
   final apiService = ref.watch(taskApiServiceProvider);
 
   // Parse "March 2026"
@@ -809,6 +818,7 @@ Future<List<ProjectModel>> monthlyCompletedProjects(
         ...params,
         'completion_start_date': startDateStr,
         'completion_end_date': endDateStr,
+        if (search.isNotEmpty) 'search': search,
       },
       allProjects: true,
     );
@@ -821,6 +831,7 @@ Future<List<ProjectModel>> monthlyCompletedProjects(
 @riverpod
 Future<List<TaskModel>> monthlyCompletedTasks(
     MonthlyCompletedTasksRef ref, String monthYear) async {
+  final search = ref.watch(dashboardSearchQueryProvider);
   final apiService = ref.watch(taskApiServiceProvider);
 
   // Parse "March 2026"
@@ -848,6 +859,7 @@ Future<List<TaskModel>> monthlyCompletedTasks(
     return await apiService.getTasks(
       startDate: startDateStr,
       endDate: endDateStr,
+      search: search.isNotEmpty ? search : null,
     );
   } catch (e) {
     debugPrint('Error in monthlyCompletedTasksProvider: $e');

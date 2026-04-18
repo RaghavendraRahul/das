@@ -512,11 +512,13 @@ class TaskApiService {
   Future<List<TaskModel>> getTasks({
     String? startDate,
     String? endDate,
+    String? search,
   }) async {
     try {
       final queryParams = {
         if (startDate != null) 'start_date': startDate,
         if (endDate != null) 'end_date': endDate,
+        if (search != null && search.isNotEmpty) 'search': search,
       };
       final response = await _dio.get('/tasks/', queryParameters: queryParams);
       if (response.statusCode == 200) {
@@ -912,6 +914,7 @@ class TaskApiService {
     String? endDate,
     int? projectId,
     int? employeeId,
+    String? search,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
@@ -920,6 +923,7 @@ class TaskApiService {
       if (endDate != null) queryParams['end_date'] = endDate;
       if (projectId != null) queryParams['project_id'] = projectId;
       if (employeeId != null) queryParams['employee_id'] = employeeId;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       print('');
       print('📊╔════════════════════════════════════════════════════════════');
@@ -965,7 +969,7 @@ class TaskApiService {
 
   Future<Map<String, dynamic>> getProjectCompletionChart(
       int year, String filter,
-      [int? userId]) async {
+      [int? userId, String? search]) async {
     try {
       final startDate = '$year-01-01';
       final endDate = '$year-12-31';
@@ -975,6 +979,7 @@ class TaskApiService {
         'end_date': endDate,
         'filter': filter,
         if (userId != null) 'user_id': userId,
+        if (search != null && search.isNotEmpty) 'search': search,
       });
       if (response.statusCode == 200) {
         return response.data;
@@ -988,7 +993,7 @@ class TaskApiService {
 
   Future<Map<String, dynamic>> getTaskCompletionChart(
       String startDate, String endDate, String filter,
-      [int? userId]) async {
+      [int? userId, String? search]) async {
     try {
       final response =
           await _dio.get('/task-completion-chart/', queryParameters: {
@@ -996,6 +1001,7 @@ class TaskApiService {
         'end_date': endDate,
         'filter': filter,
         if (userId != null) 'user_id': userId,
+        if (search != null && search.isNotEmpty) 'search': search,
       });
       if (response.statusCode == 200) {
         return response.data;
@@ -1008,7 +1014,7 @@ class TaskApiService {
   }
 
   Future<List<dynamic>> getHoursCompletionChart(int year, String filter,
-      [int? userId]) async {
+      [int? userId, String? search]) async {
     try {
       final response = await _dio.get(
         '/hours-completion-chart/',
@@ -1016,6 +1022,7 @@ class TaskApiService {
           'year': year,
           'filter': filter,
           if (userId != null) 'user_id': userId,
+          if (search != null && search.isNotEmpty) 'search': search,
         },
       );
       if (response.statusCode == 200) {

@@ -1,3 +1,5 @@
+import 'package:auto_route/auto_route.dart';
+import 'package:project_pm/src/routes/app_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -8,12 +10,14 @@ import 'package:project_pm/src/features/projects/models/project_model.dart';
 import 'package:project_pm/src/features/projects/models/task_model.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import '../dashboard_providers.dart';
+import '../../projects/project_providers.dart';
 
 // Enums removed in favor of direct String-based state management via providers
 
 class ProjectWorkingReport extends HookConsumerWidget {
   final String filter;
-  const ProjectWorkingReport({super.key, required this.filter});
+  final String? searchQuery;
+  const ProjectWorkingReport({super.key, required this.filter, this.searchQuery});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,34 +47,39 @@ class ProjectWorkingReport extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _MainTitleSection(isDark: isDark),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (selectedMonth == null)
+              _MainTitleSection(isDark: isDark)
+            else
+              _DrillDownHeader(
+                title: selectedMonth,
+                onBack: () => ref.read(workingReportDetailMonthProvider.notifier).state = null,
+                isDark: isDark,
+              ),
+
+            if (selectedMonth == null)
+              _HeaderSection(
+                currentView: currentView,
+                selectedYear: selectedYear,
+                isEmployee: isEmployee,
+                currentScope: currentScope,
+                onScopeChanged: (val) => ref.read(workingReportScopeProvider.notifier).state = val,
+                onViewChanged: (val) => ref.read(workingReportViewProvider.notifier).state = val,
+                onYearChanged: (val) => ref.read(workingReportYearProvider.notifier).state = val,
+                isDark: isDark,
+              ),
+          ],
+        ),
         const SizedBox(height: 12),
         _ReportCard(
           isDark: isDark,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header Segment: Title + Controls
-              // We hide controls when in drill-down mode to simplify UI
-              if (selectedMonth == null)
-                _HeaderSection(
-                  currentView: currentView,
-                  selectedYear: selectedYear,
-                  isEmployee: isEmployee,
-                  currentScope: currentScope,
-                  onScopeChanged: (val) => ref.read(workingReportScopeProvider.notifier).state = val,
-                  onViewChanged: (val) => ref.read(workingReportViewProvider.notifier).state = val,
-                  onYearChanged: (val) => ref.read(workingReportYearProvider.notifier).state = val,
-                  isDark: isDark,
-                )
-              else
-                _DrillDownHeader(
-                  title: selectedMonth,
-                  onBack: () => ref.read(workingReportDetailMonthProvider.notifier).state = null,
-                  isDark: isDark,
-                ),
-
-              const SizedBox(height: 32),
+              const SizedBox(height: 8),
 
               // Body Section with Animated Switcher
               AnimatedSwitcher(
@@ -95,10 +104,12 @@ class ProjectWorkingReport extends HookConsumerWidget {
                             monthYear: selectedMonth,
                             isDark: isDark,
                             scope: effectiveFilter,
+                            searchQuery: searchQuery,
                           )
                         : _MonthlyTaskDetailView(
                             monthYear: selectedMonth,
                             isDark: isDark,
+                            searchQuery: searchQuery,
                           ))
                     : SizedBox(
                         key: const ValueKey('chart_view'),
@@ -216,41 +227,14 @@ class _HeaderSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.start,
-      runSpacing: 20,
-      spacing: 20,
+      spacing: 8, // Tighter grouping between sections
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        // Title & Subtitle
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Project Working Status",
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
-                letterSpacing: -0.2,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "Monthly project completion trend for $selectedYear",
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E).withOpacity(0.7),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-
         // Controls Block
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: 8,
+          runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             if (!isEmployee)
@@ -313,10 +297,10 @@ class _SegmentedControl<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D1E36) : const Color(0xFFEEF3F9),
+        color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF1F5F9), // Slate grey bg
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
+          color: isDark ? const Color(0xFF3F3F3F) : const Color(0xFFE2E8F0),
         ),
       ),
       child: Row(
@@ -332,9 +316,18 @@ class _SegmentedControl<T> extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 2), // spacing between segments
               decoration: BoxDecoration(
                 color: isSelected 
-                  ? (isDark ? Colors.blue.shade800 : const Color(0xFF05263E))
+                  ? (isDark ? const Color(0xFF424242) : Colors.white) // White pill in light mode
                   : Colors.transparent,
-                borderRadius: BorderRadius.circular(20), // Pill rounded
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: isSelected && !isDark
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Row(
                 children: [
@@ -342,18 +335,18 @@ class _SegmentedControl<T> extends StatelessWidget {
                     entry.value.icon,
                     size: 13,
                     color: isSelected
-                        ? Colors.white
-                        : (isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E).withOpacity(0.6)),
+                        ? (isDark ? Colors.white : Colors.black)
+                        : (isDark ? Colors.white70 : const Color(0xFF64748B)),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     entry.value.label,
                     style: GoogleFonts.inter(
                       fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: FontWeight.w600, // SemiBold
                       color: isSelected
-                          ? Colors.white
-                          : (isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E).withOpacity(0.7)),
+                          ? (isDark ? Colors.white : Colors.black)
+                          : (isDark ? Colors.white70 : const Color(0xFF64748B)),
                     ),
                   ),
                 ],
@@ -393,9 +386,9 @@ class _ModernYearPicker extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0)),
-              borderRadius: BorderRadius.circular(20),
-              color: isDark ? const Color(0xFF0D1E36) : Colors.white,
+              border: Border.all(color: isDark ? const Color(0xFF3F3F3F) : const Color(0xFFE2E8F0)),
+              borderRadius: BorderRadius.circular(12),
+              color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF1F5F9),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -404,14 +397,14 @@ class _ModernYearPicker extends StatelessWidget {
                   selectedYear.toString(),
                   style: GoogleFonts.inter(
                     fontSize: 10, 
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : const Color(0xFF05263E),
+                    fontWeight: FontWeight.w600, // SemiBold
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
                 const SizedBox(width: 6),
                 Icon(Icons.keyboard_arrow_down_rounded, 
                   size: 14, 
-                  color: isDark ? Colors.grey.shade400 : const Color(0xFF05263E)),
+                  color: isDark ? Colors.white70 : Colors.black87),
               ],
             ),
           ),
@@ -744,11 +737,13 @@ class _MonthlyProjectDetailView extends ConsumerWidget {
   final String monthYear;
   final bool isDark;
   final String scope;
+  final String? searchQuery;
 
   const _MonthlyProjectDetailView({
     required this.monthYear,
     required this.isDark,
     required this.scope,
+    this.searchQuery,
   });
 
   @override
@@ -791,72 +786,79 @@ class _MonthlyProjectDetailView extends ConsumerWidget {
   }
 }
 
-class _ProjectDetailCard extends StatelessWidget {
+class _ProjectDetailCard extends ConsumerWidget {
   final ProjectModel project;
   final bool isDark;
 
   const _ProjectDetailCard({required this.project, required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final completedAt = project.completedDate != null 
         ? DateFormat('MMM dd, yyyy').format(project.completedDate!)
         : 'Recently';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF5F8FC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
+    return InkWell(
+      onTap: () {
+        ref.read(selectedProjectIdProvider.notifier).state = 'api_project_${project.id}';
+        context.router.navigate(const ProjectPlanRoute());
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF5F8FC),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(14),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.check_circle_outline_rounded, size: 24, color: Colors.orange),
             ),
-            child: const Icon(Icons.check_circle_outline_rounded, size: 24, color: Colors.orange),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  project.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey.shade500),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Completed: $completedAt',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                      ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    project.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF1F2937),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey.shade500),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Completed: $completedAt',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
-        ],
+            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          ],
+        ),
       ),
     );
   }
@@ -1040,10 +1042,12 @@ Widget _buildLineChart({
 class _MonthlyTaskDetailView extends ConsumerWidget {
   final String monthYear;
   final bool isDark;
+  final String? searchQuery;
 
   const _MonthlyTaskDetailView({
     required this.monthYear,
     required this.isDark,
+    this.searchQuery,
   });
 
   @override

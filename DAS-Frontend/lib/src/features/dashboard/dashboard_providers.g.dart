@@ -23,7 +23,7 @@ final dashboardRepositoryProvider =
 );
 
 typedef DashboardRepositoryRef = AutoDisposeProviderRef<DashboardRepository>;
-String _$dashboardProjectsHash() => r'424dc55c857e267c3b6dba91967607fb77d45fa3';
+String _$dashboardProjectsHash() => r'5dce483e4e61d8e33b10db37ef641f9bff42a3f2';
 
 /// See also [dashboardProjects].
 @ProviderFor(dashboardProjects)
@@ -41,7 +41,7 @@ final dashboardProjectsProvider =
 typedef DashboardProjectsRef
     = AutoDisposeFutureProviderRef<List<ProjectWithTasks>>;
 String _$filteredDashboardStatsHash() =>
-    r'5ab89822e6b4cc48f30da3d120e93ad8960d35bb';
+    r'4f59d1bf36982b9e33027b1cc51e2d1dd83e67e6';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -231,7 +231,7 @@ final usersForStatsProvider = AutoDisposeFutureProvider<List<dynamic>>.internal(
 );
 
 typedef UsersForStatsRef = AutoDisposeFutureProviderRef<List<dynamic>>;
-String _$projectWorkStatsHash() => r'40b28a7b2650a25908d3842a2dea3e305ed0b09f';
+String _$projectWorkStatsHash() => r'2b5e103dfb1acfd84ac417c6c7cc253ebfa380ee';
 
 /// Provider for fetching project work statistics
 ///
@@ -250,7 +250,7 @@ final projectWorkStatsProvider =
 
 typedef ProjectWorkStatsRef
     = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
-String _$statsProjectsHash() => r'263714a8c1710579e7731feb606267747abf372c';
+String _$statsProjectsHash() => r'cf589b301852f6d6dd684208b399cf6ae4063007';
 
 /// Provider for fetching user-specific projects for the stats dropdown
 ///
@@ -268,7 +268,7 @@ final statsProjectsProvider = AutoDisposeFutureProvider<List<dynamic>>.internal(
 
 typedef StatsProjectsRef = AutoDisposeFutureProviderRef<List<dynamic>>;
 String _$projectCompletionChartHash() =>
-    r'ee32495e0603d043e51e2f6d77900da4635f18c8';
+    r'98b5e1f6bcd15b1d343624e5096036b66c631eee';
 
 /// See also [projectCompletionChart].
 @ProviderFor(projectCompletionChart)
@@ -403,7 +403,7 @@ class _ProjectCompletionChartProviderElement
 }
 
 String _$taskCompletionChartHash() =>
-    r'bc9afcca3112f0ef942d5ac4aab5b4580f78ef0d';
+    r'f01e499a2060c09b7cf8f409e62fd859ece90a3f';
 
 /// See also [taskCompletionChart].
 @ProviderFor(taskCompletionChart)
@@ -537,7 +537,7 @@ class _TaskCompletionChartProviderElement
 }
 
 String _$hoursCompletionChartHash() =>
-    r'f383988a0bdfdb5ae245aadbae9d3b999f014706';
+    r'3ebd12a56fe385df15abc14b5fc1125a7f87c8a1';
 
 /// See also [hoursCompletionChart].
 @ProviderFor(hoursCompletionChart)

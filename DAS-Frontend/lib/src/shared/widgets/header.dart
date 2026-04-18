@@ -8,12 +8,14 @@ import 'package:project_pm/src/features/notifications/services/notification_poll
 import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:project_pm/src/routes/app_router.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
 
 class AppHeader extends ConsumerWidget {
   final String title;
   final String subtitle;
   final Widget? customTitleWidget;
   final VoidCallback? onMenuTap; // For mobile hamburger menu
+  final Widget? actions;
 
   const AppHeader({
     super.key,
@@ -21,6 +23,7 @@ class AppHeader extends ConsumerWidget {
     required this.subtitle,
     this.customTitleWidget,
     this.onMenuTap,
+    this.actions,
   });
 
   @override
@@ -31,145 +34,189 @@ class AppHeader extends ConsumerWidget {
     final isMobile = screenWidth < 768;
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 16 : 24,
-        vertical: isMobile ? 8 : 12,
-      ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF05263E).withOpacity(isDark ? 0.95 : 1.0),
-            const Color(0xFF05263E).withOpacity(isDark ? 0.8 : 0.9),
-          ],
-        ),
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withOpacity(isDark ? 0.1 : 0.15),
-            width: 1,
-          ),
-        ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (onMenuTap != null) ...[
-            IconButton(
-              onPressed: onMenuTap,
-              icon: const Icon(
-                Icons.menu,
-                color: Colors.white,
-              ),
-              tooltip: 'Menu',
+          // ── ROW 1: TOP BAR (Search & Icons) ──────────────────────────────────
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 20,
+              vertical: isMobile ? 4 : 8,
             ),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (customTitleWidget != null)
-                  customTitleWidget!
-                else
-                  Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w700,
-                      fontSize: isMobile ? 18 : 22,
-                      letterSpacing: -0.2,
-                      color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Search Bar (Left)
+                  Expanded(
+                    flex: 4,
+                    child: Row(
+                      children: [
+                        if (onMenuTap != null) ...[
+                          IconButton(
+                            onPressed: onMenuTap,
+                            icon: const Icon(Icons.menu,
+                                color: Color(0xFF05263E), size: 20),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        if (!isMobile)
+                          Expanded(
+                            child: Container(
+                              height: 38,
+                              constraints: const BoxConstraints(maxWidth: 500),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: TextField(
+                                onChanged: (value) {
+                                  // Update the dashboard search query if we are on the dashboard
+                                  final isDashboard = context.router.current.name == DashboardRoute.name;
+                                  if (isDashboard) {
+                                    ref.read(dashboardSearchQueryProvider.notifier).state = value;
+                                  }
+                                },
+                                style: const TextStyle(
+                                    color: Color(0xFF0B1B2F), fontSize: 13),
+                                decoration: InputDecoration(
+                                  hintText: 'Search projects...',
+                                  hintStyle: const TextStyle(
+                                    color: Color(0xFF64748B),
+                                    fontSize: 13,
+                                  ),
+                                  prefixIcon: const Icon(Icons.search,
+                                      color: Color(0xFF64748B), size: 18),
+                                  border: InputBorder.none,
+                                  contentPadding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                if (subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: isMobile ? 11 : 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (!isMobile)
-            Row(
-              children: [
-                _CriticalAttentionButton(isDark: isDark),
-                const SizedBox(width: 8),
-                _NotificationButton(isDark: isDark),
-                const SizedBox(width: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(isDark ? 0.08 : 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(isDark ? 0.1 : 0.2),
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child: Row(
+                  if (!isMobile) const Spacer(flex: 1),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _ThemeButton(
-                        icon: FontAwesomeIcons.sun,
-                        isActive: currentTheme == AppThemeMode.light,
-                        onTap: () => ref
-                            .read(themeNotifierProvider.notifier)
-                            .setTheme(AppThemeMode.light),
-                        tooltip: 'Light Mode',
-                        isDark: isDark,
-                      ),
-                      _ThemeButton(
-                        icon: FontAwesomeIcons.moon,
-                        isActive: currentTheme == AppThemeMode.dark,
-                        onTap: () => ref
-                            .read(themeNotifierProvider.notifier)
-                            .setTheme(AppThemeMode.dark),
-                        tooltip: 'Dark Mode',
-                        isDark: isDark,
-                      ),
-                      _ThemeButton(
-                        icon: FontAwesomeIcons.laptop,
-                        isActive: currentTheme == AppThemeMode.system,
-                        onTap: () => ref
-                            .read(themeNotifierProvider.notifier)
-                            .setTheme(AppThemeMode.system),
-                        tooltip: 'System Theme',
-                        isDark: isDark,
+                      _CriticalAttentionButton(isDark: isDark),
+                      _NotificationButton(isDark: isDark),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9), // Slate 100
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _ThemeButton(
+                              icon: FontAwesomeIcons.sun,
+                              isActive: currentTheme == AppThemeMode.light,
+                              onTap: () => ref
+                                  .read(themeNotifierProvider.notifier)
+                                  .setTheme(AppThemeMode.light),
+                              tooltip: 'Light Mode',
+                              isDark: isDark,
+                            ),
+                            _ThemeButton(
+                              icon: FontAwesomeIcons.moon,
+                              isActive: currentTheme == AppThemeMode.dark,
+                              onTap: () => ref
+                                  .read(themeNotifierProvider.notifier)
+                                  .setTheme(AppThemeMode.dark),
+                              tooltip: 'Dark Mode',
+                              isDark: isDark,
+                            ),
+                            _ThemeButton(
+                              icon: FontAwesomeIcons.desktop,
+                              isActive: currentTheme == AppThemeMode.system,
+                              onTap: () => ref
+                                  .read(themeNotifierProvider.notifier)
+                                  .setTheme(AppThemeMode.system),
+                              tooltip: 'System Theme',
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                )
-              ],
-            )
-          else
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _CriticalAttentionButton(isDark: isDark),
-                const SizedBox(width: 8),
-                _NotificationButton(isDark: isDark),
-              ],
+                ],
+              ),
+            ),
+          ),
+
+          // ── ROW 2: FEATURE HEADER (Title & Actions) ──────────────────────────
+          if (customTitleWidget != null ||
+              (title ?? "").isNotEmpty ||
+              (subtitle ?? "").isNotEmpty ||
+              actions != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (customTitleWidget != null)
+                    customTitleWidget!
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title ?? '',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            fontSize: isMobile ? 24 : 32,
+                            letterSpacing: -0.5,
+                            color: const Color(0xFF0B1B2F),
+                          ),
+                        ),
+                        if ((subtitle ?? "").isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle ?? "",
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              color: const Color(0xFF0B1B2F).withOpacity(0.6),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  if (actions != null) actions!,
+                ],
+              ),
             ),
         ],
       ),
     );
   }
 }
+
+
+
+
 
 class _ThemeButton extends StatelessWidget {
   final IconData icon;
@@ -198,15 +245,15 @@ class _ThemeButton extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: isActive
-                ? (isDark ? Colors.white.withOpacity(0.15) : Colors.white)
+                ? (isDark ? Colors.white.withOpacity(0.12) : Colors.white)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-            boxShadow: isActive
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isActive && !isDark
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
                   ]
                 : null,
@@ -215,8 +262,8 @@ class _ThemeButton extends StatelessWidget {
             icon,
             size: 14,
             color: isActive
-                ? (isDark ? Colors.white : const Color(0xFF05263E))
-                : Colors.white.withOpacity(0.5),
+                ? (isDark ? Colors.white : Colors.blue.shade600)
+                : (isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8)),
           ),
         ),
       ),
@@ -446,7 +493,8 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
             onPressed: _toggleDropdown,
             icon: const Icon(
               FontAwesomeIcons.bell,
-              color: Colors.white,
+              color: Color(0xFF0B1B2F),
+              size: 18,
             ),
             tooltip: 'Notifications',
           ),
@@ -461,7 +509,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
                   color: Colors.red.shade500,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFF05263E),
+                    color: Colors.white,
                     width: 2,
                   ),
                 ),
@@ -782,18 +830,18 @@ class _CriticalAttentionButtonState
                       return Transform.rotate(
                         angle: (_opacityAnimation.value - 0.5) * 0.4,
                         child: Icon(
-                          Icons.warning_rounded,
-                          size: 28,
+                          Icons.report_problem_outlined,
+                          size: 20,
                           color: Color.lerp(Colors.red.shade100,
-                              Colors.redAccent, _opacityAnimation.value),
+                              const Color(0xFFEF4444), _opacityAnimation.value),
                         ),
                       );
                     },
                   )
-                : Icon(
-                    Icons.warning_amber_rounded,
-                    size: 28,
-                    color: Colors.white.withOpacity(0.6),
+                : const Icon(
+                    Icons.report_problem_outlined,
+                    size: 20,
+                    color: Color(0xFF94A3B8),
                   ),
             tooltip: 'Critical Attention',
           ),
@@ -808,7 +856,7 @@ class _CriticalAttentionButtonState
                   color: Colors.red.shade500,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFF05263E),
+                    color: Colors.white,
                     width: 2,
                   ),
                 ),

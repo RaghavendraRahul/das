@@ -253,6 +253,10 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
           
           queryset = super().get_queryset()
           
+          # If searching, bypass the "My" vs "Team" segregation to allow discovery within reachable projects
+          if self.request.query_params.get('search'):
+              return queryset
+
           # Handle 'my projects' filter (where user is creator or assignee)
           if self.request.query_params.get('filter') == 'my':
               user = self.request.user
