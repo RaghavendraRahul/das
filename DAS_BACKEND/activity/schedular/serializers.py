@@ -455,6 +455,8 @@ class TodayPlanSerializer(serializers.ModelSerializer):
     catalog_item_details = CatalogSerializer(source='catalog_item', read_only=True, allow_null=True)
     catalog_name = serializers.SerializerMethodField()
     catalog_type = serializers.SerializerMethodField()
+    total_minutes_worked = serializers.SerializerMethodField()
+    total_extra_minutes = serializers.SerializerMethodField()
     # Only apply LocalDateTimeField to DateTimeField, not TimeField
     created_at = LocalDateTimeField(read_only=True)
     updated_at = LocalDateTimeField(read_only=True)
@@ -469,7 +471,16 @@ class TodayPlanSerializer(serializers.ModelSerializer):
             'catalog_item': {'required': False, 'allow_null': True},
         }
     
+    def get_total_minutes_worked(self, obj):
+        """Sum of all minutes worked in activity logs for this plan"""
+        return sum(log.minutes_worked for log in obj.activity_logs.all())
+        
+    def get_total_extra_minutes(self, obj):
+        """Sum of all extra minutes worked in activity logs for this plan"""
+        return sum(log.extra_minutes for log in obj.activity_logs.all())
+
     def get_catalog_name(self, obj):
+
         """Return catalog name or custom title, with unplanned prefix if applicable"""
         if obj.catalog_item:
             name = obj.catalog_item.name

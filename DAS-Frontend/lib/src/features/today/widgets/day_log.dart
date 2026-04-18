@@ -23,6 +23,9 @@ class DayLog extends ConsumerWidget {
     final todayStr =
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
+    final activeSessionAsync = ref.watch(apiActiveSessionProvider(todayStr));
+    final isFinalized = activeSessionAsync.valueOrNull != null;
+
     final apiActivityLogsAsync = ref.watch(apiActivityLogsProvider(todayStr));
     final activeTaskAsync = ref.watch(apiActiveTaskProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -30,9 +33,22 @@ class DayLog extends ConsumerWidget {
     return DragTarget<Map<String, dynamic>>(
       onAcceptWithDetails: (details) async {
         if (isReadOnly) return;
+
+        // Restriction: Only allow dragging if the day plan is started (Locked)
+        if (!isFinalized) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please Lock/Start the day plan to begin recording activities.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
         try {
           // Check for active task at the very beginning
           final data = details.data;
+
 
           // Helper to handle manual review directly (No automatic timer start)
           Future<void> openManualReview(int plannedItemId, Map<String, dynamic> sourceData, {String? description, int? duration}) async {
@@ -599,6 +615,27 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                                 ),
                               ),
                             ),
+                          if ((item['extra_minutes'] as int? ?? 0) > 0)
+                            Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.redAccent.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                    color: isDark ? Colors.redAccent.withValues(alpha: 0.4) : Colors.red.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                'Extra: ${item['extra_minutes']}m',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.redAccent : Colors.red.shade700,
+                                ),
+                              ),
+                            ),
+
                           // Status Badge - Show Completed or Pending
                           if (status == 'COMPLETED')
                             Container(

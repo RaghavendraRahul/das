@@ -80,8 +80,8 @@ Future<List<ProjectWithTasks>> dashboardProjects(
       projectsWithTasks.add(ProjectWithTasks(
         project: project,
         tasks: projectTasks,
-        startDate: DateTime.tryParse(apiProject.startDate),
-        dueDate: DateTime.tryParse(apiProject.dueDate),
+        startDate: apiProject.startDate,
+        dueDate: apiProject.dueDate,
         projectLeadId: apiProject.projectLeadId,
         projectAssignees: apiProject.projectAssignees,
       ));
@@ -142,8 +142,8 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
       return ProjectWithTasks(
         project: localProject,
         tasks: tasks,
-        startDate: DateTime.tryParse(projectModel.startDate),
-        dueDate: DateTime.tryParse(projectModel.dueDate),
+        startDate: projectModel.startDate,
+        dueDate: projectModel.dueDate,
         projectLeadId: projectModel.projectLeadId,
         projectAssignees: projectModel.projectAssignees,
       );

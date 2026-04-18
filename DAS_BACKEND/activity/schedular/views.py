@@ -3652,20 +3652,50 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                     activity_log.status = 'COMPLETED'
                 elif is_pending_selected:
                     activity_log.status = 'PENDING'
-                # else: keep current status (probably IN_PROGRESS or already PENDING)
+                
                 activity_log.save()
                 print(f'[BULK-STOP] Saved log ID {activity_log.id}: new_status={activity_log.status}, completed={is_completed}, pending_selected={is_pending_selected}')
                 
                 total_minutes_worked += activity_log.minutes_worked
             
-            # Calculate aggregated totals
-            total_hours_worked = round(total_minutes_worked / 60, 2)
+            # --- CUMULATIVE SYNC LOGIC ---
+            # Fetch ALL logs for this plan to handle synchronization and cumulative calculation
+            all_logs_for_plan = ActivityLog.objects.filter(
+                today_plan=today_plan,
+                user=request.user
+            )
             
-            # Update today's plan status based on selection
+            # Calculate total cumulative minutes worked across all sessions
+            total_cumulative_minutes = sum(log.minutes_worked for log in all_logs_for_plan)
+            planned_duration = today_plan.planned_duration_minutes or 0
+            
+            # Auto-calculate extra minutes if we exceeded the plan
+            calculated_extra_minutes = max(0, total_cumulative_minutes - planned_duration)
+            
+            # Update tomorrow's plan or sync statuses
             if is_completed:
-                # User explicitly completed the task
+                # Synchronize status across all related logs
+                all_logs_for_plan.update(
+                    status='COMPLETED',
+                    is_task_completed=True
+                )
+                
+                # Update today's plan status
                 today_plan.status = 'COMPLETED'
                 today_plan.save()
+
+                # Remove from Pending table if it was there
+                Pending.objects.filter(
+                    today_plan=today_plan,
+                    user=request.user
+                ).delete()
+                
+                # Apply the calculated extra minutes to the current logs being stopped
+
+                for log in activity_logs:
+                    log.extra_minutes = calculated_extra_minutes
+                    log.save()
+                    
             elif is_pending_selected:
                 # User explicitly marked as pending
                 existing_pending = Pending.objects.filter(
@@ -3674,23 +3704,50 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                     created_at__date=today_kolkata
                 ).first()
                 
+                # Update extra minutes for current sessions
+                if calculated_extra_minutes > 0:
+                    for log in activity_logs:
+                        log.extra_minutes = calculated_extra_minutes
+                        log.save()
+
                 if not existing_pending:
-                    # Create a new pending entry (only ONE per task per day)
+                    # Create a new pending entry
                     Pending.objects.create(
                         today_plan=today_plan,
                         user=request.user,
                         minutes_left=minutes_left or 0,
-                        extra_minutes=extra_minutes,
+                        extra_minutes=calculated_extra_minutes,
                         original_plan_date=today_plan.plan_date,
                         reason='Task moved to pending'
                     )
+                else:
+                    # Update existing pending entry
+                    existing_pending.extra_minutes = calculated_extra_minutes
+                    if minutes_left is not None:
+                        existing_pending.minutes_left = minutes_left
+                    existing_pending.save()
                 
-                today_plan.status = 'MOVED_TO_PENDING'
-                today_plan.save()
+                # Safety rollback: Ensure TodayPlan stays in an active state
+                # even if it was previously marked as COMPLETED.
+                if today_plan.status == 'COMPLETED':
+                    today_plan.status = 'IN_ACTIVITY'
+                    today_plan.save()
+
+                
+
+                # We no longer set today_plan.status = 'MOVED_TO_PENDING' here
+                # to ensure it stays visible in the Today's Plan quadrants.
+                # The Pending record created above handles display in the Pending list.
+                # today_plan.status = 'MOVED_TO_PENDING' 
+                # today_plan.save()
+
             else:
-                # User just saved times without selecting completion or pending
-                # Keep the task in its current status (IN_PROGRESS or last state)
-                pass
+                # Just saving times without completion/pending selection
+                if calculated_extra_minutes > 0:
+                    for log in activity_logs:
+                        log.extra_minutes = calculated_extra_minutes
+                        log.save()
+
         
         return Response({
             "message": f"Updated {activity_logs.count()} activity logs",

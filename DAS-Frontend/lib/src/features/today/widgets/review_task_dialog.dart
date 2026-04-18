@@ -156,15 +156,37 @@ void showReviewTaskDialog(
                 if (startTimeDisplay.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: Colors.blue.shade600,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: Colors.blue.shade600,
+                          ),
+                        ),
+                        if ((todayPlan?['total_minutes_worked'] as int? ?? 0) > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Total: ${todayPlan?['total_minutes_worked']}m',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+
                 const SizedBox(height: 20),
 
                 if (plannedRemark.isNotEmpty) ...[
@@ -380,6 +402,19 @@ void showReviewTaskDialog(
                     const Text('mins'),
                   ],
                 ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 120),
+                  child: Text(
+                    'Extra time is also auto-calculated based on plan.',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 12),
 
                 // Time Pickers
@@ -577,6 +612,7 @@ void showReviewTaskDialog(
                       ref.invalidate(apiActivityLogsProvider(todayStr));
                       ref.invalidate(apiActiveTaskProvider);
                       ref.invalidate(apiTodayPlanProvider);
+                      ref.invalidate(apiPendingItemsProvider(todayStr));
 
                       if (context.mounted) {
                         Navigator.pop(context);

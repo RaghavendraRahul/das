@@ -533,6 +533,20 @@ class DayPlanner extends HookConsumerWidget {
       child: Column(
         children: [
           _QuadrantBox(
+            quadrant: 'inbox',
+            title: 'TASKS TO BE SORTED / INBOX',
+            color: Colors.blueGrey,
+            apiItems: apiItems
+                .where((i) {
+                  final q = i['quadrant']?.toString().toUpperCase();
+                  return q == 'INBOX' || q == null || q.isEmpty;
+                })
+                .toList(),
+            isFinalized: isFinalized,
+            pulse: pulse,
+          ),
+          const SizedBox(height: 12),
+          _QuadrantBox(
             quadrant: 'Q1',
             title: 'Q1 Do First (Urgent & Important)',
             color: const Color(0xFFEF4444), // Red
@@ -578,6 +592,7 @@ class DayPlanner extends HookConsumerWidget {
         ],
       ),
     );
+
   }
 }
 
@@ -606,12 +621,26 @@ class _ApiListView extends HookConsumerWidget {
 
     return DragTarget<Object>(
       onWillAcceptWithDetails: (details) {
-        if (isReadOnly || isFinalized) return false;
+        if (isReadOnly) return false;
         return details.data is Map<String, dynamic>;
       },
       onAcceptWithDetails: (details) async {
         if (details.data is! Map<String, dynamic>) return;
         final data = details.data as Map<String, dynamic>;
+
+        // Restriction: If day is started, notify user to use Activity Log for unplanned tasks
+        // Exception: Allow reordering existing today_plan items
+        if (isFinalized && data['source'] != 'today_plan') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Day has been started. For unplanned tasks, please drag them directly to the Activity Log.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
+
 
         if (data.containsKey('type')) {
           showDialog(
@@ -621,8 +650,9 @@ class _ApiListView extends HookConsumerWidget {
               initialDescription: data['description'],
               initialDuration:
                   ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
-              showQuadrantSelector: false,
+              showQuadrantSelector: true, // Enable quadrant selection from List View
               onConfirm: ({
+
                 required String name,
                 required int duration,
                 String? description,
@@ -668,27 +698,11 @@ class _ApiListView extends HookConsumerWidget {
                   }
                   
                   ref.invalidate(apiTodayPlanProvider);
-
-                  // Open Review Dialog (Step 2)
-                  if (context.mounted && plannedItemId != null) {
-                    final Map<String, dynamic> shellItem = {
-                      'id': 0,
-                      'today_plan': {
-                        'id': plannedItemId,
-                        'catalog_name': name,
-                        'planned_duration_minutes': duration,
-                        'notes': description ?? '',
-                      },
-                      'actual_start_time': null,
-                      'actual_end_time': null,
-                      'minutes_worked': 0,
-                    };
-                    showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
-                  }
                 } catch (e) {
                   debugPrint('Error adding task in list view: $e');
                 }
               },
+
             ),
           );
         }
@@ -764,16 +778,75 @@ class _ApiListView extends HookConsumerWidget {
                   children: localItems.value.asMap().entries.map((entry) {
                     final index = entry.key;
                     final item = entry.value;
-                    return Padding(
+                    return Draggable<Map<String, dynamic>>(
                       key: ValueKey(item['id']),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: _ApiPlannedItem(
-                        apiItem: item,
-                        isFinalized: isFinalized,
-                        index: index,
+                      data: {
+                        'source': 'today_plan',
+                        'type': 'plan_item',
+                        'id': item['id'],
+                        'today_plan_id': item['id'],
+                        'name': item['custom_title'] ??
+                            item['catalog_name'] ??
+                            item['name'] ??
+                            'Task',
+                        'duration': item['planned_duration_minutes'] ?? 60,
+                        'status': item['status'] ?? 'PLANNED',
+                        'planned_start': item['planned_start'],
+                        'quadrant': item['quadrant'],
+                      },
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          width: MediaQuery.of(context).size.width * 0.3,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness ==
+                                    Brightness.dark
+                                ? const Color(0xFF1F2937)
+                                    .withOpacity(0.9)
+                                : Colors.white.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 10)
+                            ],
+                          ),
+                          child: Text(
+                              (item['custom_title'] ??
+                                      item['catalog_name'] ??
+                                      item['name'] ??
+                                      'Task')
+                                  .toUpperCase(),
+                              style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue)),
+                        ),
+                      ),
+                      childWhenDragging: Opacity(
+                        opacity: 0.3,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: _ApiPlannedItem(
+                            apiItem: item,
+                            isFinalized: isFinalized,
+                            index: index,
+                          ),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: _ApiPlannedItem(
+                          apiItem: item,
+                          isFinalized: isFinalized,
+                          index: index,
+                        ),
                       ),
                     );
                   }).toList(),
+
                 ),
         );
       },
@@ -987,23 +1060,6 @@ class _QuadrantBox extends HookConsumerWidget {
                     }
 
                     ref.invalidate(apiTodayPlanProvider);
-
-                    // Open Review Dialog (Step 2)
-                    if (context.mounted && plannedItemId != null) {
-                      final Map<String, dynamic> shellItem = {
-                        'id': 0,
-                        'today_plan': {
-                          'id': plannedItemId,
-                          'catalog_name': name,
-                          'planned_duration_minutes': duration,
-                          'notes': description ?? '',
-                        },
-                        'actual_start_time': null,
-                        'actual_end_time': null,
-                        'minutes_worked': 0,
-                      };
-                      showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
-                    }
                   } catch (e) {
                     debugPrint('Error adding item from drag: $e');
                     if (context.mounted) {
@@ -1016,6 +1072,7 @@ class _QuadrantBox extends HookConsumerWidget {
                     }
                   }
                 },
+
               ),
             );
           }
@@ -1604,7 +1661,18 @@ class _ApiPlannedItem extends ConsumerWidget {
                           : (isDark ? Colors.blue.shade300 : Colors.blue.shade600),
                       ),
                       onPressed: isAlreadyInLog || isReadOnly ? null : () {
+                        if (!isFinalized) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please Lock/Start the day plan to begin recording activities.'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+                        
                         // Restore logic: Trigger the manual review flow
+
                         showDialog(
                           context: context,
                           builder: (ctx) => TaskConfigModal(

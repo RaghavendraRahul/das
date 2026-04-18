@@ -38,7 +38,7 @@ List<Map<String, dynamic>> _resolveAssignees(
       final user = allUsers.firstWhere((u) => u.id == id.toString());
       result.add({
         'id': id,
-        'name': user.name ?? user.email,
+        'name': user.name,
         'avatar_url': user.avatarUrl,
         'role': user.role,
       });
@@ -142,8 +142,8 @@ Future<PaginatedResponse<ProjectWithTasks>> paginatedDashboardProjects(
     return ProjectWithTasks(
       project: localProject,
       tasks: tasks,
-      startDate: DateTime.tryParse(projectModel.startDate),
-      dueDate: DateTime.tryParse(projectModel.dueDate),
+      startDate: projectModel.startDate,
+      dueDate: projectModel.dueDate,
       projectLeadId: projectModel.projectLeadId,
       projectAssignees: resolvedAssignees,
     );
@@ -205,8 +205,8 @@ Future<PaginatedResponse<ProjectWithTasks>> projectsPageProjects(
       return ProjectWithTasks(
         project: localProject,
         tasks: tasks,
-        startDate: DateTime.tryParse(projectModel.startDate),
-        dueDate: DateTime.tryParse(projectModel.dueDate),
+        startDate: projectModel.startDate,
+        dueDate: projectModel.dueDate,
         projectLeadId: projectModel.projectLeadId,
         projectAssignees: resolvedAssignees,
       );
@@ -334,7 +334,9 @@ Future<List<Map<String, dynamic>>> apiTodayPlan(ApiTodayPlanRef ref) async {
       "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
 
   try {
-    return await apiService.getTodayPlan(date: dateStr, userId: userId);
+    final items = await apiService.getTodayPlan(date: dateStr, userId: userId);
+    // Filter out items that have been moved to pending so they don't show in quadrants
+    return items.where((item) => item['status'] != 'MOVED_TO_PENDING').toList();
   } catch (e) {
     throw Exception('Failed to fetch today plan: $e');
   }
@@ -386,10 +388,11 @@ Future<List<Map<String, dynamic>>> apiPendingItems(
   final userId = ref.watch(currentUserIdProvider);
 
   try {
-    // 1. Fetch TodayPlan.inbox items
+    // 1. Fetch TodayPlan.inbox items + items explicitly moved to pending
     final todayPlan = await apiService.getTodayPlan(date: date, userId: userId);
     final inboxItems = todayPlan
-        .where((item) => item['quadrant'] == 'inbox')
+        .where((item) =>
+            item['quadrant'] == 'inbox' || item['status'] == 'MOVED_TO_PENDING')
         .map((item) => {
               ...item,
               'is_today_inbox': true,
@@ -740,8 +743,8 @@ Future<PaginatedResponse<ProjectWithTasks>> adminEmployeeProjects(
       return ProjectWithTasks(
         project: localProject,
         tasks: tasks,
-        startDate: DateTime.tryParse(projectModel.startDate),
-        dueDate: DateTime.tryParse(projectModel.dueDate),
+        startDate: projectModel.startDate,
+        dueDate: projectModel.dueDate,
         projectLeadId: projectModel.projectLeadId,
         projectAssignees: resolvedAssignees,
       );

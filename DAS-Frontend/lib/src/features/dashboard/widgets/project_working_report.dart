@@ -800,7 +800,7 @@ class _ProjectDetailCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completedAt = project.completedDate != null 
-        ? DateFormat('MMM dd, yyyy').format(DateTime.parse(project.completedDate!))
+        ? DateFormat('MMM dd, yyyy').format(project.completedDate!)
         : 'Recently';
 
     return Container(

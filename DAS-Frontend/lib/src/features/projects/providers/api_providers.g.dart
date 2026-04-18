@@ -849,7 +849,7 @@ final apiWorkItemsProvider =
 );
 
 typedef ApiWorkItemsRef = AutoDisposeFutureProviderRef<List<CatalogModel>>;
-String _$apiTodayPlanHash() => r'5d8636839c7225cd3c688fd4c4cfd88099bf9f40';
+String _$apiTodayPlanHash() => r'a4c356f33f41dc78b58ab63ea2743c5fb7ac99f9';
 
 /// Fetch today's planned items from API
 ///
@@ -1030,7 +1030,7 @@ final apiActiveTaskProvider =
 );
 
 typedef ApiActiveTaskRef = AutoDisposeFutureProviderRef<Map<String, dynamic>?>;
-String _$apiPendingItemsHash() => r'8803ba519f34f07ad5186a72bb3f6e71cb409972';
+String _$apiPendingItemsHash() => r'14798e85b821eb36c3c343f1180f53934e1c4c76';
 
 /// Fetch current user's pending (incomplete) tasks for a specific date
 /// This filtered version only returns items from today's plan that are in the 'inbox' (unquadranted)

@@ -6,6 +6,7 @@ import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/routes/app_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../critical_attention_provider.dart';
 
 enum StatCategory { portfolio, timeline, completion, attention }
 
@@ -40,13 +41,10 @@ class ProjectOverviewStats extends ConsumerWidget {
     final totalTasks = allTasks.length;
     final completedTasks = allTasks.where((t) => t.progress == 100).length;
 
-    // Attention
-    final criticalCount = allTasks
-        .where((t) =>
-            t.task.priority == 'High' &&
-            t.progress < 100 &&
-            t.endDate.isBefore(now))
-        .length;
+    // Attention - Centralized Sync
+    final criticalItemsAsync = ref.watch(criticalItemsProvider);
+    final criticalItemsList = criticalItemsAsync.valueOrNull ?? [];
+    final totalAttentionCount = criticalItemsList.length;
 
     void showCategoryModal(StatCategory category) {
       showDialog(
@@ -125,15 +123,15 @@ class ProjectOverviewStats extends ConsumerWidget {
               ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
               _StatCard(
                 title: "Critical Attention",
-                count: criticalCount,
-                sub1: criticalCount,
+                count: totalAttentionCount,
+                sub1: totalAttentionCount,
                 sub1Label: "Critical",
                 sub2: 0,
-                sub2Label: "Rejected",
+                sub2Label: "",
                 icon: Icons.notifications_active_outlined,
                 color: Colors.black87,
-                isSub1Alert: criticalCount > 0,
-                isCritical: criticalCount > 0,
+                isSub1Alert: totalAttentionCount > 0,
+                isCritical: totalAttentionCount > 0,
                 strokeColor: const Color(0xFF05263E),
                 onTap: () => showCategoryModal(StatCategory.attention),
               ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
@@ -146,7 +144,7 @@ class ProjectOverviewStats extends ConsumerWidget {
 }
 
 /// Modal dialog showing list of projects/tasks for a category
-class _StatsModal extends StatelessWidget {
+class _StatsModal extends ConsumerWidget {
   final StatCategory category;
   final List<ProjectWithTasks> projects;
   final ValueChanged<String> onSelectProject;
@@ -158,7 +156,7 @@ class _StatsModal extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final now = DateTime.now();
 
@@ -218,21 +216,18 @@ class _StatsModal extends StatelessWidget {
       case StatCategory.attention:
         title = "Critical Attention & Blockers";
         items = [];
-        for (final p in projects) {
-          for (final t in p.tasks) {
-            if (t.task.priority == 'High' &&
-                t.progress < 100 &&
-                t.endDate.isBefore(now)) {
-              items.add(_ModalItem(
-                id: p.project.id, // Changed to project.id for routing
-                name: t.task.name,
-                subtext: "${p.project.name} • Due ${_formatDate(t.endDate)}",
-                statusText: "CRITICAL",
-                statusColor: Colors.red,
-                isClickable: true,
-              ));
-            }
-          }
+        final criticalItemsAsync = ref.read(criticalItemsProvider);
+        final criticalItemsList = criticalItemsAsync.valueOrNull ?? [];
+
+        for (final item in criticalItemsList) {
+          items.add(_ModalItem(
+            id: item.projectId,
+            name: item.title,
+            subtext: item.subtitle,
+            statusText: item.typeLabel,
+            statusColor: item.color,
+            isClickable: true,
+          ));
         }
         if (items.isEmpty) {
           items.add(_ModalItem(
@@ -411,24 +406,6 @@ class _StatsModal extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return "${months[date.month - 1]} ${date.day}";
   }
 }
 
@@ -690,27 +667,29 @@ class _StatCardState extends State<_StatCard> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _SubStat(
-                          value: widget.sub1,
-                          label: widget.sub1Label,
-                          isAlert: widget.isSub1Alert,
-                          isPrimary: false,
-                          textColor: textColor,
-                          labelColor: mutedColor,
-                          valueFontSize: subValSz,
-                          labelFontSize: subLblSz,
-                        ),
-                        _SubStat(
-                          value: widget.sub2,
-                          label: widget.sub2Label,
-                          isAlert: widget.isSub2Alert,
-                          isPrimary: false,
-                          textColor: textColor,
-                          labelColor: mutedColor,
-                          alignEnd: true,
-                          valueFontSize: subValSz,
-                          labelFontSize: subLblSz,
-                        ),
+                        if (widget.sub1Label.isNotEmpty)
+                          _SubStat(
+                            value: widget.sub1,
+                            label: widget.sub1Label,
+                            isAlert: widget.isSub1Alert,
+                            isPrimary: false,
+                            textColor: textColor,
+                            labelColor: mutedColor,
+                            valueFontSize: subValSz,
+                            labelFontSize: subLblSz,
+                          ),
+                        if (widget.sub2Label.isNotEmpty)
+                          _SubStat(
+                            value: widget.sub2,
+                            label: widget.sub2Label,
+                            isAlert: widget.isSub2Alert,
+                            isPrimary: false,
+                            textColor: textColor,
+                            labelColor: mutedColor,
+                            alignEnd: true,
+                            valueFontSize: subValSz,
+                            labelFontSize: subLblSz,
+                          ),
                       ],
                     ),
 

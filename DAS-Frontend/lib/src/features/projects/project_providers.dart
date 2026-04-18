@@ -91,8 +91,8 @@ Future<List<ProjectWithTasks>> projectsWithTasks(
       result.add(ProjectWithTasks(
         project: localProject,
         tasks: tasksWithAssignees,
-        startDate: DateTime.tryParse(project.startDate),
-        dueDate: DateTime.tryParse(project.dueDate),
+        startDate: project.startDate,
+        dueDate: project.dueDate,
         projectLeadId: project.projectLeadId,
         projectAssignees: project.projectAssignees ?? [],
       ));
