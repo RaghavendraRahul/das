@@ -151,7 +151,7 @@ class DayLog extends ConsumerWidget {
                       debugPrint('   - Using pending path: id=${data['id']}, is_today_inbox=${data['is_today_inbox']}');
                       if (data['is_today_inbox'] == true) {
                         plannedItemId = data['id'] as int;
-                        await apiService.updateTodayPlanItem(plannedItemId!, {
+                        await apiService.updateTodayPlanItem(plannedItemId, {
                           'is_unplanned': true,
                           'notes': description,
                           'planned_duration_minutes': duration,
@@ -186,23 +186,22 @@ class DayLog extends ConsumerWidget {
                     }
 
                     debugPrint('   - Created plannedItemId: $plannedItemId');
-                    if (plannedItemId != null) {
-                      // Clean up pending if applicable
-                      if (data['is_pending'] == true && data['pending_id'] != null && data['is_today_inbox'] != true) {
-                        await apiService.deletePendingTask(data['pending_id']);
-                      }
-                      
-                      debugPrint('   - Opening manual review for $plannedItemId');
-                      await openManualReview(plannedItemId, {
-                        ...data,
-                        'name': name,
-                        'notes': description,
-                        'planned_duration_minutes': duration,
-                      }, 
-                      description: description, 
-                      duration: duration);
+                    // Clean up pending if applicable
+                    if (data['is_pending'] == true && data['pending_id'] != null && data['is_today_inbox'] != true) {
+                      await apiService.deletePendingTask(data['pending_id']);
+                      ref.invalidate(apiAllPendingItemsProvider);
                     }
-                  } catch (e, stack) {
+                    
+                    debugPrint('   - Opening manual review for $plannedItemId');
+                    await openManualReview(plannedItemId, {
+                      ...data,
+                      'name': name,
+                      'notes': description,
+                      'planned_duration_minutes': duration,
+                    }, 
+                    description: description, 
+                    duration: duration);
+                                    } catch (e, stack) {
                     debugPrint('❌ [DayLog] Failed to create unplanned item: $e');
                     debugPrint(stack.toString());
                     if (context.mounted) {
@@ -220,7 +219,6 @@ class DayLog extends ConsumerWidget {
       onWillAcceptWithDetails: (details) {
         if (isReadOnly) return false;
         final data = details.data;
-        if (data is! Map<String, dynamic>) return false;
         
         // Accept from today_plan or catalog/unplanned sources
         return data['source'] == 'today_plan' || 
@@ -230,6 +228,7 @@ class DayLog extends ConsumerWidget {
                data['type'] == 'catalog_item' ||
                data['type'] == 'catalog_task' ||
                data['type'] == 'custom_template' ||
+               data['type'] == 'pending_item' ||
                data['type'] == 'template';
       },
       builder: (context, candidateData, rejectedData) {
@@ -502,6 +501,9 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
     if (todayPlan != null) {
       // Use catalog_name which is a convenience field from the serializer
       taskName = todayPlan['catalog_name'] as String? ?? 'Unknown Task';
+      // Sanitize taskName to remove any redundant time patterns e.g. "Lunch [13:00-14:00]"
+      taskName = taskName.replaceAll(RegExp(r'\s*\[\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\]$'), '');
+      
       isUnplanned = todayPlan['is_unplanned'] == true;
       if (isUnplanned) {
         taskName = taskName.replaceFirst('[Unplanned] ', '');
@@ -665,24 +667,6 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                               ),
                             ),
                           ),
-                          if (isRunning)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                              ),
-                              child: Text(
-                                'WORKING',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.blue,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                       const SizedBox(height: 8),

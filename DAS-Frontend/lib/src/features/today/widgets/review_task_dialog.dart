@@ -35,6 +35,8 @@ void showReviewTaskDialog(
   String taskName = 'Unknown Task';
   if (todayPlan != null) {
     taskName = todayPlan['catalog_name'] as String? ?? 'Unknown Task';
+    // Sanitize taskName to remove any redundant time patterns
+    taskName = taskName.replaceAll(RegExp(r'\s*\[\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\]$'), '');
   }
 
   // Extract times directly from ISO strings

@@ -53,6 +53,15 @@ class DayPlanner extends HookConsumerWidget {
         selectedDate.month == now.month &&
         selectedDate.day == now.day;
 
+    useEffect(() {
+      debugPrint(
+          'DayPlanner: isToday=$isToday, isFinalized=$isFinalized, date=$selectedDateStr');
+      if (isFinalized) {
+        debugPrint('DayPlanner: Session detected for $selectedDateStr');
+      }
+      return null;
+    }, [isToday, isFinalized, selectedDateStr]);
+
     String dateHeader;
     if (isToday) {
       dateHeader = "Today's Plan";
@@ -212,7 +221,7 @@ class DayPlanner extends HookConsumerWidget {
                           },
                   ),
                 ],
-              )
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -234,7 +243,7 @@ class DayPlanner extends HookConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // Fixed Pending Box with Overflow Protection
           if (ref.watch(apiPendingItemsProvider(selectedDateStr)).maybeWhen(
@@ -244,7 +253,7 @@ class DayPlanner extends HookConsumerWidget {
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height *
-                        0.3, // Responsive height (30% of screen)
+                        0.18, // Reduced height (18% of screen)
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -287,7 +296,7 @@ class DayPlanner extends HookConsumerWidget {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                        "Can't add - day has been started."),
+                                        "Day Plan has started. Planning interactions are locked."),
                                     backgroundColor: Colors.orange,
                                   ),
                                 );
@@ -419,7 +428,96 @@ class DayPlanner extends HookConsumerWidget {
 
           const SizedBox(height: 8),
 
-
+          if (isToday)
+            Center(
+              child: isFinalized
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.green.withOpacity(0.15)
+                            : Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.green.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_rounded,
+                              size: 18,
+                              color: isDark ? Colors.greenAccent : Colors.green),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Day Plan has started!',
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: isDark
+                                  ? Colors.greenAccent
+                                  : Colors.green.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: isReadOnly
+                            ? null
+                            : () async {
+                                try {
+                                  final apiService =
+                                      ref.read(taskApiServiceProvider);
+                                  await apiService.startDay();
+                                  ref.invalidate(apiActiveSessionProvider(
+                                      selectedDateStr));
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            "Day Plan Locked! Let's get to work!"),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content:
+                                            Text('Failed to start day: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        icon: const Icon(Icons.play_arrow_rounded, size: 24),
+                        label: Text(
+                          'START DAY PLAN',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF166534),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+            ),
         ],
       ),
     );
@@ -954,9 +1052,9 @@ class _QuadrantBox extends HookConsumerWidget {
               // Header with Sidebar Theme
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF05263E),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF05263E),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1391,10 +1489,6 @@ class _ApiPlannedItem extends ConsumerWidget {
     final duration = apiItem['planned_duration_minutes'] ?? 0;
     final status = (apiItem['status'] ?? 'PLANNED').toString().toUpperCase();
 
-    // Watch for any active task to disable play buttons
-    final activeTaskAsync = ref.watch(apiActiveTaskProvider);
-    final hasActiveTask =
-        activeTaskAsync.value != null && activeTaskAsync.value!['id'] != null;
     final isReadOnly = ref.watch(isReadOnlyProvider);
 
     return Container(

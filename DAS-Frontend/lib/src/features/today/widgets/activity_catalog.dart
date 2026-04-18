@@ -20,55 +20,7 @@ import 'package:project_pm/src/core/providers/user_providers.dart';
 class ActivityCatalog extends HookConsumerWidget {
   const ActivityCatalog({super.key});
 
-  static const Map<String, List<Map<String, dynamic>>> systemTemplates = {
-    'Routine': [
-      {
-        'name': 'Coffee Break',
-        'icon': FontAwesomeIcons.mugHot,
-        'desc': 'Take a short break'
-      },
-      {
-        'name': 'Lunch',
-        'icon': FontAwesomeIcons.utensils,
-        'desc': 'Lunch break'
-      },
-      {
-        'name': 'Walk',
-        'icon': FontAwesomeIcons.personWalking,
-        'desc': 'Go for a walk'
-      },
-    ],
-    'Education': [
-      {
-        'name': 'Learning',
-        'icon': FontAwesomeIcons.graduationCap,
-        'desc': 'Study new topic'
-      },
-      {'name': 'Reading', 'icon': FontAwesomeIcons.book, 'desc': 'Read a book'},
-      {
-        'name': 'Course',
-        'icon': FontAwesomeIcons.chalkboardUser,
-        'desc': 'Online course'
-      },
-    ],
-    'Work': [
-      {
-        'name': 'Req. Gathering',
-        'icon': FontAwesomeIcons.briefcase,
-        'desc': 'Client requirements meeting'
-      },
-      {
-        'name': 'Documentation',
-        'icon': FontAwesomeIcons.fileLines,
-        'desc': 'Update project docs'
-      },
-      {
-        'name': 'Interview',
-        'icon': FontAwesomeIcons.users,
-        'desc': 'Candidate interview'
-      },
-    ],
-  };
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -270,28 +222,18 @@ class ActivityCatalog extends HookConsumerWidget {
                     catalogByType.putIfAbsent(type, () => []).add(item);
                   }
 
-                  // Get all unique categories (system + custom + catalog)
-                  final predefinedCategories = {
-                    'COURSE',
-                    'ROUTINE',
-                    'WORK',
-                    'CUSTOM',
-                    'PROJECT'
-                  };
-
-                  final allCategories = <String>{
-                    if (catalogByType.containsKey('COURSE')) 'Education',
-                    if (catalogByType.containsKey('ROUTINE')) 'Routine',
-                    if (catalogByType.containsKey('WORK')) 'Work',
-                    // Add dynamic categories from catalog (converted to Title Case)
-                    ...catalogByType.keys
-                        .where((k) => !predefinedCategories.contains(k))
-                        .map((k) {
-                      if (k.isEmpty) return k;
-                      return k[0] + k.substring(1).toLowerCase();
-                    }),
+                  // derive all categories from API catalog and user templates
+                  final allCategories = {
                     ...templatesByCategory.keys,
-                  };
+                    ...catalogByType.keys.map((type) {
+                      if (type == 'COURSE') return 'Education';
+                      if (type == 'ROUTINE') return 'Routine';
+                      if (type == 'WORK') return 'Work';
+                      return type[0] + type.substring(1).toLowerCase();
+                    }),
+                  }.toList();
+
+                  allCategories.sort();
 
                   // Category icon/color mapping
                   IconData getCategoryIcon(String category) {
@@ -438,7 +380,6 @@ class ActivityCatalog extends HookConsumerWidget {
                         }
 
                         // 1. Get raw items
-                        // final rawSystemItems = systemTemplates[category] ?? []; // Disabled - only show database items
                         final rawCustomItems =
                             templatesByCategory[category] ?? [];
 
@@ -457,14 +398,6 @@ class ActivityCatalog extends HookConsumerWidget {
                         // 2. Filter items based on search query
                         final query = searchQuery.value.toLowerCase();
 
-                        // final filteredSystemItems = rawSystemItems // Disabled - only show database items
-                        //     .where((item) =>
-                        //         query.isEmpty ||
-                        //         (item['name'] as String)
-                        //             .toLowerCase()
-                        //             .contains(query))
-                        //     .toList();
-
                         final filteredCustomItems = rawCustomItems
                             .where((t) =>
                                 query.isEmpty ||
@@ -477,7 +410,7 @@ class ActivityCatalog extends HookConsumerWidget {
                                 item.name.toLowerCase().contains(query))
                             .toList();
 
-                        final totalCount = // filteredSystemItems.length + // Disabled - only show database items
+                        final totalCount =
                             filteredCustomItems.length +
                                 filteredCatalogItems.length;
 
@@ -510,15 +443,6 @@ class ActivityCatalog extends HookConsumerWidget {
                                 .map((catalogItem) => _CatalogItemCard(
                                       catalogItem: catalogItem,
                                     )),
-                            // System templates - Disabled to show only database items
-                            // ...filteredSystemItems
-                            //     .map((item) => _SystemTemplateCard(
-                            //           name: item['name'] as String,
-                            //           icon: item['icon'] as IconData,
-                            //           description:
-                            //               item['desc'] as String? ?? '',
-                            //           category: category,
-                            //         )),
                             // Custom templates
                             ...filteredCustomItems
                                 .map((template) => _CustomTemplateCard(
@@ -774,12 +698,13 @@ class _ProjectTaskCard extends ConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
             showDialog(
@@ -1141,12 +1066,13 @@ class _SystemTemplateCard extends ConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
             final selectedQuadrant = ref.read(selectedQuadrantProvider);
@@ -1381,12 +1307,13 @@ class _CatalogItemCard extends ConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
             final rawDuration =
@@ -1539,27 +1466,18 @@ class _PendingTaskCard extends ConsumerWidget {
     final plannedDuration =
         todayPlanDetails?['planned_duration_minutes'] as int? ?? minutesLeft;
 
-    final dragData = isTodayInbox
-        ? {
-            'type': 'pending_item',
-            'is_today_inbox': true,
-            'id': pendingItem['id'],
-            'name': taskName,
-            'description': reason,
-            'duration': plannedDuration.clamp(15, 120),
-            if (catalogId != null) 'catalog_id': parseTaskId(catalogId),
-          }
-        : {
-            'source': 'catalog',
-            'type': 'pending_item',
-            'is_pending': true,
-            'pending_id': pendingItem['id'],
-            'id': pendingItem['id'],
-            'name': taskName,
-            'description': reason,
-            'duration': minutesLeft.clamp(15, 120),
-            if (catalogId != null) 'catalog_id': parseTaskId(catalogId),
-          };
+    final dragData = {
+      'source': 'catalog',
+      'type': 'pending_item',
+      'is_today_inbox': isTodayInbox,
+      'is_pending': !isTodayInbox,
+      'pending_id': isTodayInbox ? null : pendingItem['id'],
+      'id': pendingItem['id'],
+      'name': taskName,
+      'description': reason,
+      'duration': (isTodayInbox ? plannedDuration : minutesLeft).clamp(15, 120),
+      if (catalogId != null) 'catalog_id': parseTaskId(catalogId),
+    };
 
     return Draggable<Map<String, dynamic>>(
       data: dragData,
@@ -1631,12 +1549,13 @@ class _PendingTaskCard extends ConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
 
@@ -1924,12 +1843,13 @@ class _CustomTemplateCard extends HookConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
             showDialog(
