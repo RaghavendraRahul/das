@@ -15,6 +15,7 @@ import 'package:project_pm/src/features/dashboard/models/search_result.dart';
 import 'package:project_pm/src/shared/widgets/global_search_overlay.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'package:project_pm/src/core/providers/user_providers.dart';
 
 class AppHeader extends HookConsumerWidget {
   final String title;
@@ -44,6 +45,9 @@ class AppHeader extends HookConsumerWidget {
     final overlayState = useState<OverlayEntry?>(null);
     final focusNode = useFocusNode();
     final debounceTimer = useRef<Timer?>(null);
+
+    final userAsync = ref.watch(currentUserProvider);
+    final currentUser = userAsync.valueOrNull;
 
     // Navigation and Logic Helpers
     void handleNavigation(dynamic item) {
@@ -75,7 +79,6 @@ class AppHeader extends HookConsumerWidget {
               // For now, take them to the team overview
               router.push(const TeamOverviewRoute());
               break;
-            default: break;
          }
       } else if (item is String) {
          textController.text = item;
@@ -355,6 +358,17 @@ class AppHeader extends HookConsumerWidget {
                           ],
                         ),
                       ),
+                      if (currentUser != null && !isMobile) ...[
+                        const SizedBox(width: 16),
+                        Text(
+                          currentUser.name,
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF05263E),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],

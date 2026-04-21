@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:project_pm/src/features/auth/auth_state_providers.dart';
@@ -21,15 +23,21 @@ Dio dio(DioRef ref) {
 
   // Get base URL from multiple sources (priority order):
   // 1. --dart-define=API_BASE_URL=... (from launch.json or command line)
-  // 2. Fallback to production URL
+  // 2. .env file loaded via flutter_dotenv
+  // 3. Fallback to production/localhost defaults
   const dartDefineUrl = String.fromEnvironment('API_BASE_URL');
+  final envUrl = dotenv.maybeGet('API_BASE_URL');
+
   String baseUrl = dartDefineUrl.isNotEmpty
       ? dartDefineUrl
-      : 'http://localhost:8003/api/';
+      : (envUrl != null && envUrl.isNotEmpty)
+          ? envUrl
+          : 'http://localhost:8000/api/';
 
   if (defaultTargetPlatform == TargetPlatform.android &&
       !kIsWeb &&
-      dartDefineUrl.isEmpty) {
+      dartDefineUrl.isEmpty &&
+      (envUrl == null || envUrl.isEmpty)) {
     baseUrl = 'http://10.0.2.2:8000/api/';
   }
 
@@ -38,12 +46,12 @@ Dio dio(DioRef ref) {
 
   // Configure dio (base options, interceptors)
   dio.options.baseUrl = baseUrl;
-  
+
   // Increased timeouts for slower networks/dev environments as per user feedback
   // Using 60 seconds to ensure large data fetches complete successfully
   dio.options.connectTimeout = const Duration(seconds: 60);
   dio.options.receiveTimeout = const Duration(seconds: 60);
-  
+
   // sendTimeout is not supported on Web without body
   if (!kIsWeb) {
     dio.options.sendTimeout = const Duration(seconds: 60);
@@ -54,22 +62,23 @@ Dio dio(DioRef ref) {
     onError: (DioException err, handler) async {
       // Retry only on connection/timeout errors up to 3 times
       final isTimeout = err.type == DioExceptionType.connectionTimeout ||
-                        err.type == DioExceptionType.receiveTimeout ||
-                        err.type == DioExceptionType.sendTimeout ||
-                        err.type == DioExceptionType.connectionError;
-      
+          err.type == DioExceptionType.receiveTimeout ||
+          err.type == DioExceptionType.sendTimeout ||
+          err.type == DioExceptionType.connectionError;
+
       int retryCount = err.requestOptions.extra['retry_count'] ?? 0;
-      
+
       if (isTimeout && retryCount < 3) {
         retryCount++;
-        debugPrint('🔄 Retrying request (${err.requestOptions.path}) - Attempt $retryCount');
-        
+        debugPrint(
+            '🔄 Retrying request (${err.requestOptions.path}) - Attempt $retryCount');
+
         final options = err.requestOptions;
         options.extra['retry_count'] = retryCount;
-        
+
         // Add a small delay before retry
         await Future.delayed(Duration(milliseconds: 1000 * retryCount));
-        
+
         try {
           final response = await dio.fetch(options);
           return handler.resolve(response);
@@ -104,13 +113,14 @@ Dio dio(DioRef ref) {
       // Handle 401 Unauthorized errors
       if (error.response?.statusCode == 401) {
         final requestOptions = error.requestOptions;
-        
+
         // Avoid infinite refresh loops
         if (requestOptions.extra['is_retry'] == true) {
           return handler.next(error);
         }
 
-        debugPrint('🔒 401 Unauthorized [${requestOptions.path}] - Attempting token refresh');
+        debugPrint(
+            '🔒 401 Unauthorized [${requestOptions.path}] - Attempting token refresh');
 
         try {
           final prefs = await SharedPreferences.getInstance();
@@ -125,15 +135,17 @@ Dio dio(DioRef ref) {
 
             if (response.statusCode == 200) {
               final newAccessToken = response.data['access'];
-              debugPrint('✅ Token refresh successful. Retrying original request.');
+              debugPrint(
+                  '✅ Token refresh successful. Retrying original request.');
 
               // Save new access token
               await prefs.setString('access_token', newAccessToken);
 
               // Update headers and retry request
-              requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+              requestOptions.headers['Authorization'] =
+                  'Bearer $newAccessToken';
               requestOptions.extra['is_retry'] = true;
-              
+
               final retryResponse = await dio.fetch(requestOptions);
               return handler.resolve(retryResponse);
             }

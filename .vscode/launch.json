@@ -9,7 +9,7 @@
             "deviceId": "chrome",
             "args": [
                 "--web-port=63105",
-                "--dart-define=API_BASE_URL=http://localhost:8003/api/"
+                "--dart-define=API_BASE_URL=http://localhost:8000/api/"
             ]
         },
         {
@@ -20,7 +20,7 @@
             "deviceId": "edge",
             "args": [
                 "--web-port=63105",
-                "--dart-define=API_BASE_URL=http://localhost:8003/api/"
+                "--dart-define=API_BASE_URL=http://localhost:8000/api/"
             ]
         }
     ]
