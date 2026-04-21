@@ -8,6 +8,9 @@ import '../../core/database/database.dart'; // User model
 import '../../core/models/project_with_tasks.dart';
 import '../projects/providers/api_providers.dart';
 import '../../core/providers/user_providers.dart'; // allUsersProvider
+import 'models/search_result.dart';
+import 'global_search_service.dart';
+import 'search_history_service.dart';
 
 part 'dashboard_providers.g.dart';
 
@@ -19,6 +22,10 @@ final headerActionsProvider = StateProvider<Widget?>((ref) => null);
 // ─────────────────────────────────────────────────────────────────────────────
 final dashboardProjectTypeProvider = StateProvider<String>((ref) => 'my');
 final dashboardSearchQueryProvider = StateProvider<String>((ref) => '');
+
+// Global Search State
+final globalSearchQueryProvider = StateProvider<String>((ref) => '');
+final isSearchFocusedProvider = StateProvider<bool>((ref) => false);
 
 @riverpod
 DashboardRepository dashboardRepository(DashboardRepositoryRef ref) {
@@ -123,7 +130,7 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
     final projectModels = await apiService.getProjects(
       params: {
         'filter': filter,
-        if (search != null && search.isNotEmpty) 'search': search,
+        if (search.isNotEmpty) 'search': search,
       },
       startDate: dateRange?.start.toIso8601String().split('T')[0],
       endDate: dateRange?.end.toIso8601String().split('T')[0],
@@ -164,6 +171,25 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
   } catch (e) {
     debugPrint('Error fetching dashboard stats: $e');
     return [];
+  }
+}
+
+/// Provider to fetch backend-calculated summary statistics
+@riverpod
+Future<Map<String, dynamic>> dashboardOverviewStats(DashboardOverviewStatsRef ref) async {
+  final filter = ref.watch(dashboardProjectTypeProvider);
+  final search = ref.watch(dashboardSearchQueryProvider);
+  final apiService = ref.watch(taskApiServiceProvider);
+  
+  try {
+    // Pass optional search as query param to the statistics endpoint
+    return await apiService.getDashboardStatistics(
+      filter: filter,
+      search: search.isNotEmpty ? search : null,
+    );
+  } catch (e) {
+    debugPrint('❌ Error fetching dashboard overview statistics: $e');
+    return {};
   }
 }
 
@@ -472,6 +498,34 @@ final dailyTrendAnalyticsProvider =
   final apiService = ref.watch(taskApiServiceProvider);
   return apiService.getDailyTrend(userId);
 });
+
+@riverpod
+GlobalSearchService globalSearchService(GlobalSearchServiceRef ref) {
+  final api = ref.watch(taskApiServiceProvider);
+  return GlobalSearchService(api);
+}
+
+@riverpod
+SearchHistoryService searchHistoryService(SearchHistoryServiceRef ref) {
+  return SearchHistoryService();
+}
+
+@riverpod
+Future<List<GlobalSearchResult>> globalSearchResults(GlobalSearchResultsRef ref) async {
+  final query = ref.watch(globalSearchQueryProvider);
+  if (query.length < 2) return [];
+  
+  // Debounce logic could be added here if needed, but the UI usually handles that
+  final service = ref.watch(globalSearchServiceProvider);
+  return await service.search(query);
+}
+
+@riverpod
+Future<List<String>> searchHistoryList(SearchHistoryListRef ref) async {
+  final service = ref.watch(searchHistoryServiceProvider);
+  // We don't watch any query here, just the initial load
+  return await service.getHistory();
+}
 
 class DashboardMetrics {
   final List<Risk> risks;

@@ -25,8 +25,7 @@ Dio dio(DioRef ref) {
   const dartDefineUrl = String.fromEnvironment('API_BASE_URL');
   String baseUrl = dartDefineUrl.isNotEmpty
       ? dartDefineUrl
-      // : 'http://localhost:8000/api/';
-      : 'https://dasbackendapi.meridahr.com/api/';
+      : 'http://localhost:8003/api/';
 
   if (defaultTargetPlatform == TargetPlatform.android &&
       !kIsWeb &&

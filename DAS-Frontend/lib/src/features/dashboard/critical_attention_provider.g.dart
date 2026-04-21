@@ -6,7 +6,7 @@ part of 'critical_attention_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$criticalItemsHash() => r'15c3ad611970bdbe8e08fa349117a8ca6c1ffe8a';
+String _$criticalItemsHash() => r'2b809b9f28e598fd5740c5698a35d5f95b4c838c';
 
 /// See also [criticalItems].
 @ProviderFor(criticalItems)

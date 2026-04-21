@@ -236,15 +236,15 @@ final stickyNotesProvider =
   return StickyNotesNotifier(service);
 });
 
-// Professional fonts selection for Quick Notes
+// Professional fonts selection for Quick Notes (Google Fonts compatible)
 final availableQuickNoteFonts = [
-  'Century Schoolbook',
-  'Helvetica',
+  'Libre Baskerville',  // Similar to Century Schoolbook
+  'Inter',              // Similar to Helvetica
   'Roboto',
-  'Georgia',
-  'Garamond',
-  'Calibri',
-  'Times New Roman',
+  'Merriweather',       // Similar to Georgia
+  'EB Garamond',        // Similar to Garamond
+  'Open Sans',          // Similar to Calibri
+  'Tinos',              // Similar to Times New Roman
 ];
 
-final quickNoteFontProvider = StateProvider<String>((ref) => 'Century Schoolbook');
+final quickNoteFontProvider = StateProvider<String>((ref) => 'Roboto');

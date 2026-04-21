@@ -40,32 +40,31 @@ Future<List<CriticalItem>> criticalItems(CriticalItemsRef ref) async {
   }
 
   for (final p in projectsAsync) {
-    for (final t in p.tasks) {
-      // Skip completed tasks
-      if (t.progress >= 100) continue;
+    // Skip completed projects
+    if (p.isCompleted) continue;
 
-      // A. Overdue (Any priority)
-      if (t.task.endDate.isBefore(now)) {
+    final dueDate = p.project.dueDate;
+    if (dueDate != null) {
+      // A. Overdue
+      if (dueDate.isBefore(now)) {
         items.add(CriticalItem(
-          id: t.task.id,
+          id: p.project.id,
           projectId: p.project.id,
-          title: t.task.name,
-          subtitle: 'Overdue (${formatDate(t.task.endDate)}) • Project: ${p.project.name}',
+          title: p.project.name,
+          subtitle: 'Overdue (${formatDate(dueDate)})',
           type: CriticalItemType.critical,
-          deadline: t.task.endDate,
+          deadline: dueDate,
         ));
       } 
-      // B. At Risk (Approaching within 3 days, low progress)
-      else if (t.task.endDate.difference(now).inDays < 3 && 
-               t.task.endDate.isAfter(now) && 
-               t.progress < 50) {
+      // B. At Risk (Approaching within 3 days)
+      else if (dueDate.difference(now).inDays <= 3) {
         items.add(CriticalItem(
-          id: t.task.id,
+          id: p.project.id,
           projectId: p.project.id,
-          title: t.task.name,
-          subtitle: 'At Risk (${formatDate(t.task.endDate)}) • Project: ${p.project.name}',
+          title: p.project.name,
+          subtitle: 'At Risk (${formatDate(dueDate)})',
           type: CriticalItemType.critical,
-          deadline: t.task.endDate,
+          deadline: dueDate,
         ));
       }
     }

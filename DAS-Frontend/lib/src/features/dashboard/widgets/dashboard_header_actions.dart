@@ -53,12 +53,7 @@ class DashboardHeaderActions extends ConsumerWidget {
         _DateRangeFilterButton(
           selectedRange: dashboardDateRange,
           onTap: () async {
-            final picked = await showDateRangePicker(
-              context: context,
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2030),
-              initialDateRange: dashboardDateRange,
-            );
+            final picked = await _showCompactDateRangePicker(context, dashboardDateRange);
             if (picked != null) {
               ref.read(dashboardDateRangeProvider.notifier).state = picked;
             }
@@ -88,7 +83,7 @@ class _DateRangeFilterButton extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(24),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -99,7 +94,7 @@ class _DateRangeFilterButton extends StatelessWidget {
                 )
               : null,
           color: hasRange ? null : (isDark ? const Color(0xFF0C1C30) : const Color(0xFFF1F5F9)),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -109,7 +104,7 @@ class _DateRangeFilterButton extends StatelessWidget {
               size: 16,
               color: hasRange
                   ? Colors.white
-                  : (isDark ? Colors.white60 : const Color(0xFF0B1B2F).withOpacity(0.6)),
+                  : (isDark ? Colors.white60 : const Color(0xFF0B1B2F).withValues(alpha: 0.6)),
             ),
             const SizedBox(width: 8),
             Text(
@@ -153,7 +148,7 @@ class _ProjectTypeButton extends StatelessWidget {
     if (isDisabled) return const SizedBox.shrink();
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inactiveColor = isDark ? Colors.white54 : const Color(0xFF64748B);
+    final inactiveColor = isDark ? Colors.white70 : const Color(0xFF64748B);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -163,12 +158,12 @@ class _ProjectTypeButton extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: isSelected ? (isDark ? Colors.white.withOpacity(0.12) : Colors.white) : Colors.transparent,
+            color: isSelected ? (isDark ? Colors.white.withValues(alpha: 0.12) : Colors.white) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             boxShadow: isSelected && !isDark
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -181,7 +176,7 @@ class _ProjectTypeButton extends StatelessWidget {
               fontSize: 13,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               color: isSelected
-                  ? (isDark ? const Color(0xFF0B1B2F) : const Color(0xFF0B1B2F))
+                  ? (isDark ? Colors.white : const Color(0xFF0B1B2F))
                   : inactiveColor,
             ),
           ),
@@ -189,4 +184,129 @@ class _ProjectTypeButton extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Custom Compact Date Range Picker ──────────────────────────────────────────
+
+Future<DateTimeRange?> _showCompactDateRangePicker(BuildContext context, DateTimeRange? currentRange) {
+  return showDialog<DateTimeRange>(
+    context: context,
+    builder: (ctx) {
+      DateTime? start = currentRange?.start;
+      DateTime? end = currentRange?.end;
+      
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Select Date Range', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+            backgroundColor: Theme.of(context).cardColor,
+            content: SizedBox(
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDateRow(
+                    context, 
+                    label: 'Start Date', 
+                    date: start, 
+                    onTap: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: start ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                        initialEntryMode: DatePickerEntryMode.calendarOnly,
+                      );
+                      if (d != null) {
+                        setState(() {
+                          start = d;
+                          if (end != null && end!.isBefore(start!)) end = start;
+                        });
+                      }
+                    }
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDateRow(
+                    context, 
+                    label: 'End Date', 
+                    date: end, 
+                    onTap: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: end ?? start ?? DateTime.now(),
+                        firstDate: start ?? DateTime(2020),
+                        lastDate: DateTime(2030),
+                        initialEntryMode: DatePickerEntryMode.calendarOnly,
+                      );
+                      if (d != null) {
+                        setState(() {
+                          end = d;
+                          if (start != null && start!.isAfter(end!)) start = end;
+                        });
+                      }
+                    }
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, null),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: (start != null && end != null) 
+                  ? () => Navigator.pop(ctx, DateTimeRange(start: start!, end: end!))
+                  : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1D4ED8), 
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        }
+      );
+    }
+  );
+}
+
+Widget _buildDateRow(BuildContext context, {required String label, required DateTime? date, required VoidCallback onTap}) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(8),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+          Row(
+            children: [
+              Text(
+                date != null ? DateFormat('MMM d, yyyy').format(date) : 'Select',
+                style: TextStyle(
+                  color: date != null ? (isDark ? Colors.white : Colors.black) : Colors.grey,
+                  fontWeight: date != null ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.calendar_today, size: 14, color: isDark ? Colors.white54 : Colors.black54),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
 }

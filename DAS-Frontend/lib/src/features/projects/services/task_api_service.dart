@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/project_model.dart';
 import '../models/task_model.dart';
 import '../models/catalog_model.dart';
@@ -14,6 +15,8 @@ class TaskApiService {
   // I will target specific ranges.
 
   TaskApiService(this._dio);
+
+  Dio get dio => _dio;
 
   // --- Projects ---
 
@@ -239,22 +242,26 @@ class TaskApiService {
   Future<void> stopActivityLog({
     required int activityLogId,
     required bool isCompleted,
+    bool? isPendingSelected,
     String? reason,
     String? workNotes,
     int? minutesLeft,
     int? extraMinutes,
     String? startTime,
     String? endTime,
+    String? plannedRemark,
   }) async {
     try {
       await _dio.post('/activity-log/$activityLogId/stop/', data: {
         'is_completed': isCompleted,
+        'is_pending_selected': isPendingSelected,
         'reason': reason,
         'work_notes': workNotes,
         'minutes_left': minutesLeft,
         'extra_minutes': extraMinutes,
         'start_time': startTime,
         'end_time': endTime,
+        'planned_remark': plannedRemark,
       });
     } catch (e) {
       print('Mock: Stopped activity log $activityLogId (Backend error: $e)');
@@ -271,6 +278,7 @@ class TaskApiService {
     int? extraMinutes,
     String? startTime,
     String? endTime,
+    String? plannedRemark,
   }) async {
     try {
       print(
@@ -292,6 +300,7 @@ class TaskApiService {
         'extra_minutes': extraMinutes,
         'start_time': startTime,
         'end_time': endTime,
+        'planned_remark': plannedRemark,
       });
       print('✅ [bulkStopActivityLogs] Response received successfully');
       if (response.data is Map<String, dynamic>) {
@@ -483,9 +492,10 @@ class TaskApiService {
     }
   }
 
-  Future<List<dynamic>> getPendingProjects() async {
+  Future<List<dynamic>> getPendingProjects({String? status}) async {
     try {
-      final response = await _dio.get('/approval-requests/new_projects/');
+      final queryParams = <String, dynamic>{if (status != null) 'status': status};
+      final response = await _dio.get('/approval-requests/new_projects/', queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['requests'];
       }
@@ -495,9 +505,10 @@ class TaskApiService {
     }
   }
 
-  Future<List<dynamic>> getPendingProjectClosures() async {
+  Future<List<dynamic>> getPendingProjectClosures({String? status}) async {
     try {
-      final response = await _dio.get('/approval-requests/project_closures/');
+      final queryParams = <String, dynamic>{if (status != null) 'status': status};
+      final response = await _dio.get('/approval-requests/project_closures/', queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['requests'];
       }
@@ -628,9 +639,10 @@ class TaskApiService {
     }
   }
 
-  Future<List<dynamic>> getPendingTasks() async {
+  Future<List<dynamic>> getPendingTasks({String? status}) async {
     try {
-      final response = await _dio.get('/approval-requests/new_tasks/');
+      final queryParams = <String, dynamic>{if (status != null) 'status': status};
+      final response = await _dio.get('/approval-requests/new_tasks/', queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['requests'];
       }
@@ -640,9 +652,10 @@ class TaskApiService {
     }
   }
 
-  Future<List<dynamic>> getPendingTaskCompletions() async {
+  Future<List<dynamic>> getPendingTaskCompletions({String? status}) async {
     try {
-      final response = await _dio.get('/approval-requests/task_completions/');
+      final queryParams = <String, dynamic>{if (status != null) 'status': status};
+      final response = await _dio.get('/approval-requests/task_completions/', queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['requests'];
       }
@@ -1128,7 +1141,16 @@ class TaskApiService {
     }
   }
 
-  // --- Other Methods ---
+  /// Called once per day on planner open — moves stale IN_PROGRESS logs
+  /// from previous days into the Pending list for the current user.
+  Future<void> rolloverDay() async {
+    try {
+      await _dio.post('/activity-log/rollover_day/');
+    } catch (e) {
+      debugPrint('[rolloverDay] $e');
+    }
+  }
+
 
   Future<List<CatalogModel>> getCourses() async {
     try {
@@ -1270,6 +1292,31 @@ class TaskApiService {
     } catch (e) {
       print('Error fetching daily trend: $e');
       return [];
+    }
+  }
+
+  // --- Dashboard ---
+
+  /// GET /api/dashboard/statistics/ - Summary metrics for dashboard cards
+  Future<Map<String, dynamic>> getDashboardStatistics({
+    String? filter,
+    String? userId,
+    String? search,
+  }) async {
+    try {
+      final response = await _dio.get('/dashboard/statistics/',
+          queryParameters: {
+            if (filter != null) 'filter': filter,
+            if (userId != null) 'user_id': userId,
+            if (search != null && search.isNotEmpty) 'search': search,
+          });
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return {};
+    } on DioException catch (e) {
+      print('Error fetching dashboard statistics: ${e.message}');
+      throw Exception('Failed to fetch dashboard statistics: ${e.message}');
     }
   }
 }

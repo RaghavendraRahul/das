@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -12,12 +13,16 @@ import 'dart:ui';
 
 part 'approvals_page.g.dart';
 
+// Provider to track pending vs history mode
+final approvalsViewModeProvider = StateProvider<String>((ref) => 'PENDING');
+
 // Provider for new project approval requests
 @riverpod
 Future<List<Map<String, dynamic>>> apiNewProjects(ApiNewProjectsRef ref) async {
   final apiService = ref.watch(taskApiServiceProvider);
+  final viewMode = ref.watch(approvalsViewModeProvider);
   try {
-    final result = await apiService.getPendingProjects();
+    final result = await apiService.getPendingProjects(status: viewMode);
     return result.cast<Map<String, dynamic>>();
   } catch (e) {
     throw Exception('Failed to fetch new projects: $e');
@@ -29,8 +34,9 @@ Future<List<Map<String, dynamic>>> apiNewProjects(ApiNewProjectsRef ref) async {
 Future<List<Map<String, dynamic>>> apiProjectClosures(
     ApiProjectClosuresRef ref) async {
   final apiService = ref.watch(taskApiServiceProvider);
+  final viewMode = ref.watch(approvalsViewModeProvider);
   try {
-    final result = await apiService.getPendingProjectClosures();
+    final result = await apiService.getPendingProjectClosures(status: viewMode);
     return result.cast<Map<String, dynamic>>();
   } catch (e) {
     throw Exception('Failed to fetch project closures: $e');
@@ -41,8 +47,9 @@ Future<List<Map<String, dynamic>>> apiProjectClosures(
 @riverpod
 Future<List<Map<String, dynamic>>> apiNewTasks(ApiNewTasksRef ref) async {
   final apiService = ref.watch(taskApiServiceProvider);
+  final viewMode = ref.watch(approvalsViewModeProvider);
   try {
-    final result = await apiService.getPendingTasks();
+    final result = await apiService.getPendingTasks(status: viewMode);
     return result.cast<Map<String, dynamic>>();
   } catch (e) {
     throw Exception('Failed to fetch new tasks: $e');
@@ -54,8 +61,9 @@ Future<List<Map<String, dynamic>>> apiNewTasks(ApiNewTasksRef ref) async {
 Future<List<Map<String, dynamic>>> apiTaskCompletions(
     ApiTaskCompletionsRef ref) async {
   final apiService = ref.watch(taskApiServiceProvider);
+  final viewMode = ref.watch(approvalsViewModeProvider);
   try {
-    final result = await apiService.getPendingTaskCompletions();
+    final result = await apiService.getPendingTaskCompletions(status: viewMode);
     return result.cast<Map<String, dynamic>>();
   } catch (e) {
     throw Exception('Failed to fetch task completions: $e');
@@ -72,6 +80,8 @@ class ApprovalsPage extends HookConsumerWidget {
     // Listen to tabController to rebuild for badge color synchronization
     useListenable(tabController);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final viewMode = ref.watch(approvalsViewModeProvider);
 
     // Brand Colors
     const brandNavy = Color(0xFF05263E);
@@ -90,7 +100,7 @@ class ApprovalsPage extends HookConsumerWidget {
       backgroundColor: isDark ? const Color(0xFF111827) : Colors.grey.shade50,
       body: Column(
         children: [
-          // Glassmorphism Header & Tab Bar
+          // ── Combined Tab Bar + Toggle Row ──────────────────────────────
           ClipRRect(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -106,37 +116,58 @@ class ApprovalsPage extends HookConsumerWidget {
                             : Colors.grey.shade200),
                   ),
                 ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 44,
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: TabBar(
-                        controller: tabController,
-                        isScrollable: true,
-                        labelColor: selectedLabelColor,
-                        unselectedLabelColor: unselectedLabelColor,
-                        dividerColor: Colors.transparent,
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        indicator: BoxDecoration(
-                          borderRadius: BorderRadius.circular(22),
-                          color: activeColor,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      // Tab bar takes remaining space
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: TabBar(
+                            controller: tabController,
+                            isScrollable: true,
+                            labelColor: selectedLabelColor,
+                            unselectedLabelColor: unselectedLabelColor,
+                            dividerColor: Colors.transparent,
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            indicator: BoxDecoration(
+                              borderRadius: BorderRadius.circular(22),
+                              color: activeColor,
+                            ),
+                            labelPadding: const EdgeInsets.symmetric(horizontal: 20),
+                            labelStyle: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold, fontSize: 13.5, letterSpacing: 0.3),
+                            unselectedLabelStyle: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w600, fontSize: 13.5),
+                            tabs: [
+                              _buildApiTab(projects, 'New Projects', isDark, tabController.index == 0),
+                              _buildApiTab(closures, 'Project Closures', isDark, tabController.index == 1),
+                              _buildApiTab(tasks, 'New Tasks', isDark, tabController.index == 2),
+                              _buildApiTab(completions, 'Task Completions', isDark, tabController.index == 3),
+                            ],
+                          ),
                         ),
-                        labelPadding: const EdgeInsets.symmetric(horizontal: 20),
-                        labelStyle: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold, fontSize: 13.5, letterSpacing: 0.3),
-                        unselectedLabelStyle: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w600, fontSize: 13.5),
-                        tabs: [
-                          _buildApiTab(projects, 'New Projects', isDark, tabController.index == 0),
-                          _buildApiTab(closures, 'Project Closures', isDark, tabController.index == 1),
-                          _buildApiTab(tasks, 'New Tasks', isDark, tabController.index == 2),
-                          _buildApiTab(completions, 'Task Completions', isDark, tabController.index == 3),
-                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      // Pending / History toggle on same row
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.05)
+                              : Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildToggleBtn(context, ref, 'PENDING', 'Pending', viewMode, isDark),
+                            _buildToggleBtn(context, ref, 'HISTORY', 'History', viewMode, isDark),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -197,6 +228,32 @@ class ApprovalsPage extends HookConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildToggleBtn(BuildContext context, WidgetRef ref, String value, String label, String currentVal, bool isDark) {
+    final isSelected = value == currentVal;
+    return GestureDetector(
+      onTap: () => ref.read(approvalsViewModeProvider.notifier).state = value,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? (isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected 
+                ? (isDark ? const Color(0xFF05263E) : Colors.white)
+                : (isDark ? Colors.white70 : Colors.black87),
+          ),
+        ),
       ),
     );
   }
@@ -705,34 +762,10 @@ class _ApiProjectCard extends HookWidget {
                                     isDark: isDark,
                                     icon: Icons.auto_awesome,
                                   ),
-                                  const SizedBox(width: 8),
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: 'by ',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 12,
-                                            color: isDark
-                                                ? Colors.indigo.shade300
-                                                : Colors.indigo.shade400,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: requestedBy,
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark
-                                                ? Colors.blue.shade300
-                                                : Colors.blue.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
                                 ],
                               ),
+                              const SizedBox(height: 10),
+                              _buildRequesterInfo(requestedBy, isDark),
                             ],
                           ),
                         ),
@@ -756,25 +789,54 @@ class _ApiProjectCard extends HookWidget {
                     const SizedBox(height: 20),
                     const Divider(height: 1),
                     const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        _ExecutiveActionButton(
-                          label: rejectLabel,
-                          icon: Icons.block_flipped,
-                          color: const Color(0xFFFB7185), // Rose
-                          onPressed: onReject,
-                        ),
-                        const SizedBox(width: 12),
-                        _ExecutiveActionButton(
-                          label: approveLabel,
-                          icon: Icons.check_circle_outline,
-                          color: const Color(0xFF10B981), // Emerald
-                          isPrimary: true,
-                          onPressed: onApprove,
-                        ),
-                      ],
-                    ),
+                    if (data['approval_request_status'] == 'PENDING')
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (data['requested_at'] != null)
+                            _buildSmartFooterDate(
+                                DateTime.parse(data['requested_at'].toString()),
+                                isDark),
+                          Row(
+                            children: [
+                              _ExecutiveActionButton(
+                                label: rejectLabel,
+                                icon: Icons.block_flipped,
+                                color: const Color(0xFFFB7185), // Rose
+                                onPressed: onReject,
+                              ),
+                              const SizedBox(width: 12),
+                              _ExecutiveActionButton(
+                                label: approveLabel,
+                                icon: Icons.check_circle_outline,
+                                color: const Color(0xFF10B981), // Emerald
+                                isPrimary: true,
+                                onPressed: onApprove,
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (data['requested_at'] != null)
+                            _buildSmartFooterDate(
+                                DateTime.parse(data['requested_at'].toString()),
+                                isDark),
+                          _ExecutiveStatusChip(
+                            label: 'Status: ${data['approval_request_status']}',
+                            color: data['approval_request_status'] == 'APPROVED' 
+                                ? const Color(0xFF10B981) 
+                                : const Color(0xFFFB7185),
+                            isDark: isDark,
+                            icon: data['approval_request_status'] == 'APPROVED' 
+                                ? Icons.check_circle_outline 
+                                : Icons.block,
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -878,64 +940,55 @@ class _ApiTaskCard extends HookWidget {
                                   isDark ? Colors.white : Colors.grey.shade900,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Icon(Icons.person_outline,
-                                  size: 12,
-                                  color: isDark
-                                      ? Colors.grey.shade500
-                                      : Colors.grey.shade600),
-                              const SizedBox(width: 4),
-                              RichText(
-                                text: TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: 'Raised by ',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        color: isDark
-                                            ? Colors.indigo.shade300
-                                            : Colors.indigo.shade400,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text: requestedBy,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark
-                                            ? Colors.blue.shade300
-                                            : Colors.blue.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                          const SizedBox(height: 10),
+                          _buildRequesterInfo(requestedBy, isDark),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      children: [
-                        _ExecutiveActionButton(
-                          label: 'Approve',
-                          icon: Icons.check,
-                          color: const Color(0xFF10B981), // Emerald
-                          isPrimary: true,
-                          onPressed: onApprove,
-                        ),
-                        const SizedBox(height: 8),
-                        _ExecutiveActionButton(
-                          label: 'Reject',
-                          icon: Icons.close,
-                          color: const Color(0xFFFB7185), // Rose
-                          onPressed: onReject,
-                        ),
-                      ],
-                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (data['requested_at'] != null)
+                      _buildSmartFooterDate(
+                          DateTime.parse(data['requested_at'].toString()),
+                          isDark)
+                    else
+                      const SizedBox.shrink(),
+                    if (data['approval_request_status'] == 'PENDING')
+                      Row(
+                        children: [
+                          _ExecutiveActionButton(
+                            label: 'Reject',
+                            icon: Icons.close,
+                            color: const Color(0xFFFB7185),
+                            onPressed: onReject,
+                          ),
+                          const SizedBox(width: 8),
+                          _ExecutiveActionButton(
+                            label: 'Approve',
+                            icon: Icons.check,
+                            color: const Color(0xFF10B981),
+                            isPrimary: true,
+                            onPressed: onApprove,
+                          ),
+                        ],
+                      )
+                    else
+                      _ExecutiveStatusChip(
+                        label: '${data['approval_request_status']}',
+                        color: data['approval_request_status'] == 'APPROVED'
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFFB7185),
+                        isDark: isDark,
+                        icon: data['approval_request_status'] == 'APPROVED'
+                            ? Icons.check_circle_outline
+                            : Icons.block,
+                      ),
                   ],
                 ),
               ],
@@ -995,83 +1048,88 @@ class _ApiTaskCompletionCard extends HookWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _ExecutiveStatusChip(
-                            label: projectName.toString(),
-                            color: const Color(0xFF10B981),
-                            isDark: isDark,
-                            icon: Icons.checklist_rtl_rounded,
+                          Row(
+                            children: [
+                              _ExecutiveStatusChip(
+                                label: projectName.toString(),
+                                color: const Color(0xFF10B981),
+                                isDark: isDark,
+                                icon: Icons.checklist_rtl_rounded,
+                              ),
+                              const SizedBox(width: 8),
+                              _ExecutiveStatusChip(
+                                label: 'COMPLETION',
+                                color: Colors.blue,
+                                isDark: isDark,
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          _ExecutiveStatusChip(
-                            label: 'COMPLETION',
-                            color: Colors.blue,
-                            isDark: isDark,
+                          const SizedBox(height: 12),
+                          Text(
+                            taskTitle,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isDark ? Colors.white : Colors.grey.shade900,
+                            ),
                           ),
+                          const SizedBox(height: 10),
+                          _buildRequesterInfo(requestedBy, isDark),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        taskTitle,
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: isDark ? Colors.white : Colors.grey.shade900,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'Completed by ',
-                              style: GoogleFonts.outfit(
-                                fontSize: 12,
-                                color: isDark
-                                    ? Colors.indigo.shade300
-                                    : Colors.indigo.shade400,
-                              ),
-                            ),
-                            TextSpan(
-                              text: requestedBy,
-                              style: GoogleFonts.outfit(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.blue.shade300
-                                    : Colors.blue.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Column(
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _ExecutiveActionButton(
-                      label: 'Confirm',
-                      icon: Icons.verified,
-                      color: const Color(0xFF10B981),
-                      isPrimary: true,
-                      onPressed: onApprove,
-                    ),
-                    const SizedBox(height: 8),
-                    _ExecutiveActionButton(
-                      label: 'Revoke',
-                      icon: Icons.undo_rounded,
-                      color: const Color(0xFFFB7185),
-                      onPressed: onReject,
-                    ),
+                    if (data['requested_at'] != null)
+                      _buildSmartFooterDate(
+                          DateTime.parse(data['requested_at'].toString()),
+                          isDark)
+                    else
+                      const SizedBox.shrink(),
+                    if (data['approval_request_status'] == 'PENDING')
+                      Row(
+                        children: [
+                          _ExecutiveActionButton(
+                            label: 'Revoke',
+                            icon: Icons.undo_rounded,
+                            color: const Color(0xFFFB7185),
+                            onPressed: onReject,
+                          ),
+                          const SizedBox(width: 8),
+                          _ExecutiveActionButton(
+                            label: 'Confirm',
+                            icon: Icons.verified,
+                            color: const Color(0xFF10B981),
+                            isPrimary: true,
+                            onPressed: onApprove,
+                          ),
+                        ],
+                      )
+                    else
+                      _ExecutiveStatusChip(
+                        label: '${data['approval_request_status']}',
+                        color: data['approval_request_status'] == 'APPROVED' 
+                            ? const Color(0xFF10B981) 
+                            : const Color(0xFFFB7185),
+                        isDark: isDark,
+                        icon: data['approval_request_status'] == 'APPROVED' 
+                            ? Icons.check_circle_outline 
+                            : Icons.block,
+                      ),
                   ],
                 ),
               ],
@@ -1131,109 +1189,114 @@ class _ProjectClosureCard extends HookWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.archive_outlined,
-                                size: 20, color: Colors.purple),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.archive_outlined,
+                                    size: 20, color: Colors.purple),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  projectName,
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.grey.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              projectName,
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              _ExecutiveStatusChip(
+                                label: 'CLOSURE REQUEST',
+                                color: Colors.purple,
+                                isDark: isDark,
+                                icon: Icons.lock_clock_rounded,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          _buildRequesterInfo(requestedBy, isDark),
+                          if (description.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              description,
                               style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
                                 color: isDark
-                                    ? Colors.white
-                                    : Colors.grey.shade900,
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                                fontSize: 14,
+                                height: 1.5,
                               ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
-                      const SizedBox(height: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (closure['requested_at'] != null)
+                      _buildSmartFooterDate(
+                          DateTime.parse(closure['requested_at'].toString()),
+                          isDark)
+                    else
+                      const SizedBox.shrink(),
+                    if (closure['approval_request_status'] == 'PENDING')
                       Row(
                         children: [
-                          _ExecutiveStatusChip(
-                            label: 'CLOSURE REQUEST',
-                            color: Colors.purple,
-                            isDark: isDark,
-                            icon: Icons.lock_clock_rounded,
+                          _ExecutiveActionButton(
+                            label: 'Reject',
+                            icon: Icons.close,
+                            color: const Color(0xFFFB7185),
+                            onPressed: onReject,
                           ),
-                          const SizedBox(width: 12),
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: 'Raised by ',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? Colors.indigo.shade300
-                                        : Colors.indigo.shade400,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: requestedBy,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? Colors.blue.shade300
-                                        : Colors.blue.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          const SizedBox(width: 8),
+                          _ExecutiveActionButton(
+                            label: 'Approve',
+                            icon: Icons.check,
+                            color: Colors.purple,
+                            isPrimary: true,
+                            onPressed: onApprove,
                           ),
                         ],
+                      )
+                    else
+                      _ExecutiveStatusChip(
+                        label: '${closure['approval_request_status']}',
+                        color: closure['approval_request_status'] == 'APPROVED' 
+                            ? const Color(0xFF10B981) 
+                            : const Color(0xFFFB7185),
+                        isDark: isDark,
+                        icon: closure['approval_request_status'] == 'APPROVED' 
+                            ? Icons.check_circle_outline 
+                            : Icons.block,
                       ),
-                      if (description.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          description,
-                          style: GoogleFonts.outfit(
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                            fontSize: 14,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Column(
-                  children: [
-                    _ExecutiveActionButton(
-                      label: 'Approve',
-                      icon: Icons.check,
-                      color: Colors.purple,
-                      isPrimary: true,
-                      onPressed: onApprove,
-                    ),
-                    const SizedBox(height: 8),
-                    _ExecutiveActionButton(
-                      label: 'Reject',
-                      icon: Icons.close,
-                      color: const Color(0xFFFB7185),
-                      onPressed: onReject,
-                    ),
                   ],
                 ),
               ],
@@ -1375,3 +1438,79 @@ class _ExecutiveActionButtonState extends State<_ExecutiveActionButton> {
     );
   }
 }
+
+String _formatSmartDate(DateTime date) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+  final dateToCheck = DateTime(date.year, date.month, date.day);
+
+  if (dateToCheck == today) {
+    return 'Today at ${DateFormat('h:mm a').format(date)}';
+  } else if (dateToCheck == yesterday) {
+    return 'Yesterday at ${DateFormat('h:mm a').format(date)}';
+  } else if (date.year == now.year) {
+    return DateFormat('MMM dd, h:mm a').format(date);
+  } else {
+    return DateFormat('MMM dd, yyyy').format(date);
+  }
+}
+
+Widget _buildRequesterInfo(String email, bool isDark) {
+  return Row(
+    children: [
+      Icon(
+        Icons.person_outline_rounded,
+        size: 14,
+        color: isDark ? Colors.blue.shade300 : Colors.blue.shade600,
+      ),
+      const SizedBox(width: 6),
+      Text(
+        email,
+        style: GoogleFonts.outfit(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: isDark ? Colors.blue.shade200 : Colors.blue.shade700,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildSmartFooterDate(DateTime? date, bool isDark) {
+  if (date == null) return const SizedBox.shrink();
+  
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(
+        Icons.access_time_rounded,
+        size: 14,
+        color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+      ),
+      const SizedBox(width: 6),
+      RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: 'Raised on ',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+              ),
+            ),
+            TextSpan(
+              text: _formatSmartDate(date),
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+

@@ -819,6 +819,7 @@ class Pending(models.Model):
     minutes_left = models.IntegerField(default=0, help_text="Estimated minutes left to complete")
     extra_minutes = models.IntegerField(default=0, help_text="Extra minutes worked beyond planned time")
     reason = models.TextField(blank=True, null=True, help_text="Reason for not completing")
+    work_notes = models.TextField(blank=True, null=True, help_text="Work notes synced from activity log")
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     

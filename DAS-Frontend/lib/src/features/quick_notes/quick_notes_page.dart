@@ -65,62 +65,7 @@ class QuickNotesPage extends HookConsumerWidget {
       backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
       body: Row(
         children: [
-          // Left Sidebar for Sticky Note Templates
-          _StickyNotesSidebar(
-            isDark: isDark,
-            isSelectionMode: isSelectionMode,
-            selectedIds: selectedIds,
-            onAddNote: (color) async {
-              try {
-                // Return the new note so we can select it
-                final newNote = await ref
-                    .read(stickyNotesProvider.notifier)
-                    .addNote("New Note", color);
-                selectedNoteId.value = newNote.id;
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Failed to create note: $e")),
-                );
-              }
-            },
-            onSelectNote: (id) {
-              selectedNoteId.value = id;
-            },
-            onDeleteNotes: (ids) async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Delete Selected Notes?'),
-                  content: Text(
-                      'Are you sure you want to delete ${ids.length} notes?'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancel')),
-                    TextButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        style:
-                            TextButton.styleFrom(foregroundColor: Colors.red),
-                        child: const Text('Delete')),
-                  ],
-                ),
-              );
-
-              if (confirm == true) {
-                await ref.read(stickyNotesProvider.notifier).deleteNotes(ids);
-                isSelectionMode.value = false;
-                selectedIds.value = {};
-                // If the currently selected note was deleted, reset selection
-                if (ids.contains(selectedNoteId.value)) {
-                  selectedNoteId.value = null; // Will auto-select next
-                }
-              }
-            },
-            notes: userNotes, // Pass notes to sidebar if we want to list them
-            selectedNoteId: selectedNoteId.value,
-          ),
-
-          // Main Canvas Area
+          // Main Canvas Area (Left side - Notepad)
           Expanded(
             child: MouseRegion(
               onHover: (event) => mousePos.value = event.localPosition,
@@ -250,6 +195,61 @@ class QuickNotesPage extends HookConsumerWidget {
               ),
             ),
           ),
+
+          // Right Sidebar for Sticky Notes
+          _StickyNotesSidebar(
+            isDark: isDark,
+            isSelectionMode: isSelectionMode,
+            selectedIds: selectedIds,
+            onAddNote: (color) async {
+              try {
+                // Return the new note so we can select it
+                final newNote = await ref
+                    .read(stickyNotesProvider.notifier)
+                    .addNote("New Note", color);
+                selectedNoteId.value = newNote.id;
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Failed to create note: $e")),
+                );
+              }
+            },
+            onSelectNote: (id) {
+              selectedNoteId.value = id;
+            },
+            onDeleteNotes: (ids) async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Delete Selected Notes?'),
+                  content: Text(
+                      'Are you sure you want to delete ${ids.length} notes?'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style:
+                            TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Delete')),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await ref.read(stickyNotesProvider.notifier).deleteNotes(ids);
+                isSelectionMode.value = false;
+                selectedIds.value = {};
+                // If the currently selected note was deleted, reset selection
+                if (ids.contains(selectedNoteId.value)) {
+                  selectedNoteId.value = null; // Will auto-select next
+                }
+              }
+            },
+            notes: userNotes, // Pass notes to sidebar if we want to list them
+            selectedNoteId: selectedNoteId.value,
+          ),
         ],
       ),
     );
@@ -299,7 +299,7 @@ class _StickyNotesSidebar extends HookWidget {
             ? const Color(0xFF111827).withOpacity(0.8)
             : Colors.white.withOpacity(0.8),
         border: Border(
-            right: BorderSide(
+            left: BorderSide(
                 color: isDark ? Colors.white10 : Colors.grey.shade200)),
       ),
       child: ClipRect(

@@ -15,7 +15,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:project_pm/src/core/networking/api_client.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
-import 'package:project_pm/src/features/dashboard/widgets/dashboard_header_actions.dart';
 import 'package:project_pm/src/features/quick_notes/notes_provider.dart';
 import 'package:project_pm/src/features/today/today_repository.dart';
 
@@ -608,7 +607,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
           fontWeight: FontWeight.w800,
           fontSize: isMobile ? 16 : 18,
           letterSpacing: -0.5,
-          color: Colors.white,
+          color: textColor,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

@@ -48,7 +48,7 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
       switch (status) {
         case 'active':
         case 'working':
-          projectColor = const Color(0xFF05263E);
+          projectColor = widget.isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E);
           break;
         case 'on_hold':
           projectColor = Colors.orange;
@@ -85,22 +85,22 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
                       end: Alignment.bottomRight,
                       colors: [
                         const Color(0xFF1E293B),
-                        const Color(0xFF0F172A).withOpacity(0.8),
+                        const Color(0xFF0F172A).withValues(alpha: 0.8),
                       ],
                     )
                   : null,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: _isHovered 
-                    ? projectColor.withOpacity(0.5) 
-                    : (widget.isDark ? Colors.white10 : Colors.indigo.withOpacity(0.05)),
+                    ? projectColor.withValues(alpha: 0.5) 
+                    : (widget.isDark ? Colors.white10 : Colors.indigo.withValues(alpha: 0.05)),
                 width: _isHovered ? 2.0 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
                   color: _isHovered
-                      ? projectColor.withOpacity(0.25)
-                      : Colors.black.withOpacity(widget.isDark ? 0.3 : 0.06),
+                      ? projectColor.withValues(alpha: 0.25)
+                      : Colors.black.withValues(alpha: widget.isDark ? 0.3 : 0.06),
                   blurRadius: _isHovered ? 30 : 15,
                   spreadRadius: _isHovered ? 2 : 0,
                   offset: Offset(0, _isHovered ? 12 : 6),
@@ -121,15 +121,15 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
                       decoration: BoxDecoration(
                         color: projectColor,
                         borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          bottomLeft: Radius.circular(16),
+                          topLeft: Radius.circular(24),
+                          bottomLeft: Radius.circular(24),
                         ),
                       ),
                     ),
                   ),
                   InkWell(
                     onTap: widget.onTap,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(24),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(22, 16, 16, 16),
                       child: Column(
@@ -284,7 +284,7 @@ class _ProjectHeader extends StatelessWidget {
       switch (status) {
         case 'active':
         case 'working':
-          statusColor = const Color(0xFF05263E);
+          statusColor = isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E);
           statusText = 'Open';
           break;
         case 'on_hold':
@@ -375,9 +375,9 @@ class _PlannedHoursBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -414,8 +414,8 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         text.toUpperCase(),
@@ -517,7 +517,7 @@ class _TaskPreviewSection extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isDark
-              ? Colors.grey.shade800.withOpacity(0.3)
+              ? Colors.grey.shade800.withValues(alpha: 0.3)
               : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
@@ -569,7 +569,7 @@ class _TaskPreviewSection extends StatelessWidget {
                   height: 6,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isHighPriority ? Colors.red : const Color(0xFF05263E),
+                    color: isHighPriority ? Colors.red : (isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E)),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -590,7 +590,7 @@ class _TaskPreviewSection extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -779,10 +779,10 @@ class _ProjectFooter extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.amber.withOpacity(0.2),
+                              color: Colors.amber.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: Colors.amber.withOpacity(0.5),
+                                  color: Colors.amber.withValues(alpha: 0.5),
                                   width: 0.5),
                             ),
                             child: const Text(
@@ -801,10 +801,10 @@ class _ProjectFooter extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF05263E).withOpacity(0.1),
+                              color: const Color(0xFF05263E).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: const Color(0xFF05263E).withOpacity(0.3),
+                                  color: const Color(0xFF05263E).withValues(alpha: 0.3),
                                   width: 0.5),
                             ),
                             child: const Text(
@@ -1002,7 +1002,7 @@ class _DaysRemainingPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: fg.withAlpha(80)),
+        border: Border.all(color: fg.withValues(alpha: 0.31)),
       ),
       child: Text(
         label,
@@ -1033,10 +1033,10 @@ class _RejectionBanner extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF450A0A).withOpacity(0.6) : Colors.red.shade50,
-        borderRadius: BorderRadius.circular(10),
+        color: isDark ? const Color(0xFF450A0A).withValues(alpha: 0.6) : Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.red.shade900.withOpacity(0.5) : Colors.red.shade200,
+          color: isDark ? Colors.red.shade900.withValues(alpha: 0.5) : Colors.red.shade200,
         ),
       ),
       child: Column(
@@ -1193,12 +1193,12 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: isDark
-                ? Colors.green.withOpacity(_isLoading ? 0.1 : 0.2)
+                ? Colors.green.withValues(alpha: _isLoading ? 0.1 : 0.2)
                 : Colors.green.shade50,
             shape: BoxShape.circle,
             border: Border.all(
               color: isDark
-                  ? Colors.green.withOpacity(0.5)
+                  ? Colors.green.withValues(alpha: 0.5)
                   : Colors.green.shade300,
               width: 1.5,
             ),
@@ -1224,11 +1224,11 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color:
-              isDark ? Colors.orange.withOpacity(0.2) : Colors.orange.shade50,
+              isDark ? Colors.orange.withValues(alpha: 0.2) : Colors.orange.shade50,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: isDark
-                  ? Colors.orange.withOpacity(0.5)
+                  ? Colors.orange.withValues(alpha: 0.5)
                   : Colors.orange.shade200),
         ),
         child: Row(
@@ -1256,11 +1256,11 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isDark ? Colors.green.withOpacity(0.2) : Colors.green.shade50,
+          color: isDark ? Colors.green.withValues(alpha: 0.2) : Colors.green.shade50,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: isDark
-                  ? Colors.green.withOpacity(0.5)
+                  ? Colors.green.withValues(alpha: 0.5)
                   : Colors.green.shade200),
         ),
         child: Row(
@@ -1408,11 +1408,11 @@ class _ReopenedBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: isDark 
-          ? Colors.blue.withOpacity(0.15) 
+          ? Colors.blue.withValues(alpha: 0.15) 
           : const Color(0xFFEFF6FF), // Light blue background
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.blue.withOpacity(0.3) : const Color(0xFFDBEAFE),
+          color: isDark ? Colors.blue.withValues(alpha: 0.3) : const Color(0xFFDBEAFE),
         ),
       ),
       child: Row(

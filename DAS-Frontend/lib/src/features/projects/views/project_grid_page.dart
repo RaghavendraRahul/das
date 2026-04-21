@@ -70,7 +70,7 @@ class _ProjectGridView extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                       color: isDark
                           ? const Color(0xFF374151)
@@ -101,8 +101,8 @@ class _ProjectGridView extends StatelessWidget {
                             ? Colors.grey.shade800.withOpacity(0.5)
                             : Colors.grey.shade50,
                         borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          topRight: Radius.circular(12),
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
                         ),
                       ),
                       child: Row(

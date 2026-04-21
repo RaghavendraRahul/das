@@ -142,10 +142,10 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 4)
                 ],
               ),
@@ -183,10 +183,10 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: note.color,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 4)
                         ],
                       ),
@@ -205,7 +205,7 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                             "${note.createdAt.day}/${note.createdAt.month}/${note.createdAt.year}",
                             style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.black.withOpacity(0.4)),
+                                color: Colors.black.withValues(alpha: 0.4)),
                           )
                         ],
                       ),
@@ -217,7 +217,7 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                         onTap: () => _deleteNote(note.id),
                         child: Icon(Icons.close,
                             size: 16,
-                            color: Colors.black.withOpacity(0.3)),
+                            color: Colors.black.withValues(alpha: 0.3)),
                       ),
                     )
                   ],
@@ -254,13 +254,13 @@ class _AddNoteDialogState extends State<_AddNoteDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
         padding: const EdgeInsets.all(24),
         width: 400,
         decoration: BoxDecoration(
           color: _selectedColor,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

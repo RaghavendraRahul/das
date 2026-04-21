@@ -8,6 +8,7 @@ from .views import (ProjectWorkingHoursViewSet, TeamActivityStatusViewSet, SyncH
 from .sso_views import SSOLoginView, InactiveUserView
 from .views_performance import (DailyPerformanceView, DateRangePerformanceView, 
                                WeeklyComparisonView, MonthlyComparisonView, PerformanceDashboardView)
+from .global_search_view import GlobalSearchAPIView
 
 router = DefaultRouter()
 
@@ -83,6 +84,7 @@ urlpatterns = [
     path('monthly-comparison/', MonthlyComparisonView.as_view(), name='monthly-comparison-current'),
     path('monthly-comparison/<int:year>/<int:month>/', MonthlyComparisonView.as_view(), name='monthly-comparison'),
     path('performance-dashboard/', PerformanceDashboardView.as_view(), name='performance-dashboard'),
+    path('global-search/', GlobalSearchAPIView.as_view(), name='global-search'),
     
     # API Routes
     path('', include(router.urls)),

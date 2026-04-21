@@ -251,7 +251,7 @@ class _ApiPaginatedProjectsProviderElement
 }
 
 String _$paginatedDashboardProjectsHash() =>
-    r'd90a3ebe98051b6e39946ceb71c7afb1007dc5a0';
+    r'897bc75a6dca0f813af0d3ecfe6cc19fcd34436a';
 
 /// Fetch projects with tasks pre-mapped (for simple listing cases)
 ///

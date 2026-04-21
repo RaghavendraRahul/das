@@ -50,22 +50,24 @@ class ActivityCatalog extends HookConsumerWidget {
     );
     final customTemplatesSnapshot = useStream(customTemplatesStream);
 
+    const sidebarBlue = Color(0xFF05263E);
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
-            blurRadius: 15,
+            color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.06),
+            blurRadius: 20,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0.02),
+            color: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.02),
             blurRadius: 2,
             offset: const Offset(0, 2),
           ),
@@ -76,7 +78,7 @@ class ActivityCatalog extends HookConsumerWidget {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12), // More compact
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -86,10 +88,10 @@ class ActivityCatalog extends HookConsumerWidget {
                     Text(
                       "ACTIVITY CATALOG",
                       style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                        color: isDark ? Colors.white : const Color(0xFF05263E),
+                        fontSize: 11, // Slightly larger for clarity
+                        fontWeight: FontWeight.w900, // Extra bold
+                        letterSpacing: 1.2, // More premium letter spacing
+                        color: isDark ? Colors.white : sidebarBlue,
                       ),
                     ),
                     // Add Template Button
@@ -151,31 +153,46 @@ class ActivityCatalog extends HookConsumerWidget {
                 const SizedBox(height: 12),
                 // Search
                 SizedBox(
-                  height: 36,
-                  child: TextField(
-                    onChanged: (v) => searchQuery.value = v,
-                    decoration: InputDecoration(
-                      hintText: 'Search templates...',
-                      hintStyle: GoogleFonts.inter(
-                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
-                        fontSize: 11,
-                      ),
-                      prefixIcon: Icon(Icons.search_rounded,
-                          size: 16,
-                          color: isDark
-                              ? Colors.grey.shade500
-                              : Colors.grey.shade400),
-                      filled: true,
-                      fillColor:
-                          isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
+                  height: 42,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                       ),
                     ),
-                    style: GoogleFonts.inter(fontSize: 12),
+                    child: TextField(
+                      onChanged: (v) => searchQuery.value = v,
+                      // We use a local controller state to manage the text if needed, 
+                      // but here we just ensure the cursor stays at the end when resetting or typing.
+                      decoration: InputDecoration(
+                        hintText: 'Search templates...',
+                        hintStyle: GoogleFonts.inter(
+                          color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                          fontSize: 11,
+                        ),
+                        prefixIcon: Icon(Icons.search_rounded,
+                            size: 16,
+                            color: isDark
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade400),
+                        suffixIcon: searchQuery.value.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                                onPressed: () => searchQuery.value = '',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.white : Colors.black87),
+                    ),
                   ),
                 ),
               ],

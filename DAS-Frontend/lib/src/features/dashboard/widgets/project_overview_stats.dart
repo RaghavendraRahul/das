@@ -7,6 +7,8 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/routes/app_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../critical_attention_provider.dart';
+import '../dashboard_providers.dart';
+import 'package:project_pm/src/core/providers/user_providers.dart';
 
 enum StatCategory { portfolio, timeline, completion, attention }
 
@@ -24,124 +26,171 @@ class ProjectOverviewStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Always show the cards, even with empty projects (display zeros)
-    final totalProjects = totalCountOverride ?? projects.length;
-    final activeProjects = projects.where((p) => p.isActive).length;
-    final completedProjects = projects.where((p) => p.isCompleted).length;
+    // 1. WATCH the backend-calculated statistics
+    final statsAsync = ref.watch(dashboardOverviewStatsProvider);
 
-    // Timeline calculation
-    final now = DateTime.now();
-    final overdueCount = projects
-        .where((p) =>
-            p.isActive &&
-            p.tasks.any((t) => t.progress < 100 && t.endDate.isBefore(now)))
-        .length;
-    final onTrackCount = activeProjects - overdueCount;
+    return statsAsync.when(
+      loading: () => const _LoadingStats(),
+      error: (err, stack) => _ErrorStats(error: err.toString()),
+      data: (stats) {
+        // EXTRACT data from backward provided Map
+        final portfolio = stats['project_portfolio'] ?? {};
+        final timeline = stats['timeline_health'] ?? {};
+        final efficiency = stats['task_efficiency'] ?? {};
+        final attention = stats['critical_attention'] ?? {};
 
-    // Task Completion
-    final allTasks = projects.expand((p) => p.tasks).toList();
-    final totalTasks = allTasks.length;
-    final completedTasks = allTasks.where((t) => t.progress == 100).length;
+        // Portfolio values
+        final totalProjects = portfolio['total'] ?? 0;
+        final activeProjects = portfolio['active'] ?? 0;
+        final completedProjects = portfolio['done'] ?? 0;
 
-    // Attention - Centralized Sync
-    final criticalItemsAsync = ref.watch(criticalItemsProvider);
-    final allCriticalItems = criticalItemsAsync.valueOrNull ?? [];
-    
-    // Filter critical items to only those belonging to the current set of projects (My vs Team)
-    final filteredCriticalItems = allCriticalItems.where((item) {
-      return projects.any((p) => p.project.id == item.projectId);
-    }).toList();
-    
-    final totalAttentionCount = filteredCriticalItems.length;
+        // Timeline values
+        final onTrackCount = timeline['on_track'] ?? 0;
+        final overdueCount = timeline['overdue'] ?? 0;
 
-    void showCategoryModal(StatCategory category) {
-      showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) => _StatsModal(
-          category: category,
-          projects: projects,
-          searchQuery: searchQuery,
-          onSelectProject: (projectId) {
-            Navigator.of(ctx).pop();
-            ref.read(selectedProjectIdProvider.notifier).state = projectId;
-            context.router.navigate(const ProjectPlanRoute());
-          },
-        ),
-      );
-    }
+        // Efficiency values
+        final totalTasks = efficiency['total'] ?? 0;
+        final completedTasks = efficiency['completed'] ?? 0;
+        final pendingTasks = efficiency['pending'] ?? 0;
 
-    return Column(
-      children: [
-        LayoutBuilder(builder: (context, constraints) {
-          int crossAxisCount = 1;
-          if (constraints.maxWidth > 700) crossAxisCount = 2;
-          if (constraints.maxWidth > 1400) crossAxisCount = 4;
+        // Attention values
+        final totalAttentionCount = attention['total'] ?? 0;
+        final criticalCount = attention['critical'] ?? 0;
+        final rejectedCount = attention['rejected'] ?? 0;
 
-          return GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisExtent: 200, // Increased slightly for breathing room
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
+        void showCategoryModal(StatCategory category) {
+          showDialog(
+            context: context,
+            barrierDismissible: true,
+            builder: (ctx) => _StatsModal(
+              category: category,
+              projects: projects,
+              searchQuery: searchQuery,
+              onSelectProject: (projectId) {
+                Navigator.of(ctx).pop();
+                ref.read(selectedProjectIdProvider.notifier).state = projectId;
+                context.router.navigate(const ProjectPlanRoute());
+              },
             ),
-            children: [
-              _StatCard(
-                title: "Project Portfolio",
-                count: totalProjects,
-                sub1: activeProjects,
-                sub1Label: "Active Files",
-                sub2: completedProjects,
-                sub2Label: "Completed",
-                icon: Icons.account_balance_wallet_rounded,
-                isPrimary: false,
-                progressOverride:
-                    totalProjects > 0 ? completedProjects / totalProjects : 0,
-                strokeColor: const Color(0xFF3B82F6), // Bright Blue
-                onTap: () => showCategoryModal(StatCategory.portfolio),
-              ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
-              _StatCard(
-                title: "Timeline Health",
-                count: activeProjects,
-                sub1: onTrackCount,
-                sub1Label: "On-Track",
-                sub2: overdueCount,
-                sub2Label: "Delayed",
-                icon: Icons.shield_rounded,
-                isSub2Alert: overdueCount > 0,
-                strokeColor: const Color(0xFF1D4ED8), // Royal Blue
-                onTap: () => showCategoryModal(StatCategory.timeline),
-              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
-              _StatCard(
-                title: "Task Efficiency",
-                count: totalTasks,
-                sub1: completedTasks,
-                sub1Label: "Completed",
-                sub2: totalTasks - completedTasks,
-                sub2Label: "Pending",
-                icon: Icons.bolt_rounded,
-                strokeColor: const Color(0xFF14B8A6), // Bright Teal
-                onTap: () => showCategoryModal(StatCategory.completion),
-              ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
-              _StatCard(
-                title: "Critical Attention",
-                count: totalAttentionCount,
-                sub1: totalAttentionCount,
-                sub1Label: "Blockers",
-                sub2: 0,
-                sub2Label: "Fixed", 
-                icon: Icons.priority_high_rounded,
-                isSub1Alert: totalAttentionCount > 0,
-                isCritical: totalAttentionCount > 0,
-                strokeColor: const Color(0xFFEF4444), // Bright Red
-                onTap: () => showCategoryModal(StatCategory.attention),
-              ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
-            ],
           );
-        }),
-      ],
+        }
+
+        return Column(
+          children: [
+            LayoutBuilder(builder: (context, constraints) {
+              int crossAxisCount = 1;
+              if (constraints.maxWidth > 700) crossAxisCount = 2;
+              if (constraints.maxWidth > 1400) crossAxisCount = 4;
+
+              return GridView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisExtent: 200,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                ),
+                children: [
+                  _StatCard(
+                    title: "Project Portfolio",
+                    count: totalProjects,
+                    sub1: activeProjects,
+                    sub1Label: "Active Files",
+                    sub2: completedProjects,
+                    sub2Label: "Completed",
+                    icon: Icons.account_balance_wallet_rounded,
+                    isPrimary: false,
+                    strokeColor: const Color(0xFF3B82F6),
+                    progressOverride: totalProjects > 0
+                        ? (completedProjects / totalProjects)
+                        : 0,
+                    onTap: () => showCategoryModal(StatCategory.portfolio),
+                  ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
+                  _StatCard(
+                    title: "Timeline Health",
+                    count: activeProjects,
+                    sub1: onTrackCount,
+                    sub1Label: "On-Track",
+                    sub2: overdueCount,
+                    sub2Label: "Delayed",
+                    icon: Icons.shield_rounded,
+                    isSub2Alert: overdueCount > 0,
+                    // Risk view: progress = % of delayed projects
+                    // 0% = all healthy ✅   |   100% = all overdue 🔴
+                    progressOverride: activeProjects > 0
+                        ? (overdueCount / activeProjects)
+                        : 0.0,
+                    strokeColor: const Color(0xFF1D4ED8), // Fixed Royal Blue
+                    onTap: () => showCategoryModal(StatCategory.timeline),
+                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
+                  _StatCard(
+                    title: "Task Efficiency",
+                    count: totalTasks,
+                    sub1: completedTasks,
+                    sub1Label: "Completed",
+                    sub2: pendingTasks,
+                    sub2Label: "Pending",
+                    icon: Icons.bolt_rounded,
+                    strokeColor: const Color(0xFF14B8A6),
+                    onTap: () => showCategoryModal(StatCategory.completion),
+                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
+                  _StatCard(
+                    title: "Critical Attention",
+                    count: totalAttentionCount,
+                    sub1: criticalCount,
+                    sub1Label: "Blockers",
+                    sub2: rejectedCount,
+                    sub2Label: "Rejected",
+                    icon: Icons.priority_high_rounded,
+                    isSub1Alert: criticalCount > 0,
+                    isSub2Alert: rejectedCount > 0,
+                    isCritical: totalAttentionCount > 0,
+                    strokeColor: const Color(0xFFEF4444),
+                    progressOverride: totalAttentionCount > 0 ? 0.0 : 1.0,
+                    onTap: () => showCategoryModal(StatCategory.attention),
+                  ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
+                ],
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LoadingStats extends StatelessWidget {
+  const _LoadingStats();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 200,
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class _ErrorStats extends StatelessWidget {
+  final String error;
+  const _ErrorStats({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Center(
+        child: Text(
+          "Retry failed: $error",
+          style: const TextStyle(color: Colors.red),
+        ),
+      ),
     );
   }
 }
@@ -225,11 +274,18 @@ class _StatsModal extends ConsumerWidget {
       case StatCategory.completion:
         title = "Task Completion Status";
         items = [];
+        final filterMode = ref.read(dashboardProjectTypeProvider);
+        final currentUserId = ref.read(currentUserIdProvider);
         for (final p in projects) {
           for (final t in p.tasks) {
+            // If 'my' mode: only show tasks where current user is an assignee
+            if (filterMode == 'my' && currentUserId != null) {
+              final isAssigned = t.assignees.any((u) => u.id == currentUserId);
+              if (!isAssigned) continue;
+            }
             final isDone = t.progress == 100;
             items.add(_ModalItem(
-              id: p.project.id, // Changed to project.id for routing
+              id: p.project.id,
               name: t.task.name,
               subtext: p.project.name,
               statusText: isDone ? "Done" : "${t.progress}%",
@@ -239,11 +295,11 @@ class _StatsModal extends ConsumerWidget {
           }
         }
 
-        if (items.isEmpty && searchQuery.isNotEmpty) {
+        if (items.isEmpty) {
           items.add(_ModalItem(
             id: "empty",
-            name: "No results for '$searchQuery'",
-            subtext: "Try searching by project or task name",
+            name: filterMode == 'my' ? "No tasks assigned to you" : "No tasks found",
+            subtext: filterMode == 'my' ? "You have no task assignments in these projects" : "Try searching by project or task name",
             statusText: "Empty",
             statusColor: Colors.grey,
             isClickable: false,
@@ -286,7 +342,7 @@ class _StatsModal extends ConsumerWidget {
     }
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
         child: Column(
@@ -299,7 +355,7 @@ class _StatsModal extends ConsumerWidget {
                 border: Border(
                   bottom: BorderSide(
                     color:
-                        isDark ? const Color(0xFF05263E).withOpacity(0.7) : Colors.grey.shade200,
+                        isDark ? const Color(0xFF05263E).withValues(alpha: 0.7) : Colors.grey.shade200,
                   ),
                 ),
               ),
@@ -359,7 +415,7 @@ class _StatsModal extends ConsumerWidget {
                 separatorBuilder: (_, __) => Divider(
                   height: 1,
                   color: isDark
-                      ? const Color(0xFF05263E).withOpacity(0.7).withOpacity(0.3)
+                      ? const Color(0xFF05263E).withValues(alpha: 0.2)
                       : Colors.grey.shade100,
                 ),
                 itemBuilder: (context, index) {
@@ -403,8 +459,8 @@ class _StatsModal extends ConsumerWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: item.statusColor.withAlpha(30),
-                              borderRadius: BorderRadius.circular(12),
+                              color: item.statusColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(24),
                             ),
                             child: Text(
                               item.statusText,
@@ -431,7 +487,7 @@ class _StatsModal extends ConsumerWidget {
                 border: Border(
                   top: BorderSide(
                     color:
-                        isDark ? const Color(0xFF05263E).withOpacity(0.7) : Colors.grey.shade200,
+                        isDark ? const Color(0xFF05263E).withValues(alpha: 0.7) : Colors.grey.shade200,
                   ),
                 ),
               ),
@@ -516,8 +572,8 @@ class _StatCardState extends State<_StatCard> {
     
     // Strict Figma Colors
     final bgColor = isDark ? const Color(0xFF0B1424) : const Color(0xFFF9FAFB);
-    final shadowColor = isDark ? Colors.black45 : Colors.black.withOpacity(0.03);
-    final subLabelColor = isDark ? const Color(0xFF64748B) : const Color(0xFF9CA3AF);
+    final shadowColor = isDark ? Colors.black45 : Colors.black.withValues(alpha: 0.03);
+    final subLabelColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF9CA3AF);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -526,7 +582,7 @@ class _StatCardState extends State<_StatCard> {
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
               color: shadowColor,
@@ -536,7 +592,7 @@ class _StatCardState extends State<_StatCard> {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
@@ -551,8 +607,8 @@ class _StatCardState extends State<_StatCard> {
                       decoration: BoxDecoration(
                         color: widget.strokeColor,
                         borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          bottomLeft: Radius.circular(12),
+                          topLeft: Radius.circular(24),
+                          bottomLeft: Radius.circular(24),
                         ),
                       ),
                     ),
@@ -571,7 +627,7 @@ class _StatCardState extends State<_StatCard> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: widget.strokeColor.withOpacity(0.1),
+                                color: widget.strokeColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
@@ -585,7 +641,7 @@ class _StatCardState extends State<_StatCard> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: (widget.isCritical ? Colors.red : widget.strokeColor).withOpacity(0.1),
+                                  color: (widget.isCritical ? Colors.red : widget.strokeColor).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
@@ -669,7 +725,7 @@ class _StatCardState extends State<_StatCard> {
                         // PROGRESS BAR
                         Builder(
                           builder: (context) {
-                            double total = (widget.sub1 + widget.sub2).toDouble();
+                            double total = widget.count.toDouble();
                             if (total == 0) total = 1.0;
                             double prog = widget.progressOverride ?? (widget.sub1 / total);
                             return Row(
@@ -718,7 +774,6 @@ class _SubStatSmall extends StatelessWidget {
   final bool isDark;
   final bool alignEnd;
   final Color labelColor;
-  final Color? valueColor;
 
   const _SubStatSmall({
     required this.label,
@@ -726,7 +781,6 @@ class _SubStatSmall extends StatelessWidget {
     required this.isAlert,
     required this.isDark,
     required this.labelColor,
-    this.valueColor,
     this.alignEnd = false,
   });
 
@@ -740,7 +794,7 @@ class _SubStatSmall extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: valueColor ?? (isAlert ? Colors.red : (isDark ? Colors.white : Colors.black)),
+            color: isAlert ? Colors.red : (isDark ? Colors.white : Colors.black),
           ),
         ),
         Text(
@@ -749,7 +803,7 @@ class _SubStatSmall extends StatelessWidget {
             fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
-            color: isDark ? labelColor : Colors.black,
+            color: isDark ? labelColor : const Color(0xFF9CA3AF),
           ),
         ),
       ],

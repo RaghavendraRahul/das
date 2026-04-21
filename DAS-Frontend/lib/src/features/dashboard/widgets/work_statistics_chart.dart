@@ -19,12 +19,12 @@ const _palette = [
 
 final List<BoxShadow> _premiumShadow = [
   BoxShadow(
-    color: Colors.black.withOpacity(0.12),
+    color: Colors.black.withValues(alpha: 0.12),
     blurRadius: 32,
     offset: const Offset(0, 16),
   ),
   BoxShadow(
-    color: Colors.black.withOpacity(0.04),
+    color: Colors.black.withValues(alpha: 0.04),
     blurRadius: 8,
     offset: const Offset(0, 2),
   ),
@@ -32,12 +32,12 @@ final List<BoxShadow> _premiumShadow = [
 
 final List<BoxShadow> _softShadow = [
   BoxShadow(
-    color: Colors.black.withOpacity(0.04),
+    color: Colors.black.withValues(alpha: 0.04),
     blurRadius: 10,
     offset: const Offset(0, 4),
   ),
   BoxShadow(
-    color: Colors.black.withOpacity(0.02),
+    color: Colors.black.withValues(alpha: 0.02),
     blurRadius: 4,
     offset: const Offset(0, 1),
   ),
@@ -191,7 +191,7 @@ class _Header extends ConsumerWidget {
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
-                color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
+                color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF05263E),
                 letterSpacing: -0.5,
               ),
             ),
@@ -230,7 +230,7 @@ class _Header extends ConsumerWidget {
                       style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF4B6A8A))),
+                          color: isDark ? const Color(0xFFE0F2FE) : const Color(0xFF4B6A8A))),
                   icon: Icon(Icons.keyboard_arrow_down_rounded,
                       size: 16, color: isDark ? const Color(0xFF7EC8F4) : Colors.grey.shade500),
                   isDense: true,
@@ -375,17 +375,17 @@ class _StatCard extends HookWidget {
             isHovered.value ? 1.02 : 1.0, isHovered.value ? 1.02 : 1.0, 1.0),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF0B1A2E) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: isHovered.value ? _premiumShadow : [
             BoxShadow(
-              color: const Color(0xFF05263E).withOpacity(isDark ? 0.15 : 0.06),
+              color: const Color(0xFF05263E).withValues(alpha: isDark ? 0.15 : 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(
             color: isHovered.value
-                ? color.withOpacity(0.4)
+                ? color.withValues(alpha: 0.4)
                 : (isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0)),
             width: 1,
           ),
@@ -398,7 +398,7 @@ class _StatCard extends HookWidget {
               child: Icon(
                 icon,
                 size: 60,
-                color: color.withOpacity(0.04),
+                color: color.withValues(alpha: 0.04),
               ),
             ),
             Row(
@@ -407,7 +407,7 @@ class _StatCard extends HookWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, size: 16, color: color),
@@ -423,7 +423,7 @@ class _StatCard extends HookWidget {
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade600,
+                          color: isDark ? Colors.white70 : Colors.grey.shade600,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -439,7 +439,7 @@ class _StatCard extends HookWidget {
                                 style: GoogleFonts.outfit(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w900,
-                                  color: color,
+                                  color: isDark ? (color == const Color(0xFF05263E) ? const Color(0xFFD1E9FF) : color) : color,
                                   letterSpacing: -0.5,
                                 ),
                               ),
@@ -451,7 +451,7 @@ class _StatCard extends HookWidget {
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade400,
+                              color: isDark ? Colors.white54 : Colors.grey.shade400,
                             ),
                           ),
                         ],
@@ -530,7 +530,7 @@ class _DonutSection extends StatelessWidget {
       achievedSlices.add(
         _Slice(
           value: remaining,
-          color: const Color(0xFFF59E0B).withOpacity(isDark ? 0.2 : 0.1), // Match Remaining card color
+          color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.2 : 0.1), // Match Remaining card color
           label: 'Remaining',
         ),
       );
@@ -548,7 +548,7 @@ class _DonutSection extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
-                  color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
+                  color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF05263E),
                   letterSpacing: -0.2,
                 ),
               ),
@@ -648,7 +648,7 @@ class _DonutChart extends HookWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.03) : const Color(0xFFF5F8FC),
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF5F8FC),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
@@ -672,7 +672,7 @@ class _DonutChart extends HookWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: accentColor.withOpacity(0.4),
+                        color: accentColor.withValues(alpha: 0.4),
                         blurRadius: 4,
                       )
                     ],
@@ -684,7 +684,7 @@ class _DonutChart extends HookWidget {
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    color: isDark ? const Color(0xFFB0C8E0) : const Color(0xFF05263E),
+                    color: isDark ? const Color(0xFFD1E9FF) : const Color(0xFF05263E),
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -701,7 +701,7 @@ class _DonutChart extends HookWidget {
                     height: chartSize + (radius * 2.5),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isDark ? Colors.white.withOpacity(0.01) : Colors.black.withOpacity(0.01),
+                      color: isDark ? Colors.white.withValues(alpha: 0.01) : Colors.black.withValues(alpha: 0.01),
                     ),
                   ),
                   // Smarter Background Track
@@ -716,7 +716,7 @@ class _DonutChart extends HookWidget {
                           PieChartSectionData(
                             value: 1,
                             title: '',
-                            color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.01),
+                            color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.01),
                             radius: radius,
                           ),
                         ],
@@ -751,7 +751,7 @@ class _DonutChart extends HookWidget {
                                   title: '',
                                   radius: isHovered ? radius * 1.2 : radius,
                                   gradient: LinearGradient(
-                                    colors: [s.color, s.color.withOpacity(0.7)],
+                                    colors: [s.color, s.color.withValues(alpha: 0.7)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -784,15 +784,15 @@ class _DonutChart extends HookWidget {
                       color: isDark ? Colors.black12 : Colors.white,
                       border: hoveredIndex.value != -1 && hasData && hoveredIndex.value < slices.length
                           ? Border.all(
-                              color: _palette[hoveredIndex.value % _palette.length][0].withOpacity(0.3),
+                              color: _palette[hoveredIndex.value % _palette.length][0].withValues(alpha: 0.3),
                               width: 2,
                             )
                           : null,
                       boxShadow: [
                         BoxShadow(
                           color: hoveredIndex.value != -1 && hasData && hoveredIndex.value < slices.length
-                              ? _palette[hoveredIndex.value % _palette.length][0].withOpacity(0.15)
-                              : Colors.black.withOpacity(0.05),
+                              ? _palette[hoveredIndex.value % _palette.length][0].withValues(alpha: 0.15)
+                              : Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
@@ -871,10 +871,10 @@ class _DonutChart extends HookWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.08),
+                color: accentColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: accentColor.withOpacity(0.1),
+                  color: accentColor.withValues(alpha: 0.1),
                 ),
               ),
               child: Row(
@@ -919,6 +919,7 @@ class _ProjectPickerSheet extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final search = useTextEditingController();
+    useListenable(search); // Rebuild when typing for suffix icon visibility
     final filtered = useState(projects);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -929,7 +930,7 @@ class _ProjectPickerSheet extends HookWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, -5),
           )
@@ -960,7 +961,17 @@ class _ProjectPickerSheet extends HookWidget {
                   style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Search your projects…',
+                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    suffixIcon: search.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            onPressed: () {
+                              search.clear();
+                              filtered.value = projects;
+                            },
+                          )
+                        : null,
                     filled: true,
                     fillColor:
                         isDark ? const Color(0xFF1F2937) : Colors.grey.shade50,
@@ -1035,7 +1046,7 @@ class _PickerTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.1),
+          color: Colors.blue.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 18, color: Colors.blue.shade600),
@@ -1152,8 +1163,8 @@ class _ShellBox extends StatelessWidget {
           child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
+                color: Colors.grey.shade50.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(24),
               ),
               child: child)),
     );

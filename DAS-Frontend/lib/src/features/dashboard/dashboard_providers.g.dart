@@ -41,7 +41,7 @@ final dashboardProjectsProvider =
 typedef DashboardProjectsRef
     = AutoDisposeFutureProviderRef<List<ProjectWithTasks>>;
 String _$filteredDashboardStatsHash() =>
-    r'4f59d1bf36982b9e33027b1cc51e2d1dd83e67e6';
+    r'3fd11a5d4eccef9d5fecad8dea4cac4ceedd8d83';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -214,6 +214,26 @@ class _FilteredDashboardStatsProviderElement
   String get filter => (origin as FilteredDashboardStatsProvider).filter;
 }
 
+String _$dashboardOverviewStatsHash() =>
+    r'f435f0fde7412649c2843478e3ce0c7e27070e5a';
+
+/// Provider to fetch backend-calculated summary statistics
+///
+/// Copied from [dashboardOverviewStats].
+@ProviderFor(dashboardOverviewStats)
+final dashboardOverviewStatsProvider =
+    AutoDisposeFutureProvider<Map<String, dynamic>>.internal(
+  dashboardOverviewStats,
+  name: r'dashboardOverviewStatsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$dashboardOverviewStatsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef DashboardOverviewStatsRef
+    = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
 String _$usersForStatsHash() => r'd095821330473d9f1dc133c588d75e247ce00fdf';
 
 /// Provider for fetching users list for stats dropdown
@@ -699,5 +719,73 @@ final dashboardMetricsProvider =
 );
 
 typedef DashboardMetricsRef = AutoDisposeFutureProviderRef<DashboardMetrics>;
+String _$globalSearchServiceHash() =>
+    r'954f5226fc22b7c6caad888e2a137d8f6662cfe6';
+
+/// See also [globalSearchService].
+@ProviderFor(globalSearchService)
+final globalSearchServiceProvider =
+    AutoDisposeProvider<GlobalSearchService>.internal(
+  globalSearchService,
+  name: r'globalSearchServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$globalSearchServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef GlobalSearchServiceRef = AutoDisposeProviderRef<GlobalSearchService>;
+String _$searchHistoryServiceHash() =>
+    r'cd9b9a56808b39248e46b9d3a26dfb5925737ccb';
+
+/// See also [searchHistoryService].
+@ProviderFor(searchHistoryService)
+final searchHistoryServiceProvider =
+    AutoDisposeProvider<SearchHistoryService>.internal(
+  searchHistoryService,
+  name: r'searchHistoryServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$searchHistoryServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef SearchHistoryServiceRef = AutoDisposeProviderRef<SearchHistoryService>;
+String _$globalSearchResultsHash() =>
+    r'93c5c0b48dfaa5ee50e344e265429904ec943332';
+
+/// See also [globalSearchResults].
+@ProviderFor(globalSearchResults)
+final globalSearchResultsProvider =
+    AutoDisposeFutureProvider<List<GlobalSearchResult>>.internal(
+  globalSearchResults,
+  name: r'globalSearchResultsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$globalSearchResultsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef GlobalSearchResultsRef
+    = AutoDisposeFutureProviderRef<List<GlobalSearchResult>>;
+String _$searchHistoryListHash() => r'3e5413e4129e4ade43b43476de679a7c1682bce9';
+
+/// See also [searchHistoryList].
+@ProviderFor(searchHistoryList)
+final searchHistoryListProvider =
+    AutoDisposeFutureProvider<List<String>>.internal(
+  searchHistoryList,
+  name: r'searchHistoryListProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$searchHistoryListHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef SearchHistoryListRef = AutoDisposeFutureProviderRef<List<String>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

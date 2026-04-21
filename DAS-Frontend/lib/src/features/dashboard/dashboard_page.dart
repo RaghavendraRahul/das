@@ -12,7 +12,6 @@ import 'package:project_pm/src/features/dashboard/widgets/project_working_report
 import 'package:project_pm/src/features/dashboard/widgets/daily_execution_rings_card.dart';
 
 import 'package:project_pm/src/core/database/database.dart';
-import 'package:project_pm/src/features/projects/models/project_model.dart';
 import 'package:project_pm/src/routes/app_router.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
@@ -112,14 +111,14 @@ class DashboardPage extends HookConsumerWidget {
                                       fontWeight: FontWeight.w700,
                                       fontSize: 26,
                                       letterSpacing: -0.5,
-                                      color: const Color(0xFF0B1B2F),
+                                      color: isDark ? Colors.white : const Color(0xFF0B1B2F),
                                     ),
                                   ),
                                   Text(
                                     'Your intelligent command center for the all projects',
                                     style: GoogleFonts.outfit(
                                       fontSize: 12,
-                                      color: const Color(0xFF0B1B2F).withValues(alpha: 0.6),
+                                      color: (isDark ? Colors.white : const Color(0xFF0B1B2F)).withValues(alpha: 0.6),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -164,7 +163,7 @@ class DashboardPage extends HookConsumerWidget {
                           ),
 
                         // ── Global Discovery Search Results ────────────────────────────────
-                        if (searchQuery != null && searchQuery.isNotEmpty) ...[
+                        if (searchQuery.isNotEmpty) ...[
                           Row(
                             children: [
                               Icon(Icons.search_rounded, 
@@ -200,7 +199,7 @@ class DashboardPage extends HookConsumerWidget {
                               children: [
                                 Icon(Icons.search_off_rounded, 
                                   size: 48, 
-                                  color: Colors.grey.withOpacity(0.3)),
+                                  color: Colors.grey.withValues(alpha: 0.3)),
                                 const SizedBox(height: 16),
                                 Text(
                                   'No project found for "$searchQuery"',
@@ -421,7 +420,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.hardEdge,
       child: child,
@@ -446,7 +445,7 @@ class _SearchResultItem extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.04) : Colors.white,
+          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
@@ -455,7 +454,7 @@ class _SearchResultItem extends ConsumerWidget {
           boxShadow: [
             if (!isDark)
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -544,7 +543,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(

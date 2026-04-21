@@ -161,14 +161,14 @@ class _MainTitleSection extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF05263E).withOpacity(0.08),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF05263E).withOpacity(0.1)),
+            color: const Color(0xFF05263E).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF05263E).withValues(alpha: 0.1)),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.trending_up,
             size: 18,
-            color: Color(0xFF05263E),
+            color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
           ),
         ),
         const SizedBox(width: 12),
@@ -177,7 +177,7 @@ class _MainTitleSection extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w900,
-            color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
+            color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF05263E),
             letterSpacing: -0.5,
           ),
         ),
@@ -298,7 +298,7 @@ class _SegmentedControl<T> extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF1F5F9), // Slate grey bg
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isDark ? const Color(0xFF3F3F3F) : const Color(0xFFE2E8F0),
         ),
@@ -318,11 +318,11 @@ class _SegmentedControl<T> extends StatelessWidget {
                 color: isSelected 
                   ? (isDark ? const Color(0xFF424242) : Colors.white) // White pill in light mode
                   : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: isSelected && !isDark
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -346,7 +346,7 @@ class _SegmentedControl<T> extends StatelessWidget {
                       fontWeight: FontWeight.w600, // SemiBold
                       color: isSelected
                           ? (isDark ? Colors.white : Colors.black)
-                          : (isDark ? Colors.white70 : const Color(0xFF64748B)),
+                          : (isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF64748B)),
                     ),
                   ),
                 ],
@@ -382,12 +382,12 @@ class _ModernYearPicker extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: null, // Let context menu handle it
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               border: Border.all(color: isDark ? const Color(0xFF3F3F3F) : const Color(0xFFE2E8F0)),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(24),
               color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF1F5F9),
             ),
             child: Row(
@@ -454,7 +454,7 @@ class _ConnectedProjectChart extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.bar_chart_rounded, size: 48, color: Colors.grey.withOpacity(0.3)),
+                Icon(Icons.bar_chart_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
                 const SizedBox(height: 16),
                 Text("No project data available for $selectedYear", 
                   style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
@@ -531,7 +531,7 @@ class _ConnectedTaskChart extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.task_alt_rounded, size: 48, color: Colors.grey.withOpacity(0.3)),
+                Icon(Icons.task_alt_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
                 const SizedBox(height: 16),
                 Text("No task analysis available for $selectedYear", 
                   style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
@@ -626,7 +626,7 @@ class _HoursLineChart extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.timer_rounded, size: 48, color: Colors.grey.withOpacity(0.3)),
+            Icon(Icons.timer_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text("No hours worked metadata for $selectedYear", 
               style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
@@ -759,7 +759,7 @@ class _MonthlyProjectDetailView extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.assignment_turned_in_rounded, size: 48, color: Colors.grey.withOpacity(0.2)),
+                  Icon(Icons.assignment_turned_in_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.2)),
                   const SizedBox(height: 16),
                   Text(
                     "No projects completed in $monthYear",
@@ -807,7 +807,7 @@ class _ProjectDetailCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF5F8FC),
+          color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF5F8FC),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
@@ -819,7 +819,7 @@ class _ProjectDetailCard extends ConsumerWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(Icons.check_circle_outline_rounded, size: 24, color: Colors.orange),
@@ -887,7 +887,7 @@ Widget _buildLineChart({
         drawVerticalLine: false,
         horizontalInterval: maxY > 20 ? (maxY / 5) : 5,
         getDrawingHorizontalLine: (value) => FlLine(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
           strokeWidth: 1.5,
         ),
       ),
@@ -961,7 +961,7 @@ Widget _buildLineChart({
           color: color,
           barWidth: 4,
           isStrokeCapRound: true,
-          shadow: Shadow(color: color.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5)),
+          shadow: Shadow(color: color.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 5)),
           dotData: FlDotData(
             show: spots.length < 30,
             getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
@@ -974,7 +974,7 @@ Widget _buildLineChart({
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [color.withOpacity(0.2), color.withOpacity(0.0)],
+              colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -1122,11 +1122,11 @@ class _TaskDetailCard extends StatelessWidget {
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1137,7 +1137,7 @@ class _TaskDetailCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
+              color: Colors.blue.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.check_circle_outline, color: Colors.blue, size: 20),
@@ -1170,7 +1170,7 @@ class _TaskDetailCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(

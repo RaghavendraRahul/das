@@ -116,7 +116,7 @@ Future<PaginatedResponse<ProjectWithTasks>> paginatedDashboardProjects(
   // Use the same task source as Project Plan page for consistent task lists.
   final PaginatedResponse<ProjectModel> keys = await ref.watch(
       apiPaginatedProjectsProvider(page: page, filter: filter, search: search)
-          .future) as PaginatedResponse<ProjectModel>;
+          .future);
   final allTasks = await ref.watch(apiTasksProvider.future);
   // Using allUsersForProjectsProvider to ensure we get ALL users for assignee resolution
   final allUsers = await ref.watch(allUsersForProjectsProvider.future);
