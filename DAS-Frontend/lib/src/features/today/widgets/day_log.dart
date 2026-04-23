@@ -151,7 +151,7 @@ class DayLog extends ConsumerWidget {
                       debugPrint('   - Using pending path: id=${data['id']}, is_today_inbox=${data['is_today_inbox']}');
                       if (data['is_today_inbox'] == true) {
                         plannedItemId = data['id'] as int;
-                        await apiService.updateTodayPlanItem(plannedItemId!, {
+                        await apiService.updateTodayPlanItem(plannedItemId, {
                           'is_unplanned': true,
                           'notes': description,
                           'planned_duration_minutes': duration,
@@ -186,23 +186,21 @@ class DayLog extends ConsumerWidget {
                     }
 
                     debugPrint('   - Created plannedItemId: $plannedItemId');
-                    if (plannedItemId != null) {
-                      // Clean up pending if applicable
-                      if (data['is_pending'] == true && data['pending_id'] != null && data['is_today_inbox'] != true) {
-                        await apiService.deletePendingTask(data['pending_id']);
-                      }
-                      
-                      debugPrint('   - Opening manual review for $plannedItemId');
-                      await openManualReview(plannedItemId, {
-                        ...data,
-                        'name': name,
-                        'notes': description,
-                        'planned_duration_minutes': duration,
-                      }, 
-                      description: description, 
-                      duration: duration);
+                    // Clean up pending if applicable
+                    if (data['is_pending'] == true && data['pending_id'] != null && data['is_today_inbox'] != true) {
+                      await apiService.deletePendingTask(data['pending_id']);
                     }
-                  } catch (e, stack) {
+                    
+                    debugPrint('   - Opening manual review for $plannedItemId');
+                    await openManualReview(plannedItemId, {
+                      ...data,
+                      'name': name,
+                      'notes': description,
+                      'planned_duration_minutes': duration,
+                    }, 
+                    description: description, 
+                    duration: duration);
+                                    } catch (e, stack) {
                     debugPrint('❌ [DayLog] Failed to create unplanned item: $e');
                     debugPrint(stack.toString());
                     if (context.mounted) {
@@ -220,7 +218,6 @@ class DayLog extends ConsumerWidget {
       onWillAcceptWithDetails: (details) {
         if (isReadOnly) return false;
         final data = details.data;
-        if (data is! Map<String, dynamic>) return false;
         
         // Accept from today_plan or catalog/unplanned sources
         return data['source'] == 'today_plan' || 
