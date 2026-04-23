@@ -4303,8 +4303,9 @@ class DashboardViewSet(viewsets.GenericViewSet):
         
         # 4. CRITICAL ATTENTION
         # Align with frontend logic: Priority Critical + Rejected Projects/Tasks
-        critical_tasks = tasks.filter(priority='CRITICAL').count()
-        rejected_projects = projects.filter(approval_status='REJECTED').count()
+        # Only count tasks that are NOT DONE and projects that are NOT COMPLETED
+        critical_tasks = tasks.filter(priority='CRITICAL').exclude(status='DONE').exclude(project__status='COMPLETED').count()
+        rejected_projects = projects.filter(approval_status='REJECTED').exclude(status='COMPLETED').count()
         
         critical_stats = {
             'total': critical_tasks + rejected_projects,

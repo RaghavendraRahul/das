@@ -289,13 +289,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # For local development: http://127.0.0.1:8001
 # For production: Use environment variable or update with actual URL
 import os
+HRM_BASE_URL = os.getenv('HRM_BASE_URL', 'http://127.0.0.1:8001')  # Localhost HRM
 # HRM_BASE_URL = os.getenv('HRM_BASE_URL', 'https://hrmbackendapi.meridahr.com')  # Production
-HRM_BASE_URL = os.getenv('HRM_BASE_URL', 'http://localhost:8001')  # LAN IP
 # DAS Frontend URL for SSO redirects
 # IMPORTANT: Update this to your production DAS frontend URL
 # For local development: http://localhost:63105/
 # For production: https://das.meridahr.com/ (or your actual DAS frontend URL)
-DAS_FRONTEND_URL = os.getenv('DAS_FRONTEND_URL', 'http://localhost:63105/')
+DAS_FRONTEND_URL = os.getenv('DAS_FRONTEND_URL', 'http://127.0.0.1:63105/')
 # DAS_FRONTEND_URL = os.getenv('DAS_FRONTEND_URL', 'https://das.meridahr.com/')
 
 # SSL Verification setting for HRM requests

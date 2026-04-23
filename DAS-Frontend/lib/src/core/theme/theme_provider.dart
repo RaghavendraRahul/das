@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -75,6 +74,9 @@ final themeNotifierProvider =
 
 /// Resolved ThemeMode based on AppThemeMode
 final resolvedThemeModeProvider = Provider<ThemeMode>((ref) {
+  // Force light mode as per user request
+  return ThemeMode.light;
+  /*
   final appThemeMode = ref.watch(themeNotifierProvider);
   switch (appThemeMode) {
     case AppThemeMode.light:
@@ -84,10 +86,14 @@ final resolvedThemeModeProvider = Provider<ThemeMode>((ref) {
     case AppThemeMode.system:
       return ThemeMode.system;
   }
+  */
 });
 
 /// Check if currently in dark mode (considers system)
 final isDarkModeProvider = Provider<bool>((ref) {
+  // Force light mode (false) as per user request
+  return false;
+  /*
   final appThemeMode = ref.watch(themeNotifierProvider);
   switch (appThemeMode) {
     case AppThemeMode.light:
@@ -99,6 +105,7 @@ final isDarkModeProvider = Provider<bool>((ref) {
           SchedulerBinding.instance.platformDispatcher.platformBrightness;
       return brightness == Brightness.dark;
   }
+  */
 });
 
 /// Dark theme colors (matching React Tailwind dark: classes)

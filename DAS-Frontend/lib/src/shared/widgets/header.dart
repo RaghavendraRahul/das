@@ -318,6 +318,7 @@ class AppHeader extends HookConsumerWidget {
                       _CriticalAttentionButton(isDark: isDark),
                       _NotificationButton(isDark: isDark),
                       const SizedBox(width: 12),
+                      /* // Theme toggle button removed as per user request
                       Container(
                         decoration: BoxDecoration(
                           color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
@@ -358,6 +359,7 @@ class AppHeader extends HookConsumerWidget {
                           ],
                         ),
                       ),
+                      */
                       if (currentUser != null && !isMobile) ...[
                         const SizedBox(width: 16),
                         Text(

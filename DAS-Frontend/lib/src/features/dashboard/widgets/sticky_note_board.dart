@@ -170,57 +170,77 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
 
           SizedBox(
             height: 180,
-            child: ListView.separated(
+            child: ReorderableListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: notes.length,
-              separatorBuilder: (c, i) => const SizedBox(width: 12),
+              onReorder: (oldIndex, newIndex) {
+                ref.read(stickyNotesProvider.notifier).reorderNotes(oldIndex, newIndex);
+              },
+              proxyDecorator: (child, index, animation) {
+                return AnimatedBuilder(
+                  animation: animation,
+                  builder: (context, child) {
+                    return Material(
+                      elevation: 8,
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      child: child,
+                    );
+                  },
+                  child: child,
+                );
+              },
               itemBuilder: (context, index) {
                 final note = notes[index];
-                return Stack(
-                  children: [
-                    Container(
-                      width: 180,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: note.color,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 4)
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              note.content,
-                              style: const TextStyle(fontSize: 13, height: 1.4),
-                              maxLines: 6,
-                              overflow: TextOverflow.ellipsis,
+                return Padding(
+                  key: ValueKey(note.id),
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 180,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: note.color,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 4)
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                note.content,
+                                style: const TextStyle(fontSize: 13, height: 1.4),
+                                maxLines: 6,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                          Text(
-                            "${note.createdAt.day}/${note.createdAt.month}/${note.createdAt.year}",
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.black.withValues(alpha: 0.4)),
-                          )
-                        ],
+                            Text(
+                              "${note.createdAt.day}/${note.createdAt.month}/${note.createdAt.year}",
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.black.withValues(alpha: 0.4)),
+                            )
+                          ],
+                        ),
                       ),
-                    ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: InkWell(
-                        onTap: () => _deleteNote(note.id),
-                        child: Icon(Icons.close,
-                            size: 16,
-                            color: Colors.black.withValues(alpha: 0.3)),
-                      ),
-                    )
-                  ],
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: InkWell(
+                          onTap: () => _deleteNote(note.id),
+                          child: Icon(Icons.close,
+                              size: 16,
+                              color: Colors.black.withValues(alpha: 0.3)),
+                        ),
+                      )
+                    ],
+                  ),
                 );
               },
             ),

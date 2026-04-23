@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -41,6 +42,7 @@ class QuickNotesPage extends HookConsumerWidget {
         title: '',
         content: '',
         color: const Color(0xFFFEF3C7),
+        order: 0,
         createdAt: DateTime.now(),
       ),
     );
@@ -206,7 +208,7 @@ class QuickNotesPage extends HookConsumerWidget {
                 // Return the new note so we can select it
                 final newNote = await ref
                     .read(stickyNotesProvider.notifier)
-                    .addNote("New Note", color);
+                    .addNote("", color);
                 selectedNoteId.value = newNote.id;
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -247,6 +249,9 @@ class QuickNotesPage extends HookConsumerWidget {
                 }
               }
             },
+            onReorder: (oldIndex, newIndex) {
+              ref.read(stickyNotesProvider.notifier).reorderNotes(oldIndex, newIndex);
+            },
             notes: userNotes, // Pass notes to sidebar if we want to list them
             selectedNoteId: selectedNoteId.value,
           ),
@@ -261,6 +266,7 @@ class _StickyNotesSidebar extends HookWidget {
   final Function(Color) onAddNote;
   final Function(String) onSelectNote;
   final Function(List<String>) onDeleteNotes;
+  final Function(int, int) onReorder;
   final List<StickyNote> notes;
   final String? selectedNoteId;
   final ValueNotifier<bool> isSelectionMode;
@@ -271,6 +277,7 @@ class _StickyNotesSidebar extends HookWidget {
     required this.onAddNote,
     required this.onSelectNote,
     required this.onDeleteNotes,
+    required this.onReorder,
     required this.isSelectionMode,
     required this.selectedIds,
     this.notes = const [],
@@ -288,11 +295,42 @@ class _StickyNotesSidebar extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sort notes: Newest first (standard for "quick notes")
-    final sortedNotes = List<StickyNote>.from(notes)
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final sortedNotes = notes;
+    final scrollController = useScrollController();
+    final autoscrollTimer = useRef<Timer?>(null);
+    final sidebarKey = useMemoized(() => GlobalKey());
+
+    void stopAutoscroll() {
+      autoscrollTimer.value?.cancel();
+      autoscrollTimer.value = null;
+    }
+    void startAutoscroll(double velocity) {
+      if (autoscrollTimer.value != null) return;
+      autoscrollTimer.value = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+        if (!scrollController.hasClients) {
+          stopAutoscroll();
+          return;
+        }
+        final double newOffset = scrollController.offset + velocity;
+        if (newOffset < 0) {
+          scrollController.jumpTo(0);
+          stopAutoscroll();
+        } else if (newOffset > scrollController.position.maxScrollExtent) {
+          scrollController.jumpTo(scrollController.position.maxScrollExtent);
+          stopAutoscroll();
+        } else {
+          scrollController.jumpTo(newOffset);
+        }
+      });
+    }
+
+    // Cleanup timer on unmount
+    useEffect(() {
+      return stopAutoscroll;
+    }, []);
 
     return Container(
+      key: sidebarKey,
       width: 280,
       decoration: BoxDecoration(
         color: isDark
@@ -393,41 +431,122 @@ class _StickyNotesSidebar extends HookWidget {
               const Divider(height: 1),
               Expanded(
                 child: GridView.builder(
+                  controller: scrollController,
                   padding: const EdgeInsets.all(20),
                   itemCount: sortedNotes.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.9,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.85,
                   ),
                   itemBuilder: (context, index) {
                     final note = sortedNotes[index];
-                    return _SidebarNoteItem(
-                      index: index,
-                      note: note,
-                      isSelected: note.id == selectedNoteId,
-                      isMultiSelected: selectedIds.value.contains(note.id),
-                      isSelectionMode: isSelectionMode.value,
-                      isDark: isDark,
-                      onTap: () {
-                        if (isSelectionMode.value) {
-                          final newSet = Set<String>.from(selectedIds.value);
-                          if (newSet.contains(note.id)) {
-                            newSet.remove(note.id);
-                          } else {
-                            newSet.add(note.id);
-                          }
-                          selectedIds.value = newSet;
-                        } else {
-                          onSelectNote(note.id);
-                        }
-                      },
-                      onLongPress: () {
-                        isSelectionMode.value = true;
-                        selectedIds.value = {...selectedIds.value, note.id};
-                      },
-                      onDelete: () => onDeleteNotes([note.id]),
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final noteWidth = constraints.maxWidth;
+                        final noteHeight = constraints.maxHeight;
+                        
+                        return DragTarget<int>(
+                          onWillAccept: (data) => data != index,
+                          onAccept: (oldIndex) {
+                            stopAutoscroll();
+                            onReorder(oldIndex, index);
+                          },
+                          onLeave: (data) => stopAutoscroll(),
+                          onMove: (details) {
+                            // Autoscroll logic based on pointer position relative to the WHOLE sidebar
+                            final RenderBox? sidebarBox = sidebarKey.currentContext?.findRenderObject() as RenderBox?;
+                            if (sidebarBox == null) return;
+                            
+                            final localOffset = sidebarBox.globalToLocal(details.offset);
+                            final sidebarHeight = sidebarBox.size.height;
+                            const threshold = 70.0;
+                            
+                            if (localOffset.dy < threshold) {
+                              // Near top of the sidebar
+                              startAutoscroll(-12.0);
+                            } else if (localOffset.dy > sidebarHeight - threshold) {
+                              // Near bottom of the sidebar
+                              startAutoscroll(12.0);
+                            } else {
+                              stopAutoscroll();
+                            }
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            final isHovered = candidateData.isNotEmpty;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: isHovered ? [
+                                  BoxShadow(
+                                    color: Colors.blue.withOpacity(0.3),
+                                    blurRadius: 10,
+                                    spreadRadius: 2
+                                  )
+                                ] : [],
+                              ),
+                              child: _SidebarNoteItem(
+                                index: index,
+                                note: note,
+                                isSelected: note.id == selectedNoteId,
+                                isMultiSelected: selectedIds.value.contains(note.id),
+                                isSelectionMode: isSelectionMode.value,
+                                isDark: isDark,
+                                onReorder: (oldIdx) {
+                                  // Reorder will be handled by DragTarget.onAccept
+                                },
+                                onTap: () {
+                                  if (isSelectionMode.value) {
+                                    final newSet = Set<String>.from(selectedIds.value);
+                                    if (newSet.contains(note.id)) {
+                                      newSet.remove(note.id);
+                                    } else {
+                                      newSet.add(note.id);
+                                    }
+                                    selectedIds.value = newSet;
+                                  } else {
+                                    onSelectNote(note.id);
+                                  }
+                                },
+                                onLongPress: () {
+                                  if (!isSelectionMode.value) {
+                                    isSelectionMode.value = true;
+                                    selectedIds.value = {note.id};
+                                  }
+                                },
+                                onDelete: () => onDeleteNotes([note.id]),
+                                dragFeedback: Material(
+                                  color: Colors.transparent,
+                                  elevation: 12,
+                                  child: SizedBox(
+                                    width: noteWidth,
+                                    height: noteHeight,
+                                    child: Opacity(
+                                      opacity: 0.9,
+                                      child: Transform.rotate(
+                                        angle: 0.05,
+                                        child: _SidebarNoteItem(
+                                          index: index,
+                                          note: note,
+                                          isSelected: note.id == selectedNoteId,
+                                          isMultiSelected: selectedIds.value.contains(note.id),
+                                          isSelectionMode: isSelectionMode.value,
+                                          isDark: isDark,
+                                          onTap: () {},
+                                          onLongPress: () {},
+                                          onDelete: () {},
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      }
                     );
                   },
                 ),
@@ -450,6 +569,8 @@ class _SidebarNoteItem extends HookConsumerWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onDelete;
+  final Function(int)? onReorder;
+  final Widget? dragFeedback;
 
   const _SidebarNoteItem({
     required this.index,
@@ -461,6 +582,8 @@ class _SidebarNoteItem extends HookConsumerWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onDelete,
+    this.onReorder,
+    this.dragFeedback,
   });
 
   @override
@@ -469,8 +592,8 @@ class _SidebarNoteItem extends HookConsumerWidget {
     final selectedFont = ref.watch(quickNoteFontProvider);
 
     return GestureDetector(
-      onLongPress: onLongPress,
       onTap: onTap,
+      onLongPress: onLongPress,
       child: MouseRegion(
         onEnter: (_) => isHovered.value = true,
         onExit: (_) => isHovered.value = false,
@@ -534,11 +657,13 @@ class _SidebarNoteItem extends HookConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (note.title.isNotEmpty)
+                        if (note.title.isNotEmpty || note.content.isEmpty)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4.0),
                             child: Text(
-                              note.title,
+                              note.title.isEmpty && note.content.isEmpty
+                                  ? "New Note"
+                                  : note.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.outfit(
@@ -549,7 +674,9 @@ class _SidebarNoteItem extends HookConsumerWidget {
                           ),
                         Expanded(
                           child: Text(
-                            note.content.isEmpty ? "Empty" : note.content,
+                            note.content.isEmpty
+                                ? (note.title.isEmpty ? "" : "No content")
+                                : note.content,
                             maxLines: note.title.isNotEmpty ? 3 : 4,
                             overflow: TextOverflow.ellipsis,
                             style: _getSafeTextStyle(
@@ -566,6 +693,22 @@ class _SidebarNoteItem extends HookConsumerWidget {
                   ),
                 ),
               ),
+
+                              // Shuffle Handle (Drag Handle) - Dedicated Draggable trigger
+                              Positioned(
+                                bottom: 12,
+                                left: 12,
+                                child: Draggable<int>(
+                                  data: index,
+                                  feedback: dragFeedback ?? const SizedBox(),
+                                  childWhenDragging: const SizedBox(),
+                                  child: Icon(
+                                    Icons.drag_handle,
+                                    size: 18,
+                                    color: Colors.black.withOpacity(0.35),
+                                  ),
+                                ),
+                              ),
 
               // Quick Action UI (Fades in on hover)
               if (!isSelectionMode)
@@ -851,7 +994,7 @@ class _EditableStickyNote extends HookConsumerWidget {
                               onChanged: onTitleUpdate,
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
-                                hintText: "Untitled Note",
+                                hintText: "Title...",
                                 isDense: true,
                                 contentPadding: EdgeInsets.zero,
                               ),
@@ -889,7 +1032,7 @@ class _EditableStickyNote extends HookConsumerWidget {
                           border: InputBorder.none,
                           filled: false,
                           contentPadding: EdgeInsets.fromLTRB(32, 16, 32, 40),
-                          hintText: "Start typing your note here...",
+                          hintText: "Take a note...",
                           hintStyle: TextStyle(color: Colors.black38),
                         ),
                         style: _getSafeTextStyle(

@@ -42,12 +42,17 @@ class StickyNoteService {
   }
 
   Future<StickyNote> updateNote(
-      {required String id, String? title, String? content, Color? color}) async {
+      {required String id,
+      String? title,
+      String? content,
+      Color? color,
+      int? order}) async {
     try {
-      final data = <String, dynamic>{};
+      final Map<String, dynamic> data = {};
       if (title != null) data['title'] = title;
       if (content != null) data['content'] = content;
       if (color != null) data['color'] = _colorToHex(color);
+      if (order != null) data['order'] = order;
 
       final response = await _dio.patch(
         '/sticky-notes/$id/',
@@ -75,6 +80,7 @@ class StickyNoteService {
       title: json['title'] ?? '',
       content: json['content'] ?? '',
       color: _hexToColor(json['color']),
+      order: json['order'] ?? 0,
       createdAt: DateTime.parse(json['created_at']),
     );
   }

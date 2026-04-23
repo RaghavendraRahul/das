@@ -32,7 +32,9 @@ Dio dio(DioRef ref) {
       ? dartDefineUrl
       : (envUrl != null && envUrl.isNotEmpty)
           ? envUrl
-          : 'http://localhost:8000/api/';
+          : 'http://127.0.0.1:8000/api/';
+          // : 'https://dasbackendapi.meridahr.com/api/';
+
 
   if (defaultTargetPlatform == TargetPlatform.android &&
       !kIsWeb &&
