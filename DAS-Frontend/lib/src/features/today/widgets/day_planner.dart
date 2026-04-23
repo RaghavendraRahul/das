@@ -53,6 +53,15 @@ class DayPlanner extends HookConsumerWidget {
         selectedDate.month == now.month &&
         selectedDate.day == now.day;
 
+    useEffect(() {
+      debugPrint(
+          'DayPlanner: isToday=$isToday, isFinalized=$isFinalized, date=$selectedDateStr');
+      if (isFinalized) {
+        debugPrint('DayPlanner: Session detected for $selectedDateStr');
+      }
+      return null;
+    }, [isToday, isFinalized, selectedDateStr]);
+
     String dateHeader;
     if (isToday) {
       dateHeader = "Today's Plan";
@@ -76,31 +85,29 @@ class DayPlanner extends HookConsumerWidget {
     final horizontalPadding =
         MediaQuery.of(context).size.width < 600 ? 12.0 : 24.0;
 
+    const sidebarBlue = Color(0xFF05263E);
+
     return Container(
       padding:
-          EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24),
+          EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.08)
-              : Colors.black.withOpacity(0.05),
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.04),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.06),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
           BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.15)
-                : Colors.black.withOpacity(0.02),
-            blurRadius: 2,
+            color: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
@@ -120,8 +127,8 @@ class DayPlanner extends HookConsumerWidget {
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
-                      letterSpacing: 0.2,
-                      color: isDark ? Colors.white : const Color(0xFF05263E),
+                      letterSpacing: 0.3,
+                      color: isDark ? Colors.white : sidebarBlue,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -212,10 +219,10 @@ class DayPlanner extends HookConsumerWidget {
                           },
                   ),
                 ],
-              )
+              ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           // Quadrants Stack
           Expanded(
@@ -234,7 +241,7 @@ class DayPlanner extends HookConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // Fixed Pending Box with Overflow Protection
           if (ref.watch(apiPendingItemsProvider(selectedDateStr)).maybeWhen(
@@ -244,7 +251,7 @@ class DayPlanner extends HookConsumerWidget {
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height *
-                        0.3, // Responsive height (30% of screen)
+                        0.18, // Reduced height (18% of screen)
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -287,7 +294,7 @@ class DayPlanner extends HookConsumerWidget {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                        "Can't add - day has been started."),
+                                        "Day Plan has started. Planning interactions are locked."),
                                     backgroundColor: Colors.orange,
                                   ),
                                 );
@@ -419,7 +426,97 @@ class DayPlanner extends HookConsumerWidget {
 
           const SizedBox(height: 8),
 
-
+          if (isToday)
+            Center(
+              child: isFinalized
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.green.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_rounded,
+                              size: 18,
+                              color: isDark ? Colors.greenAccent : Colors.green),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Day Plan has started!',
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: isDark
+                                  ? Colors.greenAccent
+                                  : Colors.green.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SizedBox(
+                      // width: double.infinity, // Removed for smarter content-based sizing
+                      child: ElevatedButton.icon(
+                        onPressed: isReadOnly
+                            ? null
+                            : () async {
+                                try {
+                                  final apiService =
+                                      ref.read(taskApiServiceProvider);
+                                  await apiService.startDay();
+                                  ref.invalidate(apiActiveSessionProvider(
+                                      selectedDateStr));
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            "Day Plan Locked! Let's get to work!"),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content:
+                                            Text('Failed to start day: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        icon: const Icon(Icons.play_arrow_rounded, size: 24),
+                        label: Text(
+                          'START DAY PLAN',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF166534),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+            ),
         ],
       ),
     );
@@ -431,55 +528,71 @@ class DayPlanner extends HookConsumerWidget {
     bool isFinalized,
     double pulse,
   ) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _QuadrantBox(
-            quadrant: 'Q1',
-            title: 'Q1 Do First (Urgent & Important)',
-            color: const Color(0xFFEF4444), // Red
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // If width allows, we do 2 columns (2x2 grid), else 1 column
+        const double spacing = 16.0;
+        final bool isWide = constraints.maxWidth > 600;
+
+        Widget buildBox(String q, String title, Color color) {
+          return _QuadrantBox(
+            quadrant: q,
+            title: title,
+            color: color,
             apiItems: apiItems
-                .where((i) => i['quadrant']?.toString().toUpperCase() == 'Q1')
+                .where((i) => i['quadrant']?.toString().toUpperCase() == q)
                 .toList(),
             isFinalized: isFinalized,
             pulse: pulse,
+          );
+        }
+
+        final q1 = buildBox('Q1', 'Q1 DO FIRST (Urgent & Important)', const Color(0xFFEF4444));
+        final q2 = buildBox('Q2', 'Q2 SCHEDULE (Important, Not Urgent)', const Color(0xFFF97316));
+        final q3 = buildBox('Q3', 'Q3 DELEGATE (Urgent, Not Important)', const Color(0xFFA855F7));
+        final q4 = buildBox('Q4', 'Q4 ELIMINATE (Neither)', Colors.teal);
+
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: isWide
+                ? Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: q1),
+                          const SizedBox(width: spacing),
+                          Expanded(child: q2),
+                        ],
+                      ),
+                      const SizedBox(height: spacing),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: q3),
+                          const SizedBox(width: spacing),
+                          Expanded(child: q4),
+                        ],
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      q1,
+                      const SizedBox(height: spacing),
+                      q2,
+                      const SizedBox(height: spacing),
+                      q3,
+                      const SizedBox(height: spacing),
+                      q4,
+                    ],
+                  ),
           ),
-          const SizedBox(height: 12),
-          _QuadrantBox(
-            quadrant: 'Q2',
-            title: 'Q2 Schedule (Important, Not Urgent)',
-            color: const Color(0xFFF97316), // Orange
-            apiItems: apiItems
-                .where((i) => i['quadrant']?.toString().toUpperCase() == 'Q2')
-                .toList(),
-            isFinalized: isFinalized,
-            pulse: pulse,
-          ),
-          const SizedBox(height: 12),
-          _QuadrantBox(
-            quadrant: 'Q3',
-            title: 'Q3 Delegate (Urgent, Not Important)',
-            color: const Color(0xFFA855F7), // Purple
-            apiItems: apiItems
-                .where((i) => i['quadrant']?.toString().toUpperCase() == 'Q3')
-                .toList(),
-            isFinalized: isFinalized,
-            pulse: pulse,
-          ),
-          const SizedBox(height: 12),
-          _QuadrantBox(
-            quadrant: 'Q4',
-            title: 'Q4 Eliminate (Neither)',
-            color: Colors.teal,
-            apiItems: apiItems
-                .where((i) => i['quadrant']?.toString().toUpperCase() == 'Q4')
-                .toList(),
-            isFinalized: isFinalized,
-            pulse: pulse,
-          ),
-        ],
-      ),
+        );
+      },
     );
+
   }
 }
 
@@ -508,12 +621,26 @@ class _ApiListView extends HookConsumerWidget {
 
     return DragTarget<Object>(
       onWillAcceptWithDetails: (details) {
-        if (isReadOnly || isFinalized) return false;
+        if (isReadOnly) return false;
         return details.data is Map<String, dynamic>;
       },
       onAcceptWithDetails: (details) async {
         if (details.data is! Map<String, dynamic>) return;
         final data = details.data as Map<String, dynamic>;
+
+        // Restriction: If day is started, notify user to use Activity Log for unplanned tasks
+        // Exception: Allow reordering existing today_plan items
+        if (isFinalized && data['source'] != 'today_plan') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Day has been started. For unplanned tasks, please drag them directly to the Activity Log.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
+
 
         if (data.containsKey('type')) {
           showDialog(
@@ -523,8 +650,9 @@ class _ApiListView extends HookConsumerWidget {
               initialDescription: data['description'],
               initialDuration:
                   ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
-              showQuadrantSelector: false,
+              showQuadrantSelector: true, // Enable quadrant selection from List View
               onConfirm: ({
+
                 required String name,
                 required int duration,
                 String? description,
@@ -538,12 +666,12 @@ class _ApiListView extends HookConsumerWidget {
                   final planDate =
                       '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
 
-                  int? plannedItemId;
+                  // Removed unused plannedItemId
                   if (data['type'] == 'catalog_item' ||
                       data['type'] == 'catalog_task' ||
                       data['type'] == 'template' ||
                       data['type'] == 'custom_template') {
-                    final planItem = await apiService.addItemToTodayPlan(
+                    await apiService.addItemToTodayPlan(
                       itemType: 'catalog',
                       catalogId: data['catalog_id'] ?? data['id'] ?? data['template_id'],
                       planDate: planDate,
@@ -552,9 +680,9 @@ class _ApiListView extends HookConsumerWidget {
                       quadrant: 'inbox',
                       userId: userId,
                     );
-                    plannedItemId = planItem['id'] as int?;
+                    // plannedItemId = planItem['id'] as int?;
                   } else {
-                    final planItem = await apiService.addItemToTodayPlan(
+                    await apiService.addItemToTodayPlan(
                       itemType: 'custom',
                       title: name,
                       planDate: planDate,
@@ -566,31 +694,15 @@ class _ApiListView extends HookConsumerWidget {
                           : null,
                       userId: userId,
                     );
-                    plannedItemId = planItem['id'] as int?;
+                    // plannedItemId = planItem['id'] as int?;
                   }
                   
                   ref.invalidate(apiTodayPlanProvider);
-
-                  // Open Review Dialog (Step 2)
-                  if (context.mounted && plannedItemId != null) {
-                    final Map<String, dynamic> shellItem = {
-                      'id': 0,
-                      'today_plan': {
-                        'id': plannedItemId,
-                        'catalog_name': name,
-                        'planned_duration_minutes': duration,
-                        'notes': description ?? '',
-                      },
-                      'actual_start_time': null,
-                      'actual_end_time': null,
-                      'minutes_worked': 0,
-                    };
-                    showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
-                  }
                 } catch (e) {
                   debugPrint('Error adding task in list view: $e');
                 }
               },
+
             ),
           );
         }
@@ -603,7 +715,7 @@ class _ApiListView extends HookConsumerWidget {
           height: double.infinity,
           decoration: BoxDecoration(
             color: isHovering 
-              ? (isDark ? Colors.blue.withOpacity(0.05) : Colors.blue.shade50.withOpacity(0.3))
+              ? (isDark ? Colors.blue.withValues(alpha: 0.05) : Colors.blue.shade50.withValues(alpha: 0.3))
               : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
           ),
@@ -666,16 +778,75 @@ class _ApiListView extends HookConsumerWidget {
                   children: localItems.value.asMap().entries.map((entry) {
                     final index = entry.key;
                     final item = entry.value;
-                    return Padding(
+                    return Draggable<Map<String, dynamic>>(
                       key: ValueKey(item['id']),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: _ApiPlannedItem(
-                        apiItem: item,
-                        isFinalized: isFinalized,
-                        index: index,
+                      data: {
+                        'source': 'today_plan',
+                        'type': 'plan_item',
+                        'id': item['id'],
+                        'today_plan_id': item['id'],
+                        'name': item['custom_title'] ??
+                            item['catalog_name'] ??
+                            item['name'] ??
+                            'Task',
+                        'duration': item['planned_duration_minutes'] ?? 60,
+                        'status': item['status'] ?? 'PLANNED',
+                        'planned_start': item['planned_start'],
+                        'quadrant': item['quadrant'],
+                      },
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          width: MediaQuery.of(context).size.width * 0.3,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness ==
+                                    Brightness.dark
+                                ? const Color(0xFF1F2937)
+                                    .withValues(alpha: 0.9)
+                                : Colors.white.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 10)
+                            ],
+                          ),
+                          child: Text(
+                              (item['custom_title'] ??
+                                      item['catalog_name'] ??
+                                      item['name'] ??
+                                      'Task')
+                                  .toUpperCase(),
+                              style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue)),
+                        ),
+                      ),
+                      childWhenDragging: Opacity(
+                        opacity: 0.3,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: _ApiPlannedItem(
+                            apiItem: item,
+                            isFinalized: isFinalized,
+                            index: index,
+                          ),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: _ApiPlannedItem(
+                          apiItem: item,
+                          isFinalized: isFinalized,
+                          index: index,
+                        ),
                       ),
                     );
                   }).toList(),
+
                 ),
         );
       },
@@ -754,7 +925,6 @@ class _QuadrantBox extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isReadOnly = ref.watch(isReadOnlyProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Optimistic local state for reordering within this quadrant
     final localItems = useState<List<Map<String, dynamic>>>(apiItems);
@@ -788,8 +958,8 @@ class _QuadrantBox extends HookConsumerWidget {
         if (details.data is! Map<String, dynamic>) return;
         final data = details.data as Map<String, dynamic>;
 
-        // Handle moving an existing API item (Drag from another quadrant)
-        if (data.containsKey('id') && !data.containsKey('type')) {
+        // Handle moving an existing API item (Drag from another quadrant or list view)
+        if (data['type'] == 'plan_item' || (data.containsKey('id') && !data.containsKey('type'))) {
           final int itemId = data['id'];
           // If it's already in this quadrant, do nothing
           if (data['quadrant'] == quadrant ||
@@ -841,8 +1011,11 @@ class _QuadrantBox extends HookConsumerWidget {
                     final apiService = ref.read(taskApiServiceProvider);
                     final userId = ref.read(currentUserIdProvider);
                     final planDate = selectedDateStr;
+                    
+                    // Use the QuadrantBox's quadrant, not the modal's
+                    final targetQuadrant = this.quadrant;
 
-                    int? plannedItemId;
+                    // Removed unused plannedItemId
                     if ((data['type'] == 'catalog_item' ||
                             data['type'] == 'custom_template' ||
                             data['type'] == 'template' ||
@@ -850,7 +1023,7 @@ class _QuadrantBox extends HookConsumerWidget {
                         (data['catalog_id'] != null ||
                             data['template_id'] != null ||
                             data['id'] != null)) {
-                      final planItem = await apiService.addItemToTodayPlan(
+                      await apiService.addItemToTodayPlan(
                         itemType: 'catalog',
                         catalogId: data['catalog_id'] ?? 
                                   data['template_id'] ?? 
@@ -858,18 +1031,18 @@ class _QuadrantBox extends HookConsumerWidget {
                         planDate: planDate,
                         plannedDurationMinutes: duration,
                         description: description,
-                        quadrant: quadrant,
+                        quadrant: targetQuadrant,
                         userId: userId,
                       );
-                      plannedItemId = planItem['id'] as int?;
+                      // plannedItemId = planItem['id'] as int?;
                     } else {
-                      final planItem = await apiService.addItemToTodayPlan(
+                      await apiService.addItemToTodayPlan(
                         itemType: 'custom',
                         title: name,
                         planDate: planDate,
                         description: description,
                         plannedDurationMinutes: duration,
-                        quadrant: quadrant,
+                        quadrant: targetQuadrant,
                         relatedTaskId: data['task_id'] != null
                             ? parseTaskId(data['task_id'])
                             : (data['id'] != null &&
@@ -878,7 +1051,7 @@ class _QuadrantBox extends HookConsumerWidget {
                                 : null),
                         userId: userId,
                       );
-                      plannedItemId = planItem['id'] as int?;
+                      // plannedItemId = planItem['id'] as int?;
                     }
 
                     if (data['is_pending'] == true &&
@@ -889,23 +1062,6 @@ class _QuadrantBox extends HookConsumerWidget {
                     }
 
                     ref.invalidate(apiTodayPlanProvider);
-
-                    // Open Review Dialog (Step 2)
-                    if (context.mounted && plannedItemId != null) {
-                      final Map<String, dynamic> shellItem = {
-                        'id': 0,
-                        'today_plan': {
-                          'id': plannedItemId,
-                          'catalog_name': name,
-                          'planned_duration_minutes': duration,
-                          'notes': description ?? '',
-                        },
-                        'actual_start_time': null,
-                        'actual_end_time': null,
-                        'minutes_worked': 0,
-                      };
-                      showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
-                    }
                   } catch (e) {
                     debugPrint('Error adding item from drag: $e');
                     if (context.mounted) {
@@ -918,6 +1074,7 @@ class _QuadrantBox extends HookConsumerWidget {
                     }
                   }
                 },
+
               ),
             );
           }
@@ -927,108 +1084,137 @@ class _QuadrantBox extends HookConsumerWidget {
         final isHovering = candidateData.isNotEmpty;
         final selectedQuadrant = ref.watch(selectedQuadrantProvider);
         final isSelected = selectedQuadrant == quadrant;
+        
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        
+        Color bgColor = isDark ? const Color(0xFF1F2937) : Colors.white;
+        Color pillTextColor = Colors.grey;
+        IconData quadrantIcon = Icons.info;
+        Color iconColor = Colors.grey;
+
+        if (quadrant == 'Q1') {
+          bgColor = isDark ? const Color(0xFF2A1B1B) : const Color(0xFFFDF5F5);
+          pillTextColor = const Color(0xFFEF4444);
+          quadrantIcon = Icons.error_outline;
+          iconColor = const Color(0xFFEF4444);
+        } else if (quadrant == 'Q2') {
+          bgColor = isDark ? const Color(0xFF172033) : const Color(0xFFF4F8FF);
+          pillTextColor = const Color(0xFF3B82F6);
+          quadrantIcon = Icons.calendar_today_rounded;
+          iconColor = const Color(0xFF3B82F6);
+        } else if (quadrant == 'Q3') {
+          bgColor = isDark ? const Color(0xFF162B22) : const Color(0xFFF0FDF4);
+          pillTextColor = const Color(0xFF10B981);
+          quadrantIcon = Icons.people_alt_outlined;
+          iconColor = const Color(0xFF10B981);
+        } else if (quadrant == 'Q4') {
+          bgColor = isDark ? const Color(0xFF2E1A33) : const Color(0xFFFAF5FF);
+          pillTextColor = const Color(0xFFA855F7);
+          quadrantIcon = Icons.delete_outline_rounded;
+          iconColor = const Color(0xFFA855F7);
+        }
+
+        // Calculate progress logic removed as it was unused
+        if (apiItems.isNotEmpty) {
+          apiItems.where((i) => i['status'] == 'DONE' || i['status'] == 'COMPLETED').length;
+        }
+
         return Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1F2937) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            color: bgColor,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
-                  ? color.withOpacity(0.5)
-                  : (isDark ? const Color(0xFF374151) : Colors.grey.shade200),
+                  ? pillTextColor.withValues(alpha: 0.8)
+                  : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
               width: isSelected ? 2 : 1,
             ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: color.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    )
-                  ]
-                : null,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header with Sidebar Theme
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF05263E),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // New High-Fidelity Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Container(
-                          width: 3,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(2),
+                        if (quadrant == 'Q1')
+                          Text(
+                            '!',
+                            style: GoogleFonts.outfit(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: iconColor.withValues(alpha: 0.8),
+                            ),
+                          )
+                        else
+                          Icon(
+                            quadrantIcon,
+                            size: 16,
+                            color: iconColor.withValues(alpha: 0.8),
                           ),
-                        ),
                         const SizedBox(width: 8),
-                        Text(
-                          title.toUpperCase(),
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 11,
-                            color: Colors.white,
-                            letterSpacing: 1.0,
+                        Expanded(
+                          child: Text(
+                            title.toUpperCase(),
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              letterSpacing: 0.2,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    if (isSelected)
-                      Icon(Icons.check_circle_rounded,
-                          size: 16, color: color),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    if (apiItems.isEmpty && !isHovering)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.assignment_outlined,
-                                size: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: apiItems.isEmpty && !isHovering
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.assignment_outlined,
+                              size: 32,
+                              color: isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade200,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Drop items here to plan your day",
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                                 color: isDark
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade200,
+                                    ? Colors.grey.shade500
+                                    : Colors.grey.shade400,
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Drop items here to plan your day",
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDark
-                                      ? Colors.grey.shade500
-                                      : Colors.grey.shade400,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      )
-                    else
-                      ReorderableListView(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
+                      ),
+                    )
+                  : ReorderableListView(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
                         buildDefaultDragHandles: false,
                         onReorder: (oldIndex, newIndex) async {
                           if (newIndex > oldIndex) newIndex -= 1;
@@ -1085,7 +1271,7 @@ class _QuadrantBox extends HookConsumerWidget {
                                   borderRadius: BorderRadius.circular(8),
                                   boxShadow: [
                                     BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
+                                        color: Colors.black.withValues(alpha: 0.2),
                                         blurRadius: 10)
                                   ],
                                 ),
@@ -1103,20 +1289,18 @@ class _QuadrantBox extends HookConsumerWidget {
                             ),
                             childWhenDragging: Opacity(
                               opacity: 0.3,
-                              child: _ApiPlannedItem(
+                              child: _QuadrantPlannedItem(
                                   apiItem: i,
                                   isFinalized: isFinalized,
                                   index: idx),
                             ),
-                            child: _ApiPlannedItem(
+                            child: _QuadrantPlannedItem(
                                 apiItem: i,
                                 isFinalized: isFinalized,
                                 index: idx),
                           );
                         }).toList(),
                       ),
-                  ],
-                ),
               ),
             ],
           ),
@@ -1157,15 +1341,15 @@ class _PendingBox extends ConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isHovering
-                ? Colors.orange.withOpacity(0.05)
+                ? Colors.orange.withValues(alpha: 0.05)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isHovering
                   ? Colors.orange
                   : (isDark
-                      ? Colors.orange.withOpacity(0.2)
-                      : Colors.orange.withOpacity(0.1)),
+                      ? Colors.orange.withValues(alpha: 0.2)
+                      : Colors.orange.withValues(alpha: 0.1)),
               width: 1.5,
             ),
           ),
@@ -1200,10 +1384,10 @@ class _PendingBox extends ConsumerWidget {
                           horizontal: 10, vertical: 2),
                       decoration: BoxDecoration(
                         color:
-                            count > 0 ? Colors.orange.withOpacity(0.1) : null,
+                            count > 0 ? Colors.orange.withValues(alpha: 0.1) : null,
                         borderRadius: BorderRadius.circular(4),
                         border:
-                            Border.all(color: Colors.orange.withOpacity(0.3)),
+                            Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                       ),
                       child: Text("$count",
                           style: GoogleFonts.inter(
@@ -1248,12 +1432,12 @@ class _PendingBox extends ConsumerWidget {
                               horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? const Color(0xFF1F2937).withOpacity(0.9)
-                                : Colors.white.withOpacity(0.9),
+                                ? const Color(0xFF1F2937).withValues(alpha: 0.9)
+                                : Colors.white.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                   blurRadius: 10)
                             ],
                           ),
@@ -1307,8 +1491,8 @@ class _PendingBox extends ConsumerWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isDark
-                  ? Colors.orange.withOpacity(0.1)
-                  : Colors.orange.withOpacity(0.05),
+                  ? Colors.orange.withValues(alpha: 0.1)
+                  : Colors.orange.withValues(alpha: 0.05),
             ),
           ),
           child: Row(
@@ -1348,7 +1532,7 @@ class _PendingBox extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -1391,10 +1575,6 @@ class _ApiPlannedItem extends ConsumerWidget {
     final duration = apiItem['planned_duration_minutes'] ?? 0;
     final status = (apiItem['status'] ?? 'PLANNED').toString().toUpperCase();
 
-    // Watch for any active task to disable play buttons
-    final activeTaskAsync = ref.watch(apiActiveTaskProvider);
-    final hasActiveTask =
-        activeTaskAsync.value != null && activeTaskAsync.value!['id'] != null;
     final isReadOnly = ref.watch(isReadOnlyProvider);
 
     return Container(
@@ -1428,9 +1608,9 @@ class _ApiPlannedItem extends ConsumerWidget {
                   children: [
                     Text(itemName,
                         style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            letterSpacing: 0.5,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                            letterSpacing: 0.2,
                             color:
                                 Theme.of(context).textTheme.bodyLarge?.color)),
                     if (status == 'IN_ACTIVITY' || status == 'STARTED')
@@ -1494,23 +1674,29 @@ class _ApiPlannedItem extends ConsumerWidget {
                   builder: (context) {
                     final today = DateTime.now();
                     final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
-                    final logsAsync = ref.watch(apiActivityLogsProvider(todayStr));
                     
-                    bool isAlreadyInLog = logsAsync.maybeWhen(
-                      data: (logs) => logs.any((l) => l['today_plan']?['id'] == itemId),
-                      orElse: () => false,
-                    );
-
                     return IconButton(
                       icon: Icon(
                         Icons.arrow_forward_rounded,
                         size: 20,
-                        color: isAlreadyInLog 
-                          ? Colors.grey.withValues(alpha: 0.3) 
-                          : (isDark ? Colors.blue.shade300 : Colors.blue.shade600),
+                        color: isReadOnly ? Colors.grey.withValues(alpha: 0.3) : (isDark ? Colors.blue.shade300 : Colors.blue.shade600),
                       ),
-                      onPressed: isAlreadyInLog || isReadOnly ? null : () {
+                      onPressed: isReadOnly ? null : () {
+                        // Allow unplanned tasks even if day isn't locked
+                        final bool itemIsUnplanned = apiItem['is_unplanned'] == true;
+                        
+                        if (!isFinalized && !itemIsUnplanned) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please Lock/Start the day plan to begin recording activities.'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+                        
                         // Restore logic: Trigger the manual review flow
+
                         showDialog(
                           context: context,
                           builder: (ctx) => TaskConfigModal(
@@ -1592,6 +1778,214 @@ class _ApiPlannedItem extends ConsumerWidget {
             ),
           ],
         ));
+  }
+}
+
+class _QuadrantPlannedItem extends ConsumerWidget {
+  final Map<String, dynamic> apiItem;
+  final bool isFinalized;
+  final int index;
+
+  const _QuadrantPlannedItem({
+    required this.apiItem,
+    required this.isFinalized,
+    required this.index,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final itemId = apiItem['id'];
+    final itemName = (apiItem['custom_title'] ??
+            apiItem['catalog_name'] ??
+            apiItem['name'] ??
+            'Task')
+        .toString();
+
+    final duration = apiItem['planned_duration_minutes'] ?? 0;
+    final isReadOnly = ref.watch(isReadOnlyProvider);
+
+    // Card Styling
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            // Task Name and Planned Remark
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    itemName,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: titleColor,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  if (apiItem['notes'] != null && apiItem['notes'].toString().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        apiItem['notes'].toString(),
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            
+            // Duration
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.blue.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                "${duration}M",
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Execute Arrow
+            Builder(
+              builder: (context) {
+                final today = DateTime.now();
+                final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+                
+                return IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: isReadOnly ? Colors.grey.withValues(alpha: 0.3) : (isDark ? Colors.blue.shade300 : Colors.blue.shade600),
+                  ),
+                  onPressed: isReadOnly ? null : () {
+                    // Allow unplanned tasks even if day isn't locked
+                    final bool itemIsUnplanned = apiItem['is_unplanned'] == true;
+
+                    if (!isFinalized && !itemIsUnplanned) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please Lock/Start the day plan to begin recording activities.'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      return;
+                    }
+                    
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => TaskConfigModal(
+                        initialTitle: itemName,
+                        initialDescription: apiItem['notes'],
+                        initialDuration: ((apiItem['planned_duration_minutes'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                        showQuadrantSelector: false,
+                        onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
+                          final shellItem = {
+                            'id': 0,
+                            'today_plan': {
+                              'id': itemId,
+                              'catalog_name': itemName,
+                              'planned_duration_minutes': duration,
+                              'notes': description ?? apiItem['notes'] ?? '',
+                            },
+                            'actual_start_time': null,
+                            'actual_end_time': null,
+                            'minutes_worked': 0,
+                          };
+                          if (context.mounted) {
+                            showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
+                          }
+                        },
+                      ),
+                    );
+                  },
+                );
+              }
+            ),
+
+            // Drag Handle
+            ReorderableDragStartListener(
+              index: index,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(
+                  Icons.reorder_rounded,
+                  size: 18,
+                  color: isDark ? Colors.white24 : Colors.grey.shade400,
+                ),
+              ),
+            ),
+
+            // Menu
+            if (!isFinalized)
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  icon: Icon(Icons.more_vert_rounded,
+                      size: 18,
+                      color: isDark
+                          ? Colors.grey.shade500
+                          : Colors.grey.shade400),
+                  onSelected: (value) async {
+                    if (value == 'delete' && itemId != null) {
+                      try {
+                        final apiService = ref.read(taskApiServiceProvider);
+                        await apiService.deleteTodayPlanItem(itemId);
+                        ref.invalidate(apiTodayPlanProvider);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to delete: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                        value: 'delete', child: Text("Delete"))
+                  ]
+                )
+              )
+          ],
+        ),
+      ),
+    );
   }
 }
 

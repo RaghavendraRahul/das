@@ -27,8 +27,8 @@ class _ProjectPmAppState extends ConsumerState<ProjectPmApp> {
     return MaterialApp.router(
       title: 'DAS',
       theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: themeMode,
+      // darkTheme: darkTheme, // Disabled as per user request
+      themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
       routerConfig: _appRouter.config(),
       builder: (context, child) {

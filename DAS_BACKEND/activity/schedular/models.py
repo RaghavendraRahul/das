@@ -819,6 +819,7 @@ class Pending(models.Model):
     minutes_left = models.IntegerField(default=0, help_text="Estimated minutes left to complete")
     extra_minutes = models.IntegerField(default=0, help_text="Extra minutes worked beyond planned time")
     reason = models.TextField(blank=True, null=True, help_text="Reason for not completing")
+    work_notes = models.TextField(blank=True, null=True, help_text="Work notes synced from activity log")
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     
@@ -870,11 +871,12 @@ class StickyNote(models.Model):
     title = models.CharField(max_length=200, blank=True, default='')
     content = models.TextField(blank=True)
     color = models.CharField(max_length=20, default='0xFFFEF3C7') # Store as 0xAARRGGBB hex string
+    order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-updated_at']
+        ordering = ['order', '-updated_at']
 
     def __str__(self):
         return f"{self.user.email} - Note {self.id}"

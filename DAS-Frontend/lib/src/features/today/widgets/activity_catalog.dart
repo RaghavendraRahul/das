@@ -20,55 +20,7 @@ import 'package:project_pm/src/core/providers/user_providers.dart';
 class ActivityCatalog extends HookConsumerWidget {
   const ActivityCatalog({super.key});
 
-  static const Map<String, List<Map<String, dynamic>>> systemTemplates = {
-    'Routine': [
-      {
-        'name': 'Coffee Break',
-        'icon': FontAwesomeIcons.mugHot,
-        'desc': 'Take a short break'
-      },
-      {
-        'name': 'Lunch',
-        'icon': FontAwesomeIcons.utensils,
-        'desc': 'Lunch break'
-      },
-      {
-        'name': 'Walk',
-        'icon': FontAwesomeIcons.personWalking,
-        'desc': 'Go for a walk'
-      },
-    ],
-    'Education': [
-      {
-        'name': 'Learning',
-        'icon': FontAwesomeIcons.graduationCap,
-        'desc': 'Study new topic'
-      },
-      {'name': 'Reading', 'icon': FontAwesomeIcons.book, 'desc': 'Read a book'},
-      {
-        'name': 'Course',
-        'icon': FontAwesomeIcons.chalkboardUser,
-        'desc': 'Online course'
-      },
-    ],
-    'Work': [
-      {
-        'name': 'Req. Gathering',
-        'icon': FontAwesomeIcons.briefcase,
-        'desc': 'Client requirements meeting'
-      },
-      {
-        'name': 'Documentation',
-        'icon': FontAwesomeIcons.fileLines,
-        'desc': 'Update project docs'
-      },
-      {
-        'name': 'Interview',
-        'icon': FontAwesomeIcons.users,
-        'desc': 'Candidate interview'
-      },
-    ],
-  };
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -98,22 +50,24 @@ class ActivityCatalog extends HookConsumerWidget {
     );
     final customTemplatesSnapshot = useStream(customTemplatesStream);
 
+    const sidebarBlue = Color(0xFF05263E);
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
-            blurRadius: 15,
+            color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.06),
+            blurRadius: 20,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0.02),
+            color: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.02),
             blurRadius: 2,
             offset: const Offset(0, 2),
           ),
@@ -124,7 +78,7 @@ class ActivityCatalog extends HookConsumerWidget {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12), // More compact
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -134,10 +88,10 @@ class ActivityCatalog extends HookConsumerWidget {
                     Text(
                       "ACTIVITY CATALOG",
                       style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                        color: isDark ? Colors.white : const Color(0xFF05263E),
+                        fontSize: 11, // Slightly larger for clarity
+                        fontWeight: FontWeight.w900, // Extra bold
+                        letterSpacing: 1.2, // More premium letter spacing
+                        color: isDark ? Colors.white : sidebarBlue,
                       ),
                     ),
                     // Add Template Button
@@ -199,31 +153,46 @@ class ActivityCatalog extends HookConsumerWidget {
                 const SizedBox(height: 12),
                 // Search
                 SizedBox(
-                  height: 36,
-                  child: TextField(
-                    onChanged: (v) => searchQuery.value = v,
-                    decoration: InputDecoration(
-                      hintText: 'Search templates...',
-                      hintStyle: GoogleFonts.inter(
-                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
-                        fontSize: 11,
-                      ),
-                      prefixIcon: Icon(Icons.search_rounded,
-                          size: 16,
-                          color: isDark
-                              ? Colors.grey.shade500
-                              : Colors.grey.shade400),
-                      filled: true,
-                      fillColor:
-                          isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
+                  height: 42,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                       ),
                     ),
-                    style: GoogleFonts.inter(fontSize: 12),
+                    child: TextField(
+                      onChanged: (v) => searchQuery.value = v,
+                      // We use a local controller state to manage the text if needed, 
+                      // but here we just ensure the cursor stays at the end when resetting or typing.
+                      decoration: InputDecoration(
+                        hintText: 'Search templates...',
+                        hintStyle: GoogleFonts.inter(
+                          color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                          fontSize: 11,
+                        ),
+                        prefixIcon: Icon(Icons.search_rounded,
+                            size: 16,
+                            color: isDark
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade400),
+                        suffixIcon: searchQuery.value.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                                onPressed: () => searchQuery.value = '',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.white : Colors.black87),
+                    ),
                   ),
                 ),
               ],
@@ -270,28 +239,18 @@ class ActivityCatalog extends HookConsumerWidget {
                     catalogByType.putIfAbsent(type, () => []).add(item);
                   }
 
-                  // Get all unique categories (system + custom + catalog)
-                  final predefinedCategories = {
-                    'COURSE',
-                    'ROUTINE',
-                    'WORK',
-                    'CUSTOM',
-                    'PROJECT'
-                  };
-
-                  final allCategories = <String>{
-                    if (catalogByType.containsKey('COURSE')) 'Education',
-                    if (catalogByType.containsKey('ROUTINE')) 'Routine',
-                    if (catalogByType.containsKey('WORK')) 'Work',
-                    // Add dynamic categories from catalog (converted to Title Case)
-                    ...catalogByType.keys
-                        .where((k) => !predefinedCategories.contains(k))
-                        .map((k) {
-                      if (k.isEmpty) return k;
-                      return k[0] + k.substring(1).toLowerCase();
-                    }),
+                  // derive all categories from API catalog and user templates
+                  final allCategories = {
                     ...templatesByCategory.keys,
-                  };
+                    ...catalogByType.keys.map((type) {
+                      if (type == 'COURSE') return 'Education';
+                      if (type == 'ROUTINE') return 'Routine';
+                      if (type == 'WORK') return 'Work';
+                      return type[0] + type.substring(1).toLowerCase();
+                    }),
+                  }.toList();
+
+                  allCategories.sort();
 
                   // Category icon/color mapping
                   IconData getCategoryIcon(String category) {
@@ -438,7 +397,6 @@ class ActivityCatalog extends HookConsumerWidget {
                         }
 
                         // 1. Get raw items
-                        // final rawSystemItems = systemTemplates[category] ?? []; // Disabled - only show database items
                         final rawCustomItems =
                             templatesByCategory[category] ?? [];
 
@@ -457,14 +415,6 @@ class ActivityCatalog extends HookConsumerWidget {
                         // 2. Filter items based on search query
                         final query = searchQuery.value.toLowerCase();
 
-                        // final filteredSystemItems = rawSystemItems // Disabled - only show database items
-                        //     .where((item) =>
-                        //         query.isEmpty ||
-                        //         (item['name'] as String)
-                        //             .toLowerCase()
-                        //             .contains(query))
-                        //     .toList();
-
                         final filteredCustomItems = rawCustomItems
                             .where((t) =>
                                 query.isEmpty ||
@@ -477,7 +427,7 @@ class ActivityCatalog extends HookConsumerWidget {
                                 item.name.toLowerCase().contains(query))
                             .toList();
 
-                        final totalCount = // filteredSystemItems.length + // Disabled - only show database items
+                        final totalCount =
                             filteredCustomItems.length +
                                 filteredCatalogItems.length;
 
@@ -510,15 +460,6 @@ class ActivityCatalog extends HookConsumerWidget {
                                 .map((catalogItem) => _CatalogItemCard(
                                       catalogItem: catalogItem,
                                     )),
-                            // System templates - Disabled to show only database items
-                            // ...filteredSystemItems
-                            //     .map((item) => _SystemTemplateCard(
-                            //           name: item['name'] as String,
-                            //           icon: item['icon'] as IconData,
-                            //           description:
-                            //               item['desc'] as String? ?? '',
-                            //           category: category,
-                            //         )),
                             // Custom templates
                             ...filteredCustomItems
                                 .map((template) => _CustomTemplateCard(
@@ -774,12 +715,13 @@ class _ProjectTaskCard extends ConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
             showDialog(
@@ -1141,12 +1083,13 @@ class _SystemTemplateCard extends ConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
             final selectedQuadrant = ref.read(selectedQuadrantProvider);
@@ -1381,12 +1324,13 @@ class _CatalogItemCard extends ConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
             final rawDuration =
@@ -1539,27 +1483,18 @@ class _PendingTaskCard extends ConsumerWidget {
     final plannedDuration =
         todayPlanDetails?['planned_duration_minutes'] as int? ?? minutesLeft;
 
-    final dragData = isTodayInbox
-        ? {
-            'type': 'pending_item',
-            'is_today_inbox': true,
-            'id': pendingItem['id'],
-            'name': taskName,
-            'description': reason,
-            'duration': plannedDuration.clamp(15, 120),
-            if (catalogId != null) 'catalog_id': parseTaskId(catalogId),
-          }
-        : {
-            'source': 'catalog',
-            'type': 'pending_item',
-            'is_pending': true,
-            'pending_id': pendingItem['id'],
-            'id': pendingItem['id'],
-            'name': taskName,
-            'description': reason,
-            'duration': minutesLeft.clamp(15, 120),
-            if (catalogId != null) 'catalog_id': parseTaskId(catalogId),
-          };
+    final dragData = {
+      'source': 'catalog',
+      'type': 'pending_item',
+      'is_today_inbox': isTodayInbox,
+      'is_pending': !isTodayInbox,
+      'pending_id': isTodayInbox ? null : pendingItem['id'],
+      'id': pendingItem['id'],
+      'name': taskName,
+      'description': reason,
+      'duration': (isTodayInbox ? plannedDuration : minutesLeft).clamp(15, 120),
+      if (catalogId != null) 'catalog_id': parseTaskId(catalogId),
+    };
 
     return Draggable<Map<String, dynamic>>(
       data: dragData,
@@ -1631,12 +1566,13 @@ class _PendingTaskCard extends ConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
 
@@ -1924,12 +1860,13 @@ class _CustomTemplateCard extends HookConsumerWidget {
         child: InkWell(
           onTap: () async {
             if (isFinalized) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Day is locked. Drag to ACTIVITY LOG to work on this as unplanned."),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Day Plan has started. To work on this unplanned, drag it directly to the ACTIVITY LOG."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
               return;
             }
             showDialog(

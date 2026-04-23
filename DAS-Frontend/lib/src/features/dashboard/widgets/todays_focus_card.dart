@@ -13,7 +13,7 @@ class TodaysFocusCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         side: BorderSide(
           color: isDark ? const Color(0xFF374151) : Colors.grey.shade200,
         ),
@@ -29,7 +29,7 @@ class TodaysFocusCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.bolt, color: Colors.blue, size: 20),
@@ -110,7 +110,7 @@ class TodaysFocusCard extends StatelessWidget {
                                                       vertical: 4),
                                               decoration: BoxDecoration(
                                                 color: item.color
-                                                    .withOpacity(0.1),
+                                                    .withValues(alpha: 0.1),
                                                 borderRadius:
                                                     BorderRadius.circular(4),
                                               ),
@@ -228,12 +228,12 @@ class TodaysFocusCard extends StatelessWidget {
                                                       vertical: 8),
                                               decoration: BoxDecoration(
                                                 color: Colors.blue
-                                                    .withOpacity(0.1),
+                                                    .withValues(alpha: 0.1),
                                                 borderRadius:
                                                     BorderRadius.circular(8),
                                                 border: Border.all(
                                                     color: Colors.blue
-                                                        .withOpacity(0.3)),
+                                                        .withValues(alpha: 0.3)),
                                               ),
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
@@ -311,14 +311,14 @@ class TodaysFocusCard extends StatelessWidget {
                               },
                             );
                           },
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           child: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: isDark
                                   ? const Color(0xFF374151)
                                   : Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isDark
                                     ? const Color(0xFF4B5563)
@@ -370,7 +370,7 @@ class TodaysFocusCard extends StatelessWidget {
                                                 horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: item.color
-                                                  .withOpacity(0.1),
+                                                  .withValues(alpha: 0.1),
                                               borderRadius:
                                                   BorderRadius.circular(4),
                                             ),

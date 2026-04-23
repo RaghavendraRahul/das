@@ -6,7 +6,7 @@ part of 'approvals_page.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$apiNewProjectsHash() => r'57c7288c800241d6bf9eccc242cdfc55a10e2dcb';
+String _$apiNewProjectsHash() => r'6471dc7fe5d692c4c0dda5d7487c88372f2b37c5';
 
 /// See also [apiNewProjects].
 @ProviderFor(apiNewProjects)
@@ -24,7 +24,7 @@ final apiNewProjectsProvider =
 typedef ApiNewProjectsRef
     = AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
 String _$apiProjectClosuresHash() =>
-    r'bd867796f0a06da65c2f1c4df1c317b4cd43d302';
+    r'0cc62d43babb494912bcda3b4da4003f9c7a8f28';
 
 /// See also [apiProjectClosures].
 @ProviderFor(apiProjectClosures)
@@ -41,7 +41,7 @@ final apiProjectClosuresProvider =
 
 typedef ApiProjectClosuresRef
     = AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$apiNewTasksHash() => r'f80f0e2f3ecd15b577846d8388dc20bb44e60784';
+String _$apiNewTasksHash() => r'2f212771784bd044c05e13452f06992dcab02985';
 
 /// See also [apiNewTasks].
 @ProviderFor(apiNewTasks)
@@ -58,7 +58,7 @@ final apiNewTasksProvider =
 typedef ApiNewTasksRef
     = AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
 String _$apiTaskCompletionsHash() =>
-    r'102945c8b117214dd4d057ada69feec76c466c28';
+    r'fbc5dd13b861d4a657c087860cb515684e2aa8a8';
 
 /// See also [apiTaskCompletions].
 @ProviderFor(apiTaskCompletions)

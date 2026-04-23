@@ -2,9 +2,9 @@ import 'dart:async';
 
 // For PathMetric
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
@@ -12,16 +12,29 @@ import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'review_task_dialog.dart';
 import 'task_config_modal.dart';
 
-class DayLog extends ConsumerWidget {
+class DayLog extends HookConsumerWidget {
   const DayLog({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch API activity logs
+    // Trigger day rollover once on first render — moves stale previous-day
+    // IN_PROGRESS logs into Pending, keeping today's activity log clean.
+    useEffect(() {
+      Future.microtask(() async {
+        final service = ref.read(taskApiServiceProvider);
+        await service.rolloverDay();
+        // Refresh pending + activity logs after rollover
+        ref.invalidate(apiAllPendingItemsProvider);
+      });
+      return null;
+    }, const []);
     final isReadOnly = ref.watch(isReadOnlyProvider);
     final today = DateTime.now();
     final todayStr =
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    final activeSessionAsync = ref.watch(apiActiveSessionProvider(todayStr));
+    final isFinalized = activeSessionAsync.valueOrNull != null;
 
     final apiActivityLogsAsync = ref.watch(apiActivityLogsProvider(todayStr));
     final activeTaskAsync = ref.watch(apiActiveTaskProvider);
@@ -30,9 +43,11 @@ class DayLog extends ConsumerWidget {
     return DragTarget<Map<String, dynamic>>(
       onAcceptWithDetails: (details) async {
         if (isReadOnly) return;
+
         try {
           // Check for active task at the very beginning
           final data = details.data;
+
 
           // Helper to handle manual review directly (No automatic timer start)
           Future<void> openManualReview(int plannedItemId, Map<String, dynamic> sourceData, {String? description, int? duration}) async {
@@ -68,6 +83,16 @@ class DayLog extends ConsumerWidget {
 
           // Case 1: Planned Items (from today's plan column)
           if (data['source'] == 'today_plan' && data['type'] == 'plan_item') {
+            if (!isFinalized) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'Please Lock/Start the day plan to begin recording activities.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
             final plannedItemId = data['id'] as int;
             showDialog(
               context: context,
@@ -189,6 +214,7 @@ class DayLog extends ConsumerWidget {
                     // Clean up pending if applicable
                     if (data['is_pending'] == true && data['pending_id'] != null && data['is_today_inbox'] != true) {
                       await apiService.deletePendingTask(data['pending_id']);
+                      ref.invalidate(apiAllPendingItemsProvider);
                     }
                     
                     debugPrint('   - Opening manual review for $plannedItemId');
@@ -227,6 +253,7 @@ class DayLog extends ConsumerWidget {
                data['type'] == 'catalog_item' ||
                data['type'] == 'catalog_task' ||
                data['type'] == 'custom_template' ||
+               data['type'] == 'pending_item' ||
                data['type'] == 'template';
       },
       builder: (context, candidateData, rejectedData) {
@@ -234,49 +261,38 @@ class DayLog extends ConsumerWidget {
         return Container(
           height: double.infinity,
           width: double.infinity,
-          decoration: BoxDecoration(
-            color: isHovering 
-                ? (isDark ? Colors.blue.withOpacity(0.05) : Colors.blue.shade50.withOpacity(0.3))
-                : (isDark ? const Color(0xFF1F2937) : Colors.white),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.05),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.3)
-                    : Colors.black.withValues(alpha: 0.06),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.15)
-                    : Colors.black.withValues(alpha: 0.02),
-                blurRadius: 2,
-                offset: const Offset(0, 2),
-              ),
-            ],
+        decoration: BoxDecoration(
+          color: isHovering 
+              ? (isDark ? Colors.blue.withValues(alpha: 0.05) : Colors.blue.shade50.withValues(alpha: 0.3))
+              : (isDark ? const Color(0xFF1F2937) : Colors.white),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.04),
+            width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.02),
+              blurRadius: 2,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
           child: Column(
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF05263E),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Compact horizontal
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -284,10 +300,10 @@ class DayLog extends ConsumerWidget {
                     Text(
                       "ACTIVITY LOG",
                       style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                        color: Colors.white,
+                        fontSize: 11, // Match catalog size
+                        fontWeight: FontWeight.w900, // Extra bold
+                        letterSpacing: 1.2,
+                        color: isDark ? Colors.white : const Color(0xFF05263E),
                       ),
                     ),
                     apiActivityLogsAsync.when(
@@ -297,6 +313,13 @@ class DayLog extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.05),
               ),
 
               // List
@@ -499,6 +522,9 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
     if (todayPlan != null) {
       // Use catalog_name which is a convenience field from the serializer
       taskName = todayPlan['catalog_name'] as String? ?? 'Unknown Task';
+      // Sanitize taskName to remove any redundant time patterns e.g. "Lunch [13:00-14:00]"
+      taskName = taskName.replaceAll(RegExp(r'\s*\[\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\]$'), '');
+      
       isUnplanned = todayPlan['is_unplanned'] == true;
       if (isUnplanned) {
         taskName = taskName.replaceFirst('[Unplanned] ', '');
@@ -511,10 +537,9 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
     final startTimeDisplay = _extractTime(startStr);
     final endTimeDisplay = _extractTime(endStr);
 
-    // Still parse for duration calculation
-    DateTime? startTime;
+    // Parsed startTime removed as it was unused
     try {
-      if (startStr != null) startTime = DateTime.parse(startStr);
+      if (startStr != null) DateTime.parse(startStr);
     } catch (e) {
       debugPrint('Error parsing times: $e');
     }
@@ -594,28 +619,49 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                                 ),
                               ),
                             ),
-                          // Status Badge - Show Completed or Pending
-                          if (status == 'COMPLETED')
+                          if ((item['extra_minutes'] as int? ?? 0) > 0)
                             Container(
-                              margin: const EdgeInsets.only(right: 6),
+                              margin: const EdgeInsets.only(right: 8),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
+                                color: isDark ? Colors.redAccent.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                    color: Colors.green.withValues(alpha: 0.4)),
+                                    color: isDark ? Colors.redAccent.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.2)),
+                              ),
+                              child: Text(
+                                'Extra: ${item['extra_minutes']}m',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.redAccent : Colors.red.shade700,
+                                ),
+                              ),
+                            ),
+
+                          // Status Badge - Show Completed or Pending
+                          if (status == 'COMPLETED')
+                            Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color: Colors.green.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(Icons.check_circle,
-                                      size: 12, color: Colors.green),
-                                  const SizedBox(width: 3),
+                                      size: 13, color: Colors.green),
+                                  const SizedBox(width: 4),
                                   Text(
                                     'Completed',
                                     style: GoogleFonts.inter(
-                                      fontSize: 9,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.green,
                                     ),
@@ -625,25 +671,25 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                             ),
                           if (status == 'PENDING')
                             Container(
-                              margin: const EdgeInsets.only(right: 6),
+                              margin: const EdgeInsets.only(right: 8),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
+                                color: Colors.orange.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                    color: Colors.orange.withValues(alpha: 0.4)),
+                                    color: Colors.orange.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.pause_circle,
-                                      size: 12, color: Colors.orange.shade700),
-                                  const SizedBox(width: 3),
+                                      size: 13, color: Colors.orange.shade700),
+                                  const SizedBox(width: 4),
                                   Text(
                                     'Pending',
                                     style: GoogleFonts.inter(
-                                      fontSize: 9,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.orange.shade700,
                                     ),
@@ -662,24 +708,6 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                               ),
                             ),
                           ),
-                          if (isRunning)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                              ),
-                              child: Text(
-                                'WORKING',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.blue,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                       const SizedBox(height: 8),

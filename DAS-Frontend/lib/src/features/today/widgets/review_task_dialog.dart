@@ -35,6 +35,8 @@ void showReviewTaskDialog(
   String taskName = 'Unknown Task';
   if (todayPlan != null) {
     taskName = todayPlan['catalog_name'] as String? ?? 'Unknown Task';
+    // Sanitize taskName to remove any redundant time patterns
+    taskName = taskName.replaceAll(RegExp(r'\s*\[\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\]$'), '');
   }
 
   // Extract times directly from ISO strings
@@ -43,29 +45,31 @@ void showReviewTaskDialog(
   final startTimeDisplay = _extractTimeForDialog(startStr);
   final endTimeDisplay = _extractTimeForDialog(endStr);
 
-  // Calculate remaining time
+  // Calculate remaining and worked time
   final plannedMinutes = todayPlan?['planned_duration_minutes'] as int? ?? 0;
-  final workedMinutes = item['minutes_worked'] as int? ?? 0;
-  final remainingMinutes = (plannedMinutes - workedMinutes).clamp(0, 999999);
+  final initialMinutesWorked = item['minutes_worked'] as int? ?? 0;
+  final remainingMinutes = (plannedMinutes - initialMinutesWorked).clamp(0, 999999);
 
   // State variables for the dialog
   String? selectedOption; // null by default, it is optional
   final remainingController =
       TextEditingController(text: remainingMinutes.toString());
-  final extraTimeController = TextEditingController(text: '0');
+      
+  // Initial extra worked - calculated auto
+  final initialExtraMinutes = (initialMinutesWorked - plannedMinutes).clamp(0, 999999);
+  final extraTimeController = TextEditingController(text: initialExtraMinutes.toString());
 
   // Timing controllers - ENABLED for manual entry as per user requirement
   final startTimeController = TextEditingController(text: startTimeDisplay);
   final endTimeController = TextEditingController(text: endTimeDisplay);
 
-  final plannedRemark = todayPlan?['notes'] as String? ?? '';
-  final initialWorkNotes = item['work_notes'] as String? ?? '';
-  final remarkController = TextEditingController(text: initialWorkNotes);
-
-  // Initial minutes worked from item
-  final initialMinutesWorked = item['minutes_worked'] as int? ?? 0;
   final workedMinutesController =
       TextEditingController(text: initialMinutesWorked.toString());
+      
+  final plannedRemark = todayPlan?['notes'] as String? ?? '';
+  final plannedRemarkController = TextEditingController(text: plannedRemark);
+  final initialWorkNotes = item['work_notes'] as String? ?? '';
+  final remarkController = TextEditingController(text: initialWorkNotes);
 
   // Helper to pick time
   Future<void> selectTime(
@@ -97,7 +101,7 @@ void showReviewTaskDialog(
       setDialogState(() {
         controller.text = formatted;
         
-        // Auto-calculate minutes if both exist
+        // Auto-calculate worked minutes if both exist
         if (startTimeController.text.isNotEmpty &&
             endTimeController.text.isNotEmpty) {
           try {
@@ -116,6 +120,14 @@ void showReviewTaskDialog(
             
             final diff = end.difference(start).inMinutes;
             workedMinutesController.text = diff.toString();
+            
+            // Updating the "Remaining" controller pre-fill if user later clicks Pending
+            final remainingValue = (plannedMinutes - diff).clamp(0, 999999);
+            remainingController.text = remainingValue.toString();
+
+            // Updating extra time controller for the backend - only if worked > planned
+            final extraValue = (diff - plannedMinutes).clamp(0, 999999);
+            extraTimeController.text = extraValue.toString();
           } catch (e) {
             debugPrint('Error auto-calculating time: $e');
           }
@@ -123,6 +135,7 @@ void showReviewTaskDialog(
       });
     }
   }
+
 
   showDialog(
     context: context,
@@ -154,46 +167,74 @@ void showReviewTaskDialog(
                 if (startTimeDisplay.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: Colors.blue.shade600,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: Colors.blue.shade600,
+                          ),
+                        ),
+                        if ((todayPlan?['total_minutes_worked'] as int? ?? 0) > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Total: ${todayPlan?['total_minutes_worked']}m',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+
                 const SizedBox(height: 20),
 
-                if (plannedRemark.isNotEmpty) ...[
-                  Text(
-                    'PLANNED REMARK',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                      letterSpacing: 1.0,
-                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
-                    ),
+                Text(
+                  'PLANNED REMARK',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                    letterSpacing: 1.0,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
+                ),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: plannedRemarkController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.grey.withValues(alpha: 0.1),
+                    hintText: 'Add a planned remark...',
+                    hintStyle:
+                        TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                     ),
-                    child: Text(
-                      plannedRemark,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                      ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                     ),
+                    contentPadding: const EdgeInsets.all(10),
                   ),
-                  const SizedBox(height: 16),
-                ],
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 // Optional completion chips
                 Wrap(
@@ -241,9 +282,16 @@ void showReviewTaskDialog(
                       onSelected: (selected) {
                         setState(() {
                           selectedOption = selected ? 'pending' : null;
+                          if (selected) {
+                             // Pre-fill remaining time based on current entries
+                             final worked = int.tryParse(workedMinutesController.text) ?? 0;
+                             final left = (plannedMinutes - worked).clamp(0, 999999);
+                             remainingController.text = left.toString();
+                          }
                         });
                       },
                       selectedColor: Colors.orange.withValues(alpha: 0.2),
+
                       backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20)),
@@ -378,6 +426,19 @@ void showReviewTaskDialog(
                     const Text('mins'),
                   ],
                 ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 120),
+                  child: Text(
+                    'Extra time is also auto-calculated based on plan.',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 12),
 
                 // Time Pickers
@@ -468,9 +529,63 @@ void showReviewTaskDialog(
                     ),
                   ],
                 ),
+                
+                // Live Calculation Feedback
+                if (startTimeController.text.isNotEmpty && endTimeController.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Builder(
+                      builder: (context) {
+                        final worked = int.tryParse(workedMinutesController.text) ?? 0;
+                        final diff = (worked - plannedMinutes).abs();
+                        final isExtra = worked > plannedMinutes;
+                        final isUnder = worked < plannedMinutes;
+                        
+                        if (worked == 0) return const SizedBox.shrink();
+                        
+                        return Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isExtra 
+                               ? Colors.green.withValues(alpha: 0.1) 
+                               : (isUnder ? Colors.orange.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1)),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isExtra 
+                                ? Colors.green.withValues(alpha: 0.3) 
+                                : (isUnder ? Colors.orange.withValues(alpha: 0.3) : Colors.blue.withValues(alpha: 0.3)),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isExtra ? Icons.trending_up : (isUnder ? Icons.trending_down : Icons.check_circle_outline),
+                                size: 16,
+                                color: isExtra ? Colors.green.shade700 : (isUnder ? Colors.orange.shade700 : Colors.blue.shade700),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  isExtra 
+                                    ? "Extra Time Worked: +${diff}m" 
+                                    : (isUnder ? "Remaining to reach goal: ${diff}m" : "Planned goal reached!"),
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: isExtra ? Colors.green.shade900 : (isUnder ? Colors.orange.shade900 : Colors.blue.shade900),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
 
                 const SizedBox(height: 16),
                 const Divider(),
+
                 const SizedBox(height: 8),
                 Text(
                   'ACHIEVED REMARK',
@@ -522,12 +637,10 @@ void showReviewTaskDialog(
                   try {
                     final apiService = ref.read(taskApiServiceProvider);
                     final isCompleted = selectedOption == 'completed';
-                    final manualMinutes = int.tryParse(workedMinutesController.text);
                     
-                    int? minutesLeft;
-                    if (!isCompleted && selectedOption == 'pending') {
-                      minutesLeft = int.tryParse(remainingController.text);
-                    }
+                    // Parse manual overrides if any
+                    final minutesLeft = int.tryParse(remainingController.text) ?? 0;
+                    final extraMinutes = int.tryParse(extraTimeController.text) ?? 0;
 
                     final today = DateTime.now();
                     final todayStr = DateFormat('yyyy-MM-dd').format(today);
@@ -540,9 +653,28 @@ void showReviewTaskDialog(
                     debugPrint('   - activityLogId: $activityLogId');
                     debugPrint('   - isCompleted: $isCompleted');
                     debugPrint('   - selectedOption: $selectedOption');
-
+                    
                     bool apiCalled = false;
-                    if (todayPlanId > 0) {
+                    
+                    // Prioritize singular stopActivityLog in edit mode to target specific session
+                    if (isEditMode && activityLogId > 0) {
+                      debugPrint('   - [Edit Mode] Calling stopActivityLog for ID: $activityLogId');
+                      await apiService.stopActivityLog(
+                        activityLogId: activityLogId,
+                        isCompleted: isCompleted,
+                        isPendingSelected: selectedOption == 'pending',
+                        reason: isCompleted ? 'Task completed' : 'Task updated',
+                        workNotes: remarkController.text,
+                        minutesLeft: minutesLeft,
+                        extraMinutes: extraMinutes > 0 ? extraMinutes : null,
+                        startTime: startTimeController.text,
+                        endTime: endTimeController.text,
+                        plannedRemark: plannedRemarkController.text,
+                      );
+                      apiCalled = true;
+                    } 
+                    // Use bulkStopActivityLogs when stopping active task (Sync logic)
+                    else if (todayPlanId > 0) {
                       debugPrint('   - Calling bulkStopActivityLogs...');
                       await apiService.bulkStopActivityLogs(
                         todayPlanId: todayPlanId,
@@ -551,12 +683,15 @@ void showReviewTaskDialog(
                         isPendingSelected: selectedOption == 'pending',
                         workNotes: remarkController.text,
                         minutesLeft: minutesLeft,
-                        extraMinutes: manualMinutes != initialMinutesWorked ? manualMinutes : null,
+                        extraMinutes: extraMinutes > 0 ? extraMinutes : null,
                         startTime: startTimeController.text,
                         endTime: endTimeController.text,
+                        plannedRemark: plannedRemarkController.text,
                       );
                       apiCalled = true;
-                    } else if (activityLogId > 0) {
+                    } 
+                    // Fallback to singular stop for non-standard cases
+                    else if (activityLogId > 0) {
                       debugPrint('   - Calling stopActivityLog...');
                       await apiService.stopActivityLog(
                         activityLogId: activityLogId,
@@ -564,9 +699,10 @@ void showReviewTaskDialog(
                         reason: isCompleted ? 'Task completed' : 'Task paused',
                         workNotes: remarkController.text,
                         minutesLeft: minutesLeft,
-                        extraMinutes: manualMinutes != initialMinutesWorked ? manualMinutes : null,
+                        extraMinutes: extraMinutes > 0 ? extraMinutes : null,
                         startTime: startTimeController.text,
                         endTime: endTimeController.text,
+                        plannedRemark: plannedRemarkController.text,
                       );
                       apiCalled = true;
                     }
@@ -575,6 +711,7 @@ void showReviewTaskDialog(
                       ref.invalidate(apiActivityLogsProvider(todayStr));
                       ref.invalidate(apiActiveTaskProvider);
                       ref.invalidate(apiTodayPlanProvider);
+                      ref.invalidate(apiPendingItemsProvider(todayStr));
 
                       if (context.mounted) {
                         Navigator.pop(context);

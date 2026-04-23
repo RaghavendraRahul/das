@@ -262,26 +262,31 @@ class ShellPage extends ConsumerWidget {
                                         const BoxConstraints(maxWidth: 1600),
                                     child: Column(
                                       children: [
-                                          AppHeader(
-                                            title: titleInfo.key,
-                                            subtitle: isReadOnly
-                                                ? 'Viewing ${ref.watch(impersonatingUserNameFutureProvider).valueOrNull ?? "Employee"}\'s account (Read-only)'
-                                                : titleInfo.value,
-                                            customTitleWidget: (_isProjectSubPage(
-                                                            currentViewMode) &&
-                                                        currentProject != null)
-                                                    ? _AppBarProjectSelector(
-                                                        project: currentProject,
-                                                        isDark: Theme.of(context)
-                                                                .brightness ==
-                                                            Brightness.dark,
-                                                        isMobile: isMobile)
-                                                    : null,
-                                            onMenuTap: isMobile
-                                                ? () => Scaffold.of(scaffoldContext)
-                                                    .openDrawer()
-                                                : null,
-                                          ),
+                                            AppHeader(
+                                              title: currentViewMode == ViewMode.dashboard ? "" : titleInfo.key,
+                                              subtitle: currentViewMode == ViewMode.dashboard 
+                                                  ? "" 
+                                                  : (isReadOnly
+                                                      ? 'Viewing ${ref.watch(impersonatingUserNameFutureProvider).valueOrNull ?? "Employee"}\'s account (Read-only)'
+                                                      : titleInfo.value),
+                                              actions: currentViewMode == ViewMode.dashboard
+                                                  ? null
+                                                  : ref.watch(headerActionsProvider),
+                                              customTitleWidget: (_isProjectSubPage(
+                                                              currentViewMode) &&
+                                                          currentProject != null)
+                                                      ? _AppBarProjectSelector(
+                                                          project: currentProject,
+                                                          isDark: Theme.of(context)
+                                                                  .brightness ==
+                                                              Brightness.dark,
+                                                          isMobile: isMobile)
+                                                      : null,
+                                              onMenuTap: isMobile
+                                                  ? () => Scaffold.of(scaffoldContext)
+                                                      .openDrawer()
+                                                  : null,
+                                            ),
                                         const Expanded(child: AutoRouter()),
                                       ],
                                     ),
@@ -459,7 +464,7 @@ class ShellPage extends ConsumerWidget {
         subtitle = ""; // Removed per user request
         break;
       case ViewMode.dashboard:
-        subtitle = ""; // Removed per user request
+        subtitle = "Your intelligent command center for the all projects";
         break;
       case ViewMode.projects:
         subtitle = "";
@@ -602,7 +607,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
           fontWeight: FontWeight.w800,
           fontSize: isMobile ? 16 : 18,
           letterSpacing: -0.5,
-          color: Colors.white,
+          color: textColor,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

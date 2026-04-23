@@ -21,8 +21,9 @@ class ProjectWithTasks {
   }) : projectAssignees = projectAssignees ?? [];
 
   // Helper to match React's "status" logic if needed
-  bool get isActive => project.status == 'active';
-  bool get isCompleted => project.status == 'completed';
+  // Case-insensitive status mapping for backend compatibility (ACTIVE, active, etc.)
+  bool get isActive => project.status.toLowerCase() == 'active' || project.status.toLowerCase() == 'ongoing';
+  bool get isCompleted => project.status.toLowerCase() == 'completed' || project.status.toLowerCase() == 'done';
 }
 
 class TaskWithAssignees {

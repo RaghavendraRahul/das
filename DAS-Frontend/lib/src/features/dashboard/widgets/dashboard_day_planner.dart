@@ -14,7 +14,11 @@ class DashboardDayPlanner extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final todayLogAsync = ref.watch(todayLogProvider);
 
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0B1A2E) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: InkWell(
         onTap: () {
           context.router.navigate(const TodayRoute());
@@ -138,10 +142,10 @@ class _DashboardQuadrantBox extends StatelessWidget {
     return Container(
       height: 140, // Fixed height for square-ish look
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
         ),
       ),
       padding: const EdgeInsets.all(12),
@@ -184,7 +188,7 @@ class _DashboardQuadrantBox extends StatelessWidget {
                         width: 6,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.5),
+                          color: color.withValues(alpha: 0.5),
                           shape: BoxShape.circle,
                         ),
                       ),

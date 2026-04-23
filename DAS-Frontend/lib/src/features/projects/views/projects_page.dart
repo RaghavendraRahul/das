@@ -36,6 +36,7 @@ class ProjectsPage extends HookConsumerWidget {
 
     final searchQuery = useState('');
     final searchController = useTextEditingController();
+    useListenable(searchController);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Debounce search input
@@ -87,7 +88,7 @@ class ProjectsPage extends HookConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1F2937) : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color:
                       isDark ? const Color(0xFF374151) : Colors.grey.shade200,
@@ -151,56 +152,53 @@ class ProjectsPage extends HookConsumerWidget {
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: 250,
+                  Container(
+                    height: 42,
+                    width: 300,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF374151) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark ? Colors.transparent : const Color(0xFFE2E8F0),
+                      ),
+                    ),
                     child: TextField(
                       controller: searchController,
                       style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black87),
+                          color: isDark ? Colors.white : const Color(0xFF0B1B2F),
+                          fontSize: 13),
                       decoration: InputDecoration(
                         hintText: "Search projects...",
                         hintStyle: TextStyle(
                             color: isDark
                                 ? Colors.grey.shade400
-                                : Colors.grey.shade500),
+                                : const Color(0xFF94A3B8),
+                            fontSize: 13),
                         prefixIcon: Icon(Icons.search,
                             color: isDark
                                 ? Colors.grey.shade400
-                                : Colors.grey.shade600),
+                                : const Color(0xFF94A3B8),
+                            size: 16),
                         suffixIcon:
-                            useListenable(searchController).text.isNotEmpty
-                                ? IconButton(
-                                    icon: Icon(Icons.close,
-                                        size: 20,
-                                        color: isDark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade600),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () {
-                                      searchController.clear();
-                                    },
+                            searchController.text.isNotEmpty
+                                ? MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      onTap: () => searchController.clear(),
+                                      child: Icon(Icons.close,
+                                          size: 16,
+                                          color: isDark
+                                              ? Colors.grey.shade400
+                                              : const Color(0xFF94A3B8)),
+                                    ),
                                   )
                                 : null,
-                        filled: true,
-                        fillColor:
-                            isDark ? const Color(0xFF374151) : Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color: isDark
-                                  ? Colors.transparent
-                                  : Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color: isDark
-                                  ? Colors.transparent
-                                  : Colors.grey.shade300),
-                        ),
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                         contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         isDense: true,
                       ),
                     ),
@@ -233,7 +231,7 @@ class ProjectsPage extends HookConsumerWidget {
                       elevation: 2,
                       shadowColor: const Color(0xFF05263E).withAlpha(100),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),

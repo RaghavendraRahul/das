@@ -58,14 +58,46 @@ class _TasksPaginatedPageState extends ConsumerState<TasksPaginatedPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      labelText: 'Search Tasks',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? Colors.white.withValues(alpha: 0.05) 
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : const Color(0xFFE2E8F0),
+                      ),
                     ),
-                    onSubmitted: (_) => _onSearch(),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Search tasks...',
+                        hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
+                        prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF94A3B8)),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                color: const Color(0xFF94A3B8),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _onSearch();
+                                  setState(() {});
+                                },
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onSubmitted: (_) => _onSearch(),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),

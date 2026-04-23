@@ -8,8 +8,24 @@ import '../../core/database/database.dart'; // User model
 import '../../core/models/project_with_tasks.dart';
 import '../projects/providers/api_providers.dart';
 import '../../core/providers/user_providers.dart'; // allUsersProvider
+import 'models/search_result.dart';
+import 'global_search_service.dart';
+import 'search_history_service.dart';
 
 part 'dashboard_providers.g.dart';
+
+/// Provider for injected header actions (e.g. toggles, filters)
+final headerActionsProvider = StateProvider<Widget?>((ref) => null);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROPER STATE MANAGEMENT: Dashboard filter state providers
+// ─────────────────────────────────────────────────────────────────────────────
+final dashboardProjectTypeProvider = StateProvider<String>((ref) => 'my');
+final dashboardSearchQueryProvider = StateProvider<String>((ref) => '');
+
+// Global Search State
+final globalSearchQueryProvider = StateProvider<String>((ref) => '');
+final isSearchFocusedProvider = StateProvider<bool>((ref) => false);
 
 @riverpod
 DashboardRepository dashboardRepository(DashboardRepositoryRef ref) {
@@ -80,8 +96,8 @@ Future<List<ProjectWithTasks>> dashboardProjects(
       projectsWithTasks.add(ProjectWithTasks(
         project: project,
         tasks: projectTasks,
-        startDate: DateTime.tryParse(apiProject.startDate),
-        dueDate: DateTime.tryParse(apiProject.dueDate),
+        startDate: apiProject.startDate,
+        dueDate: apiProject.dueDate,
         projectLeadId: apiProject.projectLeadId,
         projectAssignees: apiProject.projectAssignees,
       ));
@@ -102,6 +118,7 @@ Future<List<ProjectWithTasks>> dashboardProjects(
 Future<List<ProjectWithTasks>> filteredDashboardStats(
     FilteredDashboardStatsRef ref,
     {required String filter}) async {
+  final search = ref.watch(dashboardSearchQueryProvider);
   ref.keepAlive(); // Sustain dashboard cache locally for 0s UI renders
   final apiService = ref.watch(taskApiServiceProvider);
   // Using allUsersForProjectsProvider to ensure we get ALL users for assignee resolution
@@ -111,7 +128,10 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
   try {
     // Fetch all projects with filter (no pagination)
     final projectModels = await apiService.getProjects(
-      params: {'filter': filter},
+      params: {
+        'filter': filter,
+        if (search.isNotEmpty) 'search': search,
+      },
       startDate: dateRange?.start.toIso8601String().split('T')[0],
       endDate: dateRange?.end.toIso8601String().split('T')[0],
       allProjects: true, // Fetch all authorized projects to ensure correct stats
@@ -142,8 +162,8 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
       return ProjectWithTasks(
         project: localProject,
         tasks: tasks,
-        startDate: DateTime.tryParse(projectModel.startDate),
-        dueDate: DateTime.tryParse(projectModel.dueDate),
+        startDate: projectModel.startDate,
+        dueDate: projectModel.dueDate,
         projectLeadId: projectModel.projectLeadId,
         projectAssignees: projectModel.projectAssignees,
       );
@@ -151,6 +171,25 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
   } catch (e) {
     debugPrint('Error fetching dashboard stats: $e');
     return [];
+  }
+}
+
+/// Provider to fetch backend-calculated summary statistics
+@riverpod
+Future<Map<String, dynamic>> dashboardOverviewStats(DashboardOverviewStatsRef ref) async {
+  final filter = ref.watch(dashboardProjectTypeProvider);
+  final search = ref.watch(dashboardSearchQueryProvider);
+  final apiService = ref.watch(taskApiServiceProvider);
+  
+  try {
+    // Pass optional search as query param to the statistics endpoint
+    return await apiService.getDashboardStatistics(
+      filter: filter,
+      search: search.isNotEmpty ? search : null,
+    );
+  } catch (e) {
+    debugPrint('❌ Error fetching dashboard overview statistics: $e');
+    return {};
   }
 }
 
@@ -199,6 +238,7 @@ Future<List<dynamic>> usersForStats(UsersForStatsRef ref) async {
 Future<Map<String, dynamic>> projectWorkStats(
   ProjectWorkStatsRef ref,
 ) async {
+  final search = ref.watch(dashboardSearchQueryProvider);
   final selectedUserId = ref.watch(selectedStatsUserIdProvider);
   
   // We fetch results even if no user is selected to show project totals.
@@ -238,6 +278,7 @@ Future<Map<String, dynamic>> projectWorkStats(
       startDate: startDate,
       endDate: endDate,
       projectId: selectedProjectId,
+      search: search,
     );
   } catch (e) {
     debugPrint('Error fetching project work stats: $e');
@@ -248,6 +289,7 @@ Future<Map<String, dynamic>> projectWorkStats(
 /// Provider for fetching user-specific projects for the stats dropdown
 @riverpod
 Future<List<dynamic>> statsProjects(StatsProjectsRef ref) async {
+  final search = ref.watch(dashboardSearchQueryProvider);
   final selectedUserId = ref.watch(selectedStatsUserIdProvider);
   final apiService = ref.watch(taskApiServiceProvider);
   try {
@@ -257,6 +299,7 @@ Future<List<dynamic>> statsProjects(StatsProjectsRef ref) async {
       params: {
         if (selectedUserId != null) 'user_id': selectedUserId,
         if (selectedUserId != null) 'filter': 'my',
+        if (search.isNotEmpty) 'search': search,
       },
       allProjects: false, // Dashboard dropdown should only show allowed projects
     );
@@ -275,17 +318,31 @@ Future<List<dynamic>> statsProjects(StatsProjectsRef ref) async {
 class ProjectChartParams {
   final int year;
   final String filter;
-  final int? userId;
-  ProjectChartParams({required this.year, required this.filter, this.userId});
+  final int? userId; // Corrected to int? to match Repo/API
+  final String? search;
+  
+  ProjectChartParams({
+    required this.year, 
+    required this.filter, 
+    this.userId, 
+    this.search
+  });
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ProjectChartParams &&
           year == other.year &&
           filter == other.filter &&
-          userId == other.userId;
+          userId == other.userId &&
+          search == other.search;
+
   @override
-  int get hashCode => year.hashCode ^ filter.hashCode ^ userId.hashCode;
+  int get hashCode => 
+      year.hashCode ^ 
+      filter.hashCode ^ 
+      (userId?.hashCode ?? 0) ^ 
+      (search?.hashCode ?? 0);
 }
 
 @riverpod
@@ -293,7 +350,13 @@ Future<Map<String, dynamic>> projectCompletionChart(
     ProjectCompletionChartRef ref, ProjectChartParams params) async {
   try {
     final repo = ref.watch(dashboardRepositoryProvider);
-    return await repo.fetchProjectCompletionChart(params.year, params.filter, params.userId);
+    // Explicitly pass params to repo call
+    return await repo.fetchProjectCompletionChart(
+      params.year, 
+      params.filter, 
+      params.userId, 
+      params.search
+    );
   } catch (e) {
     debugPrint('❌ Error in projectCompletionChart: $e');
     return {'data': []};
@@ -304,10 +367,16 @@ class TaskChartParams {
   final String startDate;
   final String endDate;
   final String filter;
-  final int? userId;
+  final int? userId; // Corrected field declaration
+  final String? search;
 
-  TaskChartParams(
-      {required this.startDate, required this.endDate, required this.filter, this.userId});
+  TaskChartParams({
+    required this.startDate, 
+    required this.endDate, 
+    required this.filter, 
+    this.userId, 
+    this.search
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -317,10 +386,16 @@ class TaskChartParams {
           startDate == other.startDate &&
           endDate == other.endDate &&
           filter == other.filter &&
-          userId == other.userId;
+          userId == other.userId &&
+          search == other.search;
 
   @override
-  int get hashCode => startDate.hashCode ^ endDate.hashCode ^ filter.hashCode ^ userId.hashCode;
+  int get hashCode => 
+      startDate.hashCode ^ 
+      endDate.hashCode ^ 
+      filter.hashCode ^ 
+      (userId?.hashCode ?? 0) ^ 
+      (search?.hashCode ?? 0);
 }
 
 @riverpod
@@ -329,7 +404,7 @@ Future<Map<String, dynamic>> taskCompletionChart(
   try {
     final repo = ref.watch(dashboardRepositoryProvider);
     return await repo.fetchTaskCompletionChart(
-        params.startDate, params.endDate, params.filter, params.userId);
+        params.startDate, params.endDate, params.filter, params.userId, params.search);
   } catch (e) {
     debugPrint('❌ Error in taskCompletionChart: $e');
     return {'data': []};
@@ -341,7 +416,12 @@ Future<List<dynamic>> hoursCompletionChart(
     HoursCompletionChartRef ref, ProjectChartParams params) async {
   try {
     final repo = ref.watch(dashboardRepositoryProvider);
-    return await repo.fetchHoursCompletionChart(params.year, params.filter, params.userId);
+    return await repo.fetchHoursCompletionChart(
+      params.year, 
+      params.filter, 
+      params.userId, 
+      params.search
+    );
   } catch (e) {
     debugPrint('❌ Error in hoursCompletionChart: $e');
     return [];
@@ -418,6 +498,34 @@ final dailyTrendAnalyticsProvider =
   final apiService = ref.watch(taskApiServiceProvider);
   return apiService.getDailyTrend(userId);
 });
+
+@riverpod
+GlobalSearchService globalSearchService(GlobalSearchServiceRef ref) {
+  final api = ref.watch(taskApiServiceProvider);
+  return GlobalSearchService(api);
+}
+
+@riverpod
+SearchHistoryService searchHistoryService(SearchHistoryServiceRef ref) {
+  return SearchHistoryService();
+}
+
+@riverpod
+Future<List<GlobalSearchResult>> globalSearchResults(GlobalSearchResultsRef ref) async {
+  final query = ref.watch(globalSearchQueryProvider);
+  if (query.length < 2) return [];
+  
+  // Debounce logic could be added here if needed, but the UI usually handles that
+  final service = ref.watch(globalSearchServiceProvider);
+  return await service.search(query);
+}
+
+@riverpod
+Future<List<String>> searchHistoryList(SearchHistoryListRef ref) async {
+  final service = ref.watch(searchHistoryServiceProvider);
+  // We don't watch any query here, just the initial load
+  return await service.getHistory();
+}
 
 class DashboardMetrics {
   final List<Risk> risks;

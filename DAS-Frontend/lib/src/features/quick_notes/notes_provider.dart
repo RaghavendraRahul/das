@@ -9,6 +9,7 @@ class StickyNote {
   final String title;
   final String content;
   final Color color;
+  final int order;
   final DateTime createdAt;
 
   StickyNote({
@@ -16,6 +17,7 @@ class StickyNote {
     required this.title,
     required this.content,
     required this.color,
+    required this.order,
     required this.createdAt,
   });
 }
@@ -58,24 +60,19 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
           const Color(0xFFFCE7F3), // Pink
         ];
 
-        final List<StickyNote> newNotes = [];
+        final List<Future<StickyNote>> creationFutures = [];
         for (int i = 0; i < needed; i++) {
-          // Cycle through colors based on how many we already have
           final colorIndex = (notes.length + i) % defaultColors.length;
-          final newNote = await _service.createNote(
-              title: "Edit Note", content: "", color: defaultColors[colorIndex]);
-          newNotes.add(newNote);
+          creationFutures.add(_service.createNote(
+              title: "", content: "", color: defaultColors[colorIndex]));
         }
+        
+        final List<StickyNote> newNotes = await Future.wait(creationFutures);
 
         // Combine existing and new notes
         final allNotes = [...notes, ...newNotes];
-
-        // Sort by newest first
-        allNotes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         state = AsyncValue.data(allNotes);
       } else {
-        // Sort by descending created_at (newest first)
-        notes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         state = AsyncValue.data(notes);
       }
     } catch (e, st) {
@@ -87,7 +84,7 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
   Future<StickyNote> addNote(String content, Color color) async {
     try {
       final newNote = await _service.createNote(
-          title: "New Note", content: content, color: color);
+          title: "", content: content, color: color);
       final currentList = state.value ?? [];
       state = AsyncValue.data([newNote, ...currentList]);
       return newNote;
@@ -143,6 +140,7 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
       title: newTitle,
       content: note.content,
       color: note.color,
+      order: note.order,
       createdAt: note.createdAt,
     );
 
@@ -177,6 +175,7 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
       title: note.title,
       content: newContent,
       color: note.color,
+      order: note.order,
       createdAt: note.createdAt,
     );
 
@@ -198,6 +197,52 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
     });
   }
 
+  Future<void> reorderNotes(int oldIndex, int newIndex) async {
+    final currentList = state.value;
+    if (currentList == null) return;
+
+    final List<StickyNote> newList = List.from(currentList);
+    // Swap items for precise reordering as requested
+    final temp = newList[oldIndex];
+    newList[oldIndex] = newList[newIndex];
+    newList[newIndex] = temp;
+
+    final List<StickyNote> orderedList = [];
+    for (int i = 0; i < newList.length; i++) {
+      final note = newList[i];
+      orderedList.add(StickyNote(
+        id: note.id,
+        title: note.title,
+        content: note.content,
+        color: note.color,
+        order: i,
+        createdAt: note.createdAt,
+      ));
+    }
+
+    state = AsyncValue.data(orderedList);
+
+    // Save orders to backend
+    try {
+      final updates = <Future>[];
+      for (int i = 0; i < orderedList.length; i++) {
+        final note = orderedList[i];
+        // Only send update if the order actually changed from the previous state
+        final oldNoteIndex = currentList.indexWhere((n) => n.id == note.id);
+        if (oldNoteIndex != -1 && currentList[oldNoteIndex].order != i) {
+          updates.add(_service.updateNote(id: note.id, order: i));
+        }
+      }
+      
+      if (updates.isNotEmpty) {
+        await Future.wait(updates);
+      }
+    } catch (e) {
+      print('Error saving reordered notes: $e');
+      // Optionally revert state if it fails critically
+    }
+  }
+
   Future<void> updateNoteColor(String id, Color newColor) async {
     final currentList = state.value;
     if (currentList == null) return;
@@ -213,6 +258,7 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
       title: note.title,
       content: note.content,
       color: newColor,
+      order: note.order,
       createdAt: note.createdAt,
     );
 
@@ -236,15 +282,15 @@ final stickyNotesProvider =
   return StickyNotesNotifier(service);
 });
 
-// Professional fonts selection for Quick Notes
+// Professional fonts selection for Quick Notes (Google Fonts compatible)
 final availableQuickNoteFonts = [
-  'Century Schoolbook',
-  'Helvetica',
+  'Libre Baskerville',  // Similar to Century Schoolbook
+  'Inter',              // Similar to Helvetica
   'Roboto',
-  'Georgia',
-  'Garamond',
-  'Calibri',
-  'Times New Roman',
+  'Merriweather',       // Similar to Georgia
+  'EB Garamond',        // Similar to Garamond
+  'Open Sans',          // Similar to Calibri
+  'Tinos',              // Similar to Times New Roman
 ];
 
-final quickNoteFontProvider = StateProvider<String>((ref) => 'Century Schoolbook');
+final quickNoteFontProvider = StateProvider<String>((ref) => 'Roboto');

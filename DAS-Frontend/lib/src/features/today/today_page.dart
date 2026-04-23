@@ -100,176 +100,204 @@ class _TodayPageState extends ConsumerState<TodayPage> {
         children: [
           // Top Header Section
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Removed dual "Planner" text to save vertical space and improve premium layout.
                 Consumer(
                   builder: (context, ref, _) {
-                  final user = ref.watch(currentUserProvider).valueOrNull;
-                  final isAdmin = user?.role == 'ADMIN';
+                    final user = ref.watch(currentUserProvider).valueOrNull;
+                    final isElevatedRole = user?.role.toUpperCase() != 'EMPLOYEE';
 
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      // 1. Navigation Views (Today, Week, Month)
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _PillButton(
-                              label: 'Today',
-                              icon: Icons.calendar_today_rounded,
-                              isSelected: currentView == CalendarViewMode.today,
-                              onTap: () {
-                                ref.read(selectedDateProvider.notifier).setDate(DateTime.now());
-                                setState(() => _currentView = CalendarViewMode.today);
-                              },
-                            ),
-                            _PillButton(
-                              label: 'Week',
-                              icon: Icons.calendar_view_week_rounded,
-                              isSelected: currentView == CalendarViewMode.week,
-                              onTap: () => setState(() => _currentView = CalendarViewMode.week),
-                            ),
-                            _PillButton(
-                              label: 'Month',
-                              icon: Icons.calendar_month_rounded,
-                              isSelected: currentView == CalendarViewMode.month,
-                              onTap: () => setState(() => _currentView = CalendarViewMode.month),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // 2. Catalog
-                      Builder(builder: (context) {
-                        return _PillButton(
-                          label: 'Catalog',
-                          icon: Icons.menu_open_rounded,
-                          isSelected: _isCatalogOpen,
-                          onTap: () {
-                            final width = MediaQuery.of(context).size.width;
-                            if (width < 1100) {
-                              Scaffold.of(context).openDrawer();
-                            } else {
-                              setState(() => _isCatalogOpen = !_isCatalogOpen);
-                            }
-                          },
-                          showShadow: false,
-                          backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
-                        );
-                      }),
-
-                      // 3. Send Instructions - ADMIN ONLY
-                      if (isAdmin)
+                    final instructionsButton = Stack(
+                      clipBehavior: Clip.none,
+                      children: [
                         _PillButton(
-                          label: 'Send Instructions',
-                          icon: Icons.group_rounded,
-                          isSelected: false,
+                          label: 'Instructions',
+                          icon: Icons.inbox_rounded,
+                          isSelected: currentView == CalendarViewMode.instructions,
                           onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => const SendInstructionsModal(),
-                            );
+                            setState(() {
+                              _currentView = _currentView == CalendarViewMode.instructions
+                                  ? CalendarViewMode.today
+                                  : CalendarViewMode.instructions;
+                              _isShowingOutbox = false;
+                            });
                           },
                           showShadow: false,
                           backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
                         ),
-
-                      // 4. Instructions Inbox - ALL USERS (with badge)
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          _PillButton(
-                            label: 'Instructions',
-                            icon: Icons.inbox_rounded,
-                            isSelected: currentView == CalendarViewMode.instructions,
-                            onTap: () {
-                              setState(() {
-                                _currentView = _currentView == CalendarViewMode.instructions
-                                    ? CalendarViewMode.today
-                                    : CalendarViewMode.instructions;
-                                _isShowingOutbox = false;
-                              });
-                            },
-                            showShadow: false,
-                            backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
-                          ),
-                          if (badgeCount > 0)
-                            Positioned(
-                              top: -6,
-                              right: -6,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
+                        if (badgeCount > 0)
+                          Positioned(
+                            top: -6,
+                            right: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                              child: Text(
+                                '$badgeCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                                child: Text(
-                                  '$badgeCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
+                    );
 
-                      // 5. Layout Toggle (Quadrant vs List)
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final isQuadrantView = ref.watch(plannerSettingsProvider);
-                          return _IconButton(
-                            icon: isQuadrantView ? Icons.grid_view_rounded : Icons.view_list_rounded,
-                            onTap: () {
-                              ref.read(plannerSettingsProvider.notifier).toggleLayout();
-                            },
-                            tooltip: isQuadrantView ? 'Switch to List View' : 'Switch to Quadrant View',
-                          );
-                        },
-                      ),
-
-                      // 6. Calendar Popup Icon
-                      _IconButton(
-                        icon: Icons.calendar_month_rounded,
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            barrierColor: Colors.black26,
-                            builder: (ctx) => Dialog(
-                              backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: SizedBox(
-                                width: 380,
-                                height: 520,
-                                child: CalendarPopup(
-                                  onDateSelected: () {
-                                    setState(() => _currentView = CalendarViewMode.today);
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Left Corner: Remaining Buttons (Layout Toggle, Calendar Icon)
+                        Expanded(
+                          flex: 1,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                // Layout Toggle
+                                Consumer(
+                                  builder: (context, ref, _) {
+                                    final isQuadrantView = ref.watch(plannerSettingsProvider);
+                                    return _IconButton(
+                                      icon: isQuadrantView ? Icons.grid_view_rounded : Icons.view_list_rounded,
+                                      onTap: () {
+                                        ref.read(plannerSettingsProvider.notifier).toggleLayout();
+                                      },
+                                      tooltip: isQuadrantView ? 'Switch to List View' : 'Switch to Quadrant View',
+                                    );
                                   },
                                 ),
-                              ),
+
+                                // Calendar Popup Icon
+                                _IconButton(
+                                  icon: Icons.calendar_month_rounded,
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      barrierColor: Colors.black26,
+                                      builder: (ctx) => Dialog(
+                                        backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: SizedBox(
+                                          width: 380,
+                                          height: 520,
+                                          child: CalendarPopup(
+                                            onDateSelected: () {
+                                              setState(() => _currentView = CalendarViewMode.today);
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                      ),
-                    ],
-                  );
+                          ),
+                        ),
+
+                        // Center: Navigation Views (Today, Week, Month)
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _PillButton(
+                                label: 'Today',
+                                icon: Icons.calendar_today_rounded,
+                                isSelected: currentView == CalendarViewMode.today,
+                                onTap: () {
+                                  ref.read(selectedDateProvider.notifier).setDate(DateTime.now());
+                                  setState(() => _currentView = CalendarViewMode.today);
+                                },
+                              ),
+                              _PillButton(
+                                label: 'Week',
+                                icon: Icons.calendar_view_week_rounded,
+                                isSelected: currentView == CalendarViewMode.week,
+                                onTap: () => setState(() => _currentView = CalendarViewMode.week),
+                              ),
+                              _PillButton(
+                                label: 'Month',
+                                icon: Icons.calendar_month_rounded,
+                                isSelected: currentView == CalendarViewMode.month,
+                                onTap: () => setState(() => _currentView = CalendarViewMode.month),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Right Corner: Catalog and Instructions (and Send Instructions for Admin)
+                        Expanded(
+                          flex: 1,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                // 2. Catalog
+                                Builder(builder: (context) {
+                                  return _PillButton(
+                                    label: 'Catalog',
+                                    icon: Icons.menu_open_rounded,
+                                    isSelected: _isCatalogOpen,
+                                    onTap: () {
+                                      final width = MediaQuery.of(context).size.width;
+                                      if (width < 1100) {
+                                        Scaffold.of(context).openDrawer();
+                                      } else {
+                                        setState(() => _isCatalogOpen = !_isCatalogOpen);
+                                      }
+                                    },
+                                    showShadow: false,
+                                    backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
+                                  );
+                                }),
+
+                                // Instructions button now placed here for ALL roles
+                                instructionsButton,
+
+                                // 3. Send Instructions - Restricted for Employees
+                                if (isElevatedRole)
+                                  _PillButton(
+                                    label: 'Send Instructions',
+                                    icon: Icons.group_rounded,
+                                    isSelected: false,
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => const SendInstructionsModal(),
+                                      );
+                                    },
+                                    showShadow: false,
+                                    backgroundColor: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
                   },
                 ),
               ],
@@ -356,35 +384,31 @@ class _TodayPageState extends ConsumerState<TodayPage> {
       case CalendarViewMode.today:
         return const DayPlanner();
       case CalendarViewMode.instructions:
-        final user = ref.watch(currentUserProvider).valueOrNull;
-        final isAdmin = user?.role == 'ADMIN';
-
         return Column(
           children: [
-            if (isAdmin)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Row(
-                  children: [
-                    _SubToggleButton(
-                      label: 'INBOX',
-                      isActive: !_isShowingOutbox,
-                      onPressed: () => setState(() => _isShowingOutbox = false),
-                      icon: Icons.inbox,
-                    ),
-                    const SizedBox(width: 12),
-                    _SubToggleButton(
-                      label: 'OUTBOX',
-                      isActive: _isShowingOutbox,
-                      onPressed: () => setState(() => _isShowingOutbox = true),
-                      icon: Icons.outbox,
-                    ),
-                  ],
-                ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Row(
+                children: [
+                  _SubToggleButton(
+                    label: 'INBOX',
+                    isActive: !_isShowingOutbox,
+                    onPressed: () => setState(() => _isShowingOutbox = false),
+                    icon: Icons.inbox,
+                  ),
+                  const SizedBox(width: 12),
+                  _SubToggleButton(
+                    label: 'OUTBOX',
+                    isActive: _isShowingOutbox,
+                    onPressed: () => setState(() => _isShowingOutbox = true),
+                    icon: Icons.outbox,
+                  ),
+                ],
               ),
+            ),
             Expanded(
               child: InstructionInboxView(
-                isOutbox: isAdmin && _isShowingOutbox,
+                isOutbox: _isShowingOutbox,
               ),
             ),
           ],
@@ -426,7 +450,7 @@ class _PillButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFF05263E)
@@ -486,7 +510,7 @@ class _IconButton extends StatelessWidget {
       child: Tooltip(
         message: tooltip ?? '',
         child: Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF050E1C) : const Color(0xFFE8F0FA),
             borderRadius: BorderRadius.circular(10),

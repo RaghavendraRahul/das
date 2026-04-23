@@ -253,6 +253,10 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
           
           queryset = super().get_queryset()
           
+          # If searching, bypass the "My" vs "Team" segregation to allow discovery within reachable projects
+          if self.request.query_params.get('search'):
+              return queryset
+
           # Handle 'my projects' filter (where user is creator or assignee)
           if self.request.query_params.get('filter') == 'my':
               user = self.request.user
@@ -302,6 +306,14 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
                   models.Q(assignees__isnull=False) & ~models.Q(assignees__in=[admin_user]) |
                   Exists(other_task_assignee)
               ).distinct()
+
+          start_date = self.request.query_params.get('start_date')
+          end_date = self.request.query_params.get('end_date')
+          
+          if start_date:
+              queryset = queryset.filter(create_date__date__gte=start_date)
+          if end_date:
+              queryset = queryset.filter(create_date__date__lte=end_date)
 
           return queryset
 
@@ -1230,13 +1242,19 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def new_projects(self, request):
-        """Get pending approval requests for new projects"""
+        """Get approval requests for new projects"""
+        status_filter = request.query_params.get('status', 'PENDING')
+        
         approvals = ApprovalRequest.objects.filter(
             reference_type='PROJECT',
-            approval_type='CREATION',
-            status='PENDING'
+            approval_type='CREATION'
         ).select_related('requested_by').order_by('-created_at')
         
+        if status_filter == 'HISTORY':
+            approvals = approvals.filter(status__in=['APPROVED', 'REJECTED'])
+        elif status_filter != 'ALL':
+            approvals = approvals.filter(status=status_filter)
+            
         # Only admins can see all pending requests
         if request.user.role != 'ADMIN':
             approvals = approvals.filter(requested_by=request.user)
@@ -1248,6 +1266,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
                 project = Projects.objects.get(id=approval.reference_id)
                 items.append({
                     'approval_id': approval.id,
+                    'approval_request_status': approval.status,
                     'project_id': project.id,
                     'project_name': project.name,
                     'description': project.description,
@@ -1272,13 +1291,19 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def project_closures(self, request):
-        """Get pending approval requests for project completions"""
+        """Get approval requests for project completions"""
+        status_filter = request.query_params.get('status', 'PENDING')
+        
         approvals = ApprovalRequest.objects.filter(
             reference_type='PROJECT',
-            approval_type='COMPLETION',
-            status='PENDING'
+            approval_type='COMPLETION'
         ).select_related('requested_by').order_by('-created_at')
         
+        if status_filter == 'HISTORY':
+            approvals = approvals.filter(status__in=['APPROVED', 'REJECTED'])
+        elif status_filter != 'ALL':
+            approvals = approvals.filter(status=status_filter)
+            
         if request.user.role != 'ADMIN':
             approvals = approvals.filter(requested_by=request.user)
         
@@ -1288,6 +1313,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
                 project = Projects.objects.get(id=approval.reference_id)
                 items.append({
                     'approval_id': approval.id,
+                    'approval_request_status': approval.status,
                     'project_id': project.id,
                     'project_name': project.name,
                     'description': project.description,
@@ -1311,13 +1337,19 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def new_tasks(self, request):
-        """Get pending approval requests for new tasks"""
+        """Get approval requests for new tasks"""
+        status_filter = request.query_params.get('status', 'PENDING')
+        
         approvals = ApprovalRequest.objects.filter(
             reference_type='TASK',
-            approval_type='CREATION',
-            status='PENDING'
+            approval_type='CREATION'
         ).select_related('requested_by').order_by('-created_at')
         
+        if status_filter == 'HISTORY':
+            approvals = approvals.filter(status__in=['APPROVED', 'REJECTED'])
+        elif status_filter != 'ALL':
+            approvals = approvals.filter(status=status_filter)
+            
         if request.user.role != 'ADMIN':
             approvals = approvals.filter(requested_by=request.user)
         
@@ -1327,6 +1359,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
                 task = Task.objects.get(id=approval.reference_id)
                 items.append({
                     'approval_id': approval.id,
+                    'approval_request_status': approval.status,
                     'task_id': task.id,
                     'task_title': task.title,
                     'project': task.project.name,
@@ -1353,13 +1386,19 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def task_completions(self, request):
-        """Get pending approval requests for task completions"""
+        """Get approval requests for task completions"""
+        status_filter = request.query_params.get('status', 'PENDING')
+        
         approvals = ApprovalRequest.objects.filter(
             reference_type='TASK',
-            approval_type='COMPLETION',
-            status='PENDING'
+            approval_type='COMPLETION'
         ).select_related('requested_by').order_by('-created_at')
         
+        if status_filter == 'HISTORY':
+            approvals = approvals.filter(status__in=['APPROVED', 'REJECTED'])
+        elif status_filter != 'ALL':
+            approvals = approvals.filter(status=status_filter)
+            
         if request.user.role != 'ADMIN':
             approvals = approvals.filter(requested_by=request.user)
         
@@ -1369,6 +1408,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
                 task = Task.objects.get(id=approval.reference_id)
                 items.append({
                     'approval_id': approval.id,
+                    'approval_request_status': approval.status,
                     'task_id': task.id,
                     'task_title': task.title,
                     'project': task.project.name,
@@ -3345,11 +3385,12 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         else:
             queryset = queryset.filter(user=user)
             
-        # Date filtering - always include IN_PROGRESS tasks so they can be stopped
+        # Date filtering - include IN_PROGRESS tasks only if they belong to the same date
+        # This prevents yesterday's unfinished tasks from bleeding into today's activity log
         date_param = self.request.query_params.get('date')
         if date_param:
             queryset = queryset.filter(
-                models.Q(today_plan__plan_date=date_param) | models.Q(status='IN_PROGRESS')
+                models.Q(today_plan__plan_date=date_param)
             )
             
         return queryset
@@ -3363,6 +3404,86 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(active_log)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def rollover_day(self, request):
+        """
+        Day rollover: called when user opens the planner on a new day.
+        - Finds all stale IN_PROGRESS or PENDING ActivityLogs from before today.
+        - Closes them (sets actual_end_time = start of that day + planned duration).
+        - Marks TodayPlan as MOVED_TO_PENDING.
+        - Creates a Pending record so the task appears in the next day's pending list.
+        Returns count of rolled-over items.
+        """
+        from django.utils import timezone as tz
+        try:
+            from zoneinfo import ZoneInfo
+        except ImportError:
+            from backports.zoneinfo import ZoneInfo
+
+        try:
+            kolkata_tz = ZoneInfo('Asia/Kolkata')
+        except Exception:
+            kolkata_tz = tz.get_current_timezone()
+
+        today = tz.now().astimezone(kolkata_tz).date()
+        rolled = 0
+
+        # Find all stale activity logs from BEFORE today that are still IN_PROGRESS
+        stale_logs = ActivityLog.objects.filter(
+            user=request.user,
+            status='IN_PROGRESS',
+            today_plan__plan_date__lt=today,
+        ).select_related('today_plan', 'today_plan__catalog_item')
+
+        for log in stale_logs:
+            plan = log.today_plan
+
+            # Close the activity log
+            end_time = log.actual_start_time + tz.timedelta(
+                minutes=plan.planned_duration_minutes or 60
+            )
+            log.actual_end_time = end_time
+            log.status = 'PENDING'
+            delta = end_time - log.actual_start_time
+            log.minutes_worked = int(delta.total_seconds() / 60)
+            log.hours_worked = round(log.minutes_worked / 60, 2)
+            log.save(update_fields=[
+                'actual_end_time', 'status', 'minutes_worked', 'hours_worked'
+            ])
+
+            # Mark TodayPlan as moved to pending (only if not already done)
+            if plan.status != 'MOVED_TO_PENDING':
+                plan.status = 'MOVED_TO_PENDING'
+                plan.save(update_fields=['status'])
+
+            # Create Pending record (avoid duplicates)
+            already_pending = Pending.objects.filter(
+                user=request.user,
+                today_plan=plan,
+                status='PENDING',
+            ).exists()
+
+            if not already_pending:
+                planned_mins = plan.planned_duration_minutes or 60
+                worked_mins = log.minutes_worked or 0
+                mins_left = max(0, planned_mins - worked_mins)
+                Pending.objects.create(
+                    user=request.user,
+                    today_plan=plan,
+                    activity_log=log,
+                    original_plan_date=plan.plan_date,
+                    minutes_left=mins_left,
+                    extra_minutes=log.extra_minutes or 0,
+                    reason='Auto-rolled from previous day (not completed)',
+                    status='PENDING',
+                )
+                rolled += 1
+
+        return Response({
+            'rolled_over': rolled,
+            'message': f'{rolled} incomplete task(s) moved to pending from previous days.',
+        })
     
     @action(detail=True, methods=['post'])
     def stop(self, request, pk=None):
@@ -3375,16 +3496,15 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         
         activity_log = self.get_object()
         
-        if activity_log.status != 'IN_PROGRESS':
-            return Response(
-                {"error": "This activity is not in progress"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # If not in progress, we treat this as an update/edit rather than a 'stop' click
+        is_edit_mode = activity_log.status != 'IN_PROGRESS'
         
         is_completed = request.data.get('is_completed', False)
+        is_pending_selected = request.data.get('is_pending_selected', False)
         work_notes = request.data.get('work_notes', '')
         minutes_left = request.data.get('minutes_left', 0)
         extra_minutes = request.data.get('extra_minutes') or 0
+        planned_remark = request.data.get('planned_remark')
         
         # Get custom start and end times if provided
         start_time_str = request.data.get('start_time', '').strip()
@@ -3394,7 +3514,6 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         try:
             kolkata_tz = ZoneInfo('Asia/Kolkata')
         except Exception:
-            # Fallback if ZoneInfo fails (e.g. windows without tzdata), use UTC or server time
             kolkata_tz = timezone.get_current_timezone()
 
         current_kolkata_time = timezone.now().astimezone(kolkata_tz)
@@ -3403,7 +3522,6 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         # Update start time if provided
         if start_time_str:
             try:
-                # Try parsing with AM/PM format first, then 24-hour format
                 start_time_obj = None
                 for fmt in ['%I:%M %p', '%H:%M']:
                     try:
@@ -3413,14 +3531,11 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                         continue
                 
                 if start_time_obj:
-                    # Use existing start date in local timezone if available, otherwise use today
-                    # This ensures we use the logical day the user intended
                     if activity_log.actual_start_time:
                         base_date = activity_log.actual_start_time.astimezone(kolkata_tz).date()
                     else:
                         base_date = today_kolkata
                     
-                    # Create timezone-aware datetime
                     res_start_dt = datetime.combine(base_date, start_time_obj).replace(tzinfo=kolkata_tz)
                     activity_log.actual_start_time = res_start_dt
             except (ValueError, TypeError) as e:
@@ -3429,7 +3544,6 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         # Update end time if provided, otherwise use current Kolkata time
         if end_time_str:
             try:
-                # Try parsing with AM/PM format first, then 24-hour format
                 end_time_obj = None
                 for fmt in ['%I:%M %p', '%H:%M']:
                     try:
@@ -3439,30 +3553,39 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                         continue
                 
                 if end_time_obj:
-                    # Use the same base date as start time
                     start_local = activity_log.actual_start_time.astimezone(kolkata_tz)
                     log_date = start_local.date()
-                    
                     res_end_dt = datetime.combine(log_date, end_time_obj).replace(tzinfo=kolkata_tz)
-                    
-                    # If end time is earlier than start time, it means it spanned across midnight
                     if res_end_dt < activity_log.actual_start_time:
                         from datetime import timedelta
                         res_end_dt += timedelta(days=1)
-                        
                     activity_log.actual_end_time = res_end_dt
-                else:
+                elif not is_edit_mode:
                     activity_log.actual_end_time = current_kolkata_time
-            except (ValueError, TypeError) as e:
+            except Exception as e:
                 print(f"Error parsing end time: {e}")
-                activity_log.actual_end_time = current_kolkata_time
-        else:
+                if not is_edit_mode:
+                    activity_log.actual_end_time = current_kolkata_time
+        elif not is_edit_mode:
             activity_log.actual_end_time = current_kolkata_time
+        
+        # Fetching activity_log again to ensure we have fresh instance if needed, 
+        # though self.get_object() is fine.
         
         # Update activity log
         activity_log.work_notes = work_notes
         activity_log.is_task_completed = is_completed
-        activity_log.status = 'COMPLETED' if is_completed else 'PENDING'
+        
+        if is_completed:
+            activity_log.status = 'COMPLETED'
+        elif is_pending_selected:
+            activity_log.status = 'PENDING'
+        else:
+            # If manually updating without finishing or moving to pending, 
+            # we keep the session record as COMPLETED so it shows up in log,
+            # but we don't necessarily move the whole task plan to completed.
+            activity_log.status = 'COMPLETED'
+            
         activity_log.extra_minutes = extra_minutes
         activity_log.calculate_time_worked()
         activity_log.save()
@@ -3470,16 +3593,15 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         # Update today's plan
         today_plan = activity_log.today_plan
         
+        if planned_remark is not None:
+            today_plan.notes = planned_remark
+            
         if is_completed:
             today_plan.status = 'COMPLETED'
-            today_plan.save()
-            
-            return Response({
-                "message": "Task completed successfully!",
-                "activity_log": ActivityLogSerializer(activity_log).data
-            })
-        else:
-            # Move to pending
+            # Cleanup pending if any
+            Pending.objects.filter(today_plan=today_plan, user=request.user).delete()
+        elif is_pending_selected:
+            today_plan.status = 'MOVED_TO_PENDING'
             reason = request.data.get('reason', 'Task not completed in time')
             
             pending_task = Pending.objects.create(
@@ -3489,16 +3611,27 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                 original_plan_date=today_plan.plan_date,
                 minutes_left=minutes_left,
                 extra_minutes=extra_minutes,
-                reason=reason
+                reason=reason,
+                work_notes=work_notes
             )
             
-            today_plan.status = 'MOVED_TO_PENDING'
-            today_plan.save()
+        today_plan.save()
             
+        if is_completed:
             return Response({
-                "message": "Task moved to pending. Please replan or complete it later.",
+                "message": "Task completed successfully!",
+                "activity_log": ActivityLogSerializer(activity_log).data
+            })
+        elif is_pending_selected:
+            return Response({
+                "message": "Task moved to pending.",
                 "activity_log": ActivityLogSerializer(activity_log).data,
                 "pending": PendingSerializer(pending_task).data
+            })
+        else:
+            return Response({
+                "message": "Activity log updated.",
+                "activity_log": ActivityLogSerializer(activity_log).data
             })
     
     @action(detail=False, methods=['post'], url_path='bulk-stop')
@@ -3518,6 +3651,7 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         work_notes = request.data.get('work_notes', '')
         minutes_left = request.data.get('minutes_left', 0)
         extra_minutes = request.data.get('extra_minutes') or 0
+        planned_remark = request.data.get('planned_remark')
         
         # Debug logging
         print(f'[BULK-STOP] Request data: today_plan_id={today_plan_id}, date={date_str}, is_completed={is_completed}, is_pending={is_pending_selected}')
@@ -3652,21 +3786,62 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                     activity_log.status = 'COMPLETED'
                 elif is_pending_selected:
                     activity_log.status = 'PENDING'
-                # else: keep current status (probably IN_PROGRESS or already PENDING)
+                
                 activity_log.save()
                 print(f'[BULK-STOP] Saved log ID {activity_log.id}: new_status={activity_log.status}, completed={is_completed}, pending_selected={is_pending_selected}')
                 
                 total_minutes_worked += activity_log.minutes_worked
             
-            # Calculate aggregated totals
-            total_hours_worked = round(total_minutes_worked / 60, 2)
+            # --- CUMULATIVE SYNC LOGIC ---
+            # Fetch ALL logs for this plan to handle synchronization and cumulative calculation
+            all_logs_for_plan = ActivityLog.objects.filter(
+                today_plan=today_plan,
+                user=request.user
+            )
             
-            # Update today's plan status based on selection
+            # Calculate total cumulative minutes worked across all sessions
+            total_cumulative_minutes = sum(log.minutes_worked for log in all_logs_for_plan)
+            planned_duration = today_plan.planned_duration_minutes or 0
+            
+            # Auto-calculate extra minutes if we exceeded the plan
+            calculated_extra_minutes = max(0, total_cumulative_minutes - planned_duration)
+            
+            # Prioritize manual extra_minutes over total calculated value if manual was provided
+            final_extra_minutes = extra_minutes if extra_minutes > 0 else calculated_extra_minutes
+            
+            # Update tomorrow's plan or sync statuses
             if is_completed:
-                # User explicitly completed the task
+                # Synchronize status across all related logs
+                all_logs_for_plan.update(
+                    status='COMPLETED',
+                    is_task_completed=True
+                )
+                
+                # Update today's plan status and notes
+                if planned_remark is not None:
+                    today_plan.notes = planned_remark
                 today_plan.status = 'COMPLETED'
                 today_plan.save()
+
+                # Remove from Pending table if it was there
+                Pending.objects.filter(
+                    today_plan=today_plan,
+                    user=request.user
+                ).delete()
+                
+                # Apply the calculated extra minutes to the current logs being stopped
+
+                for log in activity_logs:
+                    log.extra_minutes = final_extra_minutes
+                    log.save()
+                    
             elif is_pending_selected:
+                # Synchronize status across all related logs
+                all_logs_for_plan.update(
+                    status='PENDING',
+                    is_task_completed=False
+                )
+                
                 # User explicitly marked as pending
                 existing_pending = Pending.objects.filter(
                     today_plan=today_plan,
@@ -3674,23 +3849,56 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                     created_at__date=today_kolkata
                 ).first()
                 
+                # Update extra minutes for current sessions
+                if final_extra_minutes > 0:
+                    for log in activity_logs:
+                        log.extra_minutes = final_extra_minutes
+                        log.save()
+
                 if not existing_pending:
-                    # Create a new pending entry (only ONE per task per day)
+                    # Create a new pending entry
                     Pending.objects.create(
                         today_plan=today_plan,
                         user=request.user,
                         minutes_left=minutes_left or 0,
-                        extra_minutes=extra_minutes,
+                        extra_minutes=final_extra_minutes,
                         original_plan_date=today_plan.plan_date,
-                        reason='Task moved to pending'
+                        reason='Task moved to pending',
+                        work_notes=work_notes # Sync work notes
                     )
                 
-                today_plan.status = 'MOVED_TO_PENDING'
-                today_plan.save()
+                # Also update today_plan notes if provided
+                if planned_remark is not None:
+                    today_plan.notes = planned_remark
+                    today_plan.save()
+                else:
+                    # Update existing pending entry
+                    existing_pending.extra_minutes = calculated_extra_minutes
+                    if minutes_left is not None:
+                        existing_pending.minutes_left = minutes_left
+                    existing_pending.save()
+                
+                # Safety rollback: Ensure TodayPlan stays in an active state
+                # even if it was previously marked as COMPLETED.
+                if today_plan.status == 'COMPLETED':
+                    today_plan.status = 'IN_ACTIVITY'
+                    today_plan.save()
+
+                
+
+                # We no longer set today_plan.status = 'MOVED_TO_PENDING' here
+                # to ensure it stays visible in the Today's Plan quadrants.
+                # The Pending record created above handles display in the Pending list.
+                # today_plan.status = 'MOVED_TO_PENDING' 
+                # today_plan.save()
+
             else:
-                # User just saved times without selecting completion or pending
-                # Keep the task in its current status (IN_PROGRESS or last state)
-                pass
+                # Just saving times without completion/pending selection
+                if calculated_extra_minutes > 0:
+                    for log in activity_logs:
+                        log.extra_minutes = calculated_extra_minutes
+                        log.save()
+
         
         return Response({
             "message": f"Updated {activity_logs.count()} activity logs",
@@ -4012,17 +4220,58 @@ class DashboardViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['get'])
     def statistics(self, request):
-        """Get dashboard statistics for cards"""
+        """Get dashboard statistics for cards with filtering support"""
         user = request.user
+        filter_param = request.query_params.get('filter', 'my')
+        target_user_id = request.query_params.get('user_id')
+        search_query = request.query_params.get('search', '')
         
-        # PROJECT PORTFOLIO
-        if not user or not user.is_authenticated or user.role == 'ADMIN':
-            projects = Projects.objects.all()
-        else:
-            projects = Projects.objects.filter(
-                models.Q(created_by=user) | 
-                models.Q(project_lead=user) | 
-                models.Q(handled_by=user)
+        # Determine the target user for stats
+        target_user = user
+        if user.is_authenticated and user.role == 'ADMIN' and target_user_id:
+            try:
+                # Use string ID check for compatibility
+                target_user = User.objects.get(id=target_user_id)
+            except:
+                pass
+
+        # 1. FETCH PROJECTS based on filter (Sync with ProjectViewSet logic)
+        projects = Projects.objects.all()
+
+        if search_query:
+            projects = projects.filter(
+                models.Q(name__icontains=search_query) |
+                models.Q(description__icontains=search_query)
+            )
+        
+        if filter_param == 'my':
+            # Role-based project filtering (Exact match of ProjectViewSet.get_queryset)
+            if target_user.role == 'ADMIN':
+                projects = projects.filter(
+                    models.Q(assignees=target_user) |
+                    models.Q(project_lead=target_user) | 
+                    models.Q(tasks__assignees__user=target_user)
+                ).distinct()
+            else:
+                projects = projects.filter(
+                    models.Q(created_by=target_user) | 
+                    models.Q(assignees=target_user) |
+                    models.Q(project_lead=target_user) | 
+                    models.Q(handled_by=target_user) |
+                    models.Q(tasks__assignees__user=target_user)
+                ).distinct()
+        elif filter_param == 'team' and target_user.role == 'ADMIN':
+            # "Team Projects" logic from ProjectViewSet:
+            # Show projects that have at least ONE other user involved (non-admin)
+            from .models import TaskAssignee as _TaskAssignee
+            from django.db.models import Exists, OuterRef
+            other_task_assignee = _TaskAssignee.objects.filter(
+                task__project=OuterRef('pk')
+            ).exclude(user=target_user)
+            
+            projects = projects.filter(
+                models.Q(assignees__isnull=False) & ~models.Q(assignees__in=[target_user]) |
+                Exists(other_task_assignee)
             ).distinct()
         
         project_stats = {
@@ -4031,7 +4280,7 @@ class DashboardViewSet(viewsets.GenericViewSet):
             'done': projects.filter(status='COMPLETED').count()
         }
         
-        # TIMELINE HEALTH
+        # 2. TIMELINE HEALTH
         today = timezone.now().date()
         timeline_stats = {
             'total': projects.count(),
@@ -4039,29 +4288,29 @@ class DashboardViewSet(viewsets.GenericViewSet):
             'overdue': projects.filter(due_date__lt=today, status__in=['ACTIVE', 'ON HOLD']).count()
         }
         
-        # TASK EFFICIENCY
-        if not user or not user.is_authenticated or user.role == 'ADMIN':
-            tasks = Task.objects.all()
-        else:
-            tasks = Task.objects.filter(
-                models.Q(assignees__user=user) | 
-                models.Q(project__created_by=user)
-            ).distinct()
-        
+        # 3. TASK EFFICIENCY
+        # Filter tasks relevant to the selected projects
+        tasks = Task.objects.filter(project__in=projects)
+        if filter_param == 'my':
+             # If personal view, restrict tasks exactly to target_user
+             tasks = tasks.filter(assignees__user=target_user).distinct()
+             
         task_stats = {
             'total': tasks.count(),
             'completed': tasks.filter(status='DONE').count(),
-            'pending': tasks.filter(status='PENDING').count()
+            'pending': tasks.filter(status__in=['PENDING', 'IN_PROGRESS', 'PENDING_APPROVAL']).count()
         }
         
-        # CRITICAL ATTENTION
-        critical_tasks = tasks.filter(priority='CRITICAL').count()
-        rejected_approvals = ApprovalRequest.objects.filter(status='REJECTED').count()
+        # 4. CRITICAL ATTENTION
+        # Align with frontend logic: Priority Critical + Rejected Projects/Tasks
+        # Only count tasks that are NOT DONE and projects that are NOT COMPLETED
+        critical_tasks = tasks.filter(priority='CRITICAL').exclude(status='DONE').exclude(project__status='COMPLETED').count()
+        rejected_projects = projects.filter(approval_status='REJECTED').exclude(status='COMPLETED').count()
         
         critical_stats = {
-            'total': critical_tasks + rejected_approvals,
+            'total': critical_tasks + rejected_projects,
             'critical': critical_tasks,
-            'rejected': rejected_approvals
+            'rejected': rejected_projects
         }
         
         return Response({
@@ -5874,26 +6123,30 @@ class ProjectCompletionLineChartViewSet(viewsets.ViewSet):
             # Admin sees all projects
             pass
         elif user.role == 'MANAGER':
-            # Manager sees projects where they or their subordinates are involved
+            # Manager sees projects where they or their subordinates are involved (including as assignees)
             subordinates = user.get_all_subordinates()
             queryset = queryset.filter(
                 Q(project_lead=user) |
                 Q(handled_by=user) |
                 Q(created_by=user) |
+                Q(assignees=user) |
                 Q(project_lead__in=subordinates) |
                 Q(handled_by__in=subordinates) |
-                Q(created_by__in=subordinates)
+                Q(created_by__in=subordinates) |
+                Q(assignees__in=subordinates)
             ).distinct()
         elif user.role == 'TEAMLEAD':
-            # Team Lead sees projects for their team members
+            # Team Lead sees projects for their team members (including as assignees)
             team_members = user.get_team_members()
             queryset = queryset.filter(
                 Q(project_lead=user) |
                 Q(handled_by=user) |
                 Q(created_by=user) |
+                Q(assignees=user) |
                 Q(project_lead__in=team_members) |
                 Q(handled_by__in=team_members) |
-                Q(created_by__in=team_members)
+                Q(created_by__in=team_members) |
+                Q(assignees__in=team_members)
             ).distinct()
         else:  # EMPLOYEE
             # Employee sees only their own projects
@@ -6047,8 +6300,10 @@ class TaskCompletionLineChartViewSet(viewsets.ViewSet):
             queryset = queryset.filter(
                 Q(project__project_lead=user) |
                 Q(assignees__user=user) |
+                Q(project__created_by=user) |
                 Q(project__project_lead__in=subordinates) |
-                Q(assignees__user__in=subordinates)
+                Q(assignees__user__in=subordinates) |
+                Q(project__created_by__in=subordinates)
             ).distinct()
         elif user.role == 'TEAMLEAD':
             # Team Lead sees tasks for their team members
@@ -6056,8 +6311,10 @@ class TaskCompletionLineChartViewSet(viewsets.ViewSet):
             queryset = queryset.filter(
                 Q(project__project_lead=user) |
                 Q(assignees__user=user) |
+                Q(project__created_by=user) |
                 Q(project__project_lead__in=team_members) |
-                Q(assignees__user__in=team_members)
+                Q(assignees__user__in=team_members) |
+                Q(project__created_by__in=team_members)
             ).distinct()
         else:  # EMPLOYEE
             # Employee sees only their own tasks

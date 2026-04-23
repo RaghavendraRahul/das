@@ -35,15 +35,34 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Daily Execution Analytics',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
-                  letterSpacing: -0.5,
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF05263E).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF05263E).withValues(alpha: 0.1)),
+                    ),
+                    child: Icon(
+                      Icons.analytics_outlined,
+                      size: 18,
+                      color: isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Daily Execution Analytics',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF05263E),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
               ),
+              const Spacer(),
               // Date Picker Icon
               InkWell(
                 onTap: () async {
@@ -73,12 +92,12 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                   decoration: BoxDecoration(
                     color: isToday 
                         ? Colors.transparent 
-                        : const Color(0xFF05263E).withOpacity(0.08),
+                        : const Color(0xFF05263E).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isToday 
                           ? (isDark ? Colors.white12 : Colors.grey.shade200)
-                          : const Color(0xFF05263E).withOpacity(0.2),
+                          : const Color(0xFF05263E).withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
@@ -88,7 +107,7 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                         size: 16,
                         color: isToday 
                             ? (isDark ? Colors.white54 : const Color(0xFF05263E))
-                            : const Color(0xFF05263E),
+                            : (isDark ? Colors.white70 : const Color(0xFF05263E)),
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -97,8 +116,8 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: isToday 
-                            ? (isDark ? Colors.white54 : const Color(0xFF05263E))
-                            : const Color(0xFF05263E),
+                            ? (isDark ? Colors.white70 : const Color(0xFF05263E))
+                            : (isDark ? Colors.white : const Color(0xFF05263E)),
                         ),
                       ),
                       if (!isToday) ...[
@@ -196,10 +215,10 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                   alignment: Alignment.center,
                   children: [
                     Tooltip(
-                      message: 'Completed (Completion Rate)',
+                      message: 'Completed',
                       child: _AnimatedRing(
                         radius: 170,
-                        color: const Color(0xFF05263E), // Brand Blue
+                        color: const Color(0xFF4FD1C5), // Achieved - Teal
                         value: completionRatio,
                         strokeWidth: 15,
                       ),
@@ -208,16 +227,16 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                       message: 'Planned Work',
                       child: _AnimatedRing(
                         radius: 130,
-                        color: const Color(0xFF1E88E5), // Medium Blue
+                        color: const Color(0xFF4299E1), // Planned - Blue
                         value: plannedRatio,
                         strokeWidth: 15,
                       ),
                     ),
                     Tooltip(
-                      message: 'Unplanned Work',
+                      message: 'Unplanned',
                       child: _AnimatedRing(
                         radius: 90,
-                        color: const Color(0xFF64B5F6), // Light Blue
+                        color: const Color(0xFF9F7AEA), // Remaining - Purple
                         value: unplannedRatio,
                         strokeWidth: 15,
                       ),
@@ -239,7 +258,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _LegendRow(
-                      color: const Color(0xFF05263E),
+                      color: const Color(0xFF4FD1C5),
                       title: 'Completed',
                       subtitle: 'vs Planned Daily Goal',
                       value: '$completedTasks / $plannedTasks',
@@ -249,7 +268,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                     ),
                     const SizedBox(height: 12),
                     _LegendRow(
-                      color: const Color(0xFF1E88E5),
+                      color: const Color(0xFF4299E1),
                       title: 'Planned Work',
                       subtitle: "Added to Today's Plan",
                       value: '$plannedTasks tasks',
@@ -259,7 +278,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                     ),
                     const SizedBox(height: 12),
                     _LegendRow(
-                      color: const Color(0xFF64B5F6),
+                      color: const Color(0xFF9F7AEA),
                       title: 'Unplanned',
                       subtitle: 'Dragged into Activity',
                       value: '$unplannedTasks tasks',
@@ -313,7 +332,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
             flex: 5,
             child: Container(
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.02),
+                color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isDark ? Colors.white10 : Colors.black12,
@@ -325,7 +344,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                         'Tap a legend to view related tasks',
                         style: TextStyle(
                           fontStyle: FontStyle.italic,
-                          color: isDark ? Colors.white54 : Colors.black54,
+                          color: isDark ? Colors.white70 : Colors.black54,
                         ),
                       ),
                     )
@@ -334,7 +353,7 @@ class _ActivityRingsBodyState extends State<_ActivityRingsBody> {
                           child: Text(
                             'No tasks in this category',
                             style: TextStyle(
-                              color: isDark ? Colors.white54 : Colors.black54,
+                              color: isDark ? Colors.white70 : Colors.black54,
                             ),
                           ),
                         )
@@ -420,7 +439,7 @@ class _AnimatedRing extends StatelessWidget {
             CircularProgressIndicator(
               value: 1.0,
               strokeWidth: strokeWidth,
-              color: isDark ? color.withOpacity(0.15) : color.withOpacity(0.1),
+              color: isDark ? color.withValues(alpha: 0.15) : color.withValues(alpha: 0.1),
             ),
             // Foreground animated fill
             TweenAnimationBuilder<double>(
@@ -471,11 +490,11 @@ class _LegendRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected 
-              ? color.withOpacity(isDark ? 0.2 : 0.1) 
+              ? color.withValues(alpha: isDark ? 0.2 : 0.1) 
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? color.withOpacity(0.5) : Colors.transparent,
+            color: isSelected ? color.withValues(alpha: 0.5) : Colors.transparent,
           ),
         ),
         child: Row(
@@ -490,7 +509,7 @@ class _LegendRow extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(0.4),
+                    color: color.withValues(alpha: 0.4),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   )

@@ -38,7 +38,7 @@ final currentProjectProvider =
 );
 
 typedef CurrentProjectRef = AutoDisposeFutureProviderRef<ProjectWithTasks?>;
-String _$projectsWithTasksHash() => r'896ba85ef71ba8f5fdcf374f3b00fcb6a4977666';
+String _$projectsWithTasksHash() => r'4b511cb90f85a7b6ceaac1c0920c042ab81ac592';
 
 /// All projects with tasks for Activity Catalog
 /// Uses apiTasksProvider which already returns tasks WITH subtasks (via TaskSerializer)
