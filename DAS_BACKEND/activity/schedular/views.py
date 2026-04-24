@@ -3029,32 +3029,49 @@ class TodayPlanViewSet(viewsets.ModelViewSet):
                     # Use estimated hours from catalog
                     planned_duration_minutes = int(float(catalog_item.estimated_hours) * 60)
             
-            # Generate default scheduled times if not provided
-            if not scheduled_start_time or not scheduled_end_time:
-                now = timezone.now()
-                if last_plan and last_plan.scheduled_end_time:
-                    start_dt = datetime.combine(now.date(), last_plan.scheduled_end_time)
-                else:
-                    start_dt = now.replace(minute=0, second=0, microsecond=0)
-                    if now.minute > 0:
-                        start_dt = start_dt + timedelta(hours=1)
-                
-                end_dt = start_dt + timedelta(minutes=planned_duration_minutes)
-                scheduled_start_time = start_dt.time()
-                scheduled_end_time = end_dt.time()
-            
-            today_plan = TodayPlan.objects.create(
+            # Check if this catalog item is already in today's plan
+            today_plan = TodayPlan.objects.filter(
                 user=user,
                 catalog_item=catalog_item,
-                plan_date=plan_date,
-                scheduled_start_time=scheduled_start_time,
-                scheduled_end_time=scheduled_end_time,
-                planned_duration_minutes=planned_duration_minutes,
-                quadrant=quadrant,
-                order_index=order_index,
-                notes=request.data.get('notes', ''),
-                is_unplanned=is_unplanned
-            )
+                plan_date=plan_date
+            ).first()
+
+            if today_plan:
+                # Reuse existing plan, but maybe update notes or duration if needed
+                today_plan.is_unplanned = is_unplanned
+                if request.data.get('notes'):
+                    today_plan.notes = request.data.get('notes')
+                # If it was completed, we might want to move it back to IN_ACTIVITY since it's being worked on again
+                if today_plan.status == 'COMPLETED':
+                    today_plan.status = 'IN_ACTIVITY'
+                today_plan.save()
+            else:
+                # Generate default scheduled times if not provided
+                if not scheduled_start_time or not scheduled_end_time:
+                    now = timezone.now()
+                    if last_plan and last_plan.scheduled_end_time:
+                        start_dt = datetime.combine(now.date(), last_plan.scheduled_end_time)
+                    else:
+                        start_dt = now.replace(minute=0, second=0, microsecond=0)
+                        if now.minute > 0:
+                            start_dt = start_dt + timedelta(hours=1)
+                    
+                    end_dt = start_dt + timedelta(minutes=planned_duration_minutes)
+                    scheduled_start_time = start_dt.time()
+                    scheduled_end_time = end_dt.time()
+                
+                today_plan = TodayPlan.objects.create(
+                    user=user,
+                    catalog_item=catalog_item,
+                    plan_date=plan_date,
+                    scheduled_start_time=scheduled_start_time,
+                    scheduled_end_time=scheduled_end_time,
+                    planned_duration_minutes=planned_duration_minutes,
+                    quadrant=quadrant,
+                    order_index=order_index,
+                    notes=request.data.get('notes', ''),
+                    is_unplanned=is_unplanned
+                )
         
         return Response({
             "message": f"{item_type.title()} item added to today's plan successfully",
@@ -3395,6 +3412,12 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
             
         return queryset
     
+    def perform_create(self, serializer):
+        """Save user on activity log creation. No auto-stopping of siblings —
+        the bulk_stop action is the authoritative place for that logic."""
+        user = self.request.user
+        serializer.save(user=user, extra_minutes=0)
+
     @action(detail=False, methods=['get'])
     def active(self, request):
         """Get currently active activity log"""
@@ -3590,326 +3613,360 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         activity_log.calculate_time_worked()
         activity_log.save()
         
-        # Update today's plan
+        # --- TASK-LEVEL SYNCHRONIZATION LOGIC ---
         today_plan = activity_log.today_plan
+        catalog_item_id = today_plan.catalog_item_id
+        task_id = today_plan.catalog_item.task_id if (today_plan.catalog_item and today_plan.catalog_item.task) else None
         
-        if planned_remark is not None:
-            today_plan.notes = planned_remark
-            
-        if is_completed:
-            today_plan.status = 'COMPLETED'
-            # Cleanup pending if any
-            Pending.objects.filter(today_plan=today_plan, user=request.user).delete()
-        elif is_pending_selected:
-            today_plan.status = 'MOVED_TO_PENDING'
-            reason = request.data.get('reason', 'Task not completed in time')
-            
-            pending_task = Pending.objects.create(
+        # Find all sibling plans (same task/item, same user, same day)
+        if task_id:
+            sibling_plans = TodayPlan.objects.filter(
                 user=request.user,
-                today_plan=today_plan,
-                activity_log=activity_log,
-                original_plan_date=today_plan.plan_date,
-                minutes_left=minutes_left,
-                extra_minutes=extra_minutes,
-                reason=reason,
-                work_notes=work_notes
+                catalog_item__task_id=task_id,
+                plan_date=today_plan.plan_date
+            )
+        elif catalog_item_id:
+            # For Routines, Courses, Calls, etc. (Non-task catalog items)
+            sibling_plans = TodayPlan.objects.filter(
+                user=request.user,
+                catalog_item_id=catalog_item_id,
+                plan_date=today_plan.plan_date
+            )
+        else:
+            # Fallback for custom tasks (match by title)
+            sibling_plans = TodayPlan.objects.filter(
+                user=request.user,
+                custom_title=today_plan.custom_title,
+                plan_date=today_plan.plan_date
             )
             
-        today_plan.save()
+        # 1. Synchronize Status Across All Sibling Plans and Logs
+        if is_completed:
+            sibling_plans.update(status='COMPLETED')
+            ActivityLog.objects.filter(today_plan__in=sibling_plans).update(
+                status='COMPLETED', 
+                is_task_completed=True
+            )
+            # Update the Master Task itself
+            if task_id:
+                from .models import Task
+                Task.objects.filter(id=task_id).update(
+                    status='DONE', 
+                    completed_at=today_kolkata
+                )
+        elif is_pending_selected:
+            sibling_plans.update(status='MOVED_TO_PENDING')
+            ActivityLog.objects.filter(today_plan__in=sibling_plans).update(
+                status='PENDING', 
+                is_task_completed=False
+            )
+
+        # 2. Cumulative Time & Extra Hours Calculation (Only for Completed/Pending)
+        all_related_logs = ActivityLog.objects.filter(today_plan__in=sibling_plans)
+        total_minutes_today = sum(log.minutes_worked for log in all_related_logs)
+        total_planned_minutes = sum(p.planned_duration_minutes or 0 for p in sibling_plans)
+        
+        # Only update extra_minutes if the current session is finishing
+        if (is_completed or is_pending_selected) and total_minutes_today > total_planned_minutes:
+            cumulative_extra = total_minutes_today - total_planned_minutes
+            activity_log.extra_minutes = cumulative_extra
+            activity_log.save(update_fields=['extra_minutes'])
+
+        # 3. Handle Pending Record (De-duplicated)
+        pending_task = None
+        if is_pending_selected:
+            reason = request.data.get('reason', 'Task not completed in time')
+            # Ensure only one pending entry exists for this specific task today
+            pending_task, created = Pending.objects.get_or_create(
+                user=request.user,
+                today_plan=today_plan, # Link to primary plan instance
+                defaults={
+                    'activity_log': activity_log,
+                    'original_plan_date': today_plan.plan_date,
+                    'minutes_left': minutes_left,
+                    'extra_minutes': activity_log.extra_minutes,
+                    'reason': reason,
+                    'work_notes': work_notes,
+                    'status': 'PENDING'
+                }
+            )
+            if not created:
+                # Update existing pending record if needed
+                pending_task.minutes_left = minutes_left
+                pending_task.work_notes = work_notes
+                pending_task.save()
+        elif is_completed:
+            # Cleanup pending if any siblings exist
+            Pending.objects.filter(today_plan__in=sibling_plans, user=request.user).delete()
             
         if is_completed:
             return Response({
-                "message": "Task completed successfully!",
+                "message": "Task and all related sessions completed successfully!",
                 "activity_log": ActivityLogSerializer(activity_log).data
             })
         elif is_pending_selected:
             return Response({
-                "message": "Task moved to pending.",
+                "message": "Task moved to pending (synchronized).",
                 "activity_log": ActivityLogSerializer(activity_log).data,
-                "pending": PendingSerializer(pending_task).data
+                "pending": PendingSerializer(pending_task).data if pending_task else None
             })
         else:
             return Response({
                 "message": "Activity log updated.",
                 "activity_log": ActivityLogSerializer(activity_log).data
             })
+
     
     @action(detail=False, methods=['post'], url_path='bulk-stop')
     def bulk_stop(self, request):
-        '''Stop all activity logs for the same task on the same day with synchronized status'''
+        """
+        Core "drag-at-the-end" workflow handler.
+
+        Every time a user drags a task/catalog item to the Activity Log, this
+        creates a NEW, distinct session record. Old sessions are NEVER deleted or
+        overwritten. When the user marks a task as Completed or Still Pending,
+        that status is propagated to ALL sessions for that task today.
+
+        Payload:
+          today_plan_id  - ID of the TodayPlan entry
+          date           - Plan date string (YYYY-MM-DD)
+          start_time     - Session start time (HH:MM)
+          end_time       - Session end time (HH:MM)
+          is_completed   - bool: mark task as fully done
+          is_pending_selected - bool: mark task as still pending
+          work_notes     - Achieved remarks for this session
+          planned_remark - Update to the plan's notes field
+          minutes_left   - Minutes remaining (for pending)
+          extra_minutes  - Manual override for extra time
+        """
         from datetime import datetime, timedelta
         try:
             from zoneinfo import ZoneInfo
         except ImportError:
             from backports.zoneinfo import ZoneInfo
-        
-        # Get input parameters
-        today_plan_id = request.data.get('today_plan_id')
-        date_str = request.data.get('date')  # e.g., '2026-04-16'
-        is_completed = request.data.get('is_completed', False)
-        is_pending_selected = request.data.get('is_pending_selected', False)
-        work_notes = request.data.get('work_notes', '')
-        minutes_left = request.data.get('minutes_left', 0)
-        extra_minutes = request.data.get('extra_minutes') or 0
-        planned_remark = request.data.get('planned_remark')
-        
-        # Debug logging
-        print(f'[BULK-STOP] Request data: today_plan_id={today_plan_id}, date={date_str}, is_completed={is_completed}, is_pending={is_pending_selected}')
-        
-        # Get custom start and end times if provided
-        start_time_str = request.data.get('start_time', '').strip()
-        end_time_str = request.data.get('end_time', '').strip()
-        
+
+        # ── 1. Parse inputs ──────────────────────────────────────────────────
+        today_plan_id       = request.data.get('today_plan_id')
+        date_str            = request.data.get('date', '')
+        is_completed        = bool(request.data.get('is_completed', False))
+        is_pending_selected = bool(request.data.get('is_pending_selected', False))
+        work_notes          = request.data.get('work_notes', '')
+        minutes_left        = int(request.data.get('minutes_left') or 0)
+        extra_minutes_input = int(request.data.get('extra_minutes') or 0)
+        planned_remark      = request.data.get('planned_remark')
+        start_time_str      = (request.data.get('start_time') or '').strip()
+        end_time_str        = (request.data.get('end_time') or '').strip()
+
+        print(f'[BULK-STOP] today_plan_id={today_plan_id} date={date_str} '
+              f'completed={is_completed} pending={is_pending_selected} '
+              f'start={start_time_str} end={end_time_str}')
+
         if not today_plan_id or not date_str:
-            error_msg = f"Missing required params: today_plan_id={today_plan_id}, date={date_str}"
-            print(f'[BULK-STOP] ERROR: {error_msg}')
             return Response(
-                {"error": error_msg},
+                {'error': f'Missing required params: today_plan_id={today_plan_id}, date={date_str}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Try to get the plan
+
+        # ── 2. Fetch the TodayPlan ───────────────────────────────────────────
         try:
             today_plan = TodayPlan.objects.get(id=today_plan_id)
-            print(f'[BULK-STOP] Found TodayPlan: {today_plan}')
         except TodayPlan.DoesNotExist:
-            error_msg = f"Today plan with id={today_plan_id} not found"
-            print(f'[BULK-STOP] ERROR: {error_msg}')
             return Response(
-                {"error": error_msg},
+                {'error': f'TodayPlan id={today_plan_id} not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
-        # Find ALL activity logs for this plan with IN_PROGRESS status
-        activity_logs = ActivityLog.objects.filter(
-            today_plan=today_plan,
-            status='IN_PROGRESS'
-        )
-        
-        print(f'[BULK-STOP] Found {activity_logs.count()} IN_PROGRESS logs for plan {today_plan_id}')
-        
-        if not activity_logs.exists():
-            print(f'[BULK-STOP] No in-progress activities found for plan {today_plan_id}. Creating a new manual log entry.')
-            # Create a new activity log entry for this plan and user
-            ActivityLog.objects.create(
-                user=request.user,
-                today_plan=today_plan,
-                status='IN_PROGRESS',
-                actual_start_time=timezone.now()
-            )
-            # Re-fetch the activity_logs queryset
-            activity_logs = ActivityLog.objects.filter(
-                today_plan=today_plan,
-                status='IN_PROGRESS'
-            )
-        
-        # Define timezone
+
+        # ── 3. Timezone setup ────────────────────────────────────────────────
         try:
             kolkata_tz = ZoneInfo('Asia/Kolkata')
         except Exception:
             kolkata_tz = timezone.get_current_timezone()
-        
-        current_kolkata_time = timezone.now().astimezone(kolkata_tz)
-        today_kolkata = current_kolkata_time.date()
-        
-        # Calculate total times
-        total_minutes_worked = 0
-        total_hours_worked = 0.0
-        
+
+        now_kolkata   = timezone.now().astimezone(kolkata_tz)
+        today_kolkata = now_kolkata.date()
+
+        # ── 4. Parse start / end times ───────────────────────────────────────
+        def _parse_time(time_str):
+            """Parse HH:MM or H:MM AM/PM → time object or None."""
+            if not time_str:
+                return None
+            for fmt in ['%H:%M', '%I:%M %p', '%I:%M%p']:
+                try:
+                    return datetime.strptime(time_str, fmt).time()
+                except ValueError:
+                    continue
+            return None
+
+        start_time_obj = _parse_time(start_time_str)
+        end_time_obj   = _parse_time(end_time_str)
+
+        # Build aware datetimes
+        if start_time_obj:
+            session_start = datetime.combine(today_kolkata, start_time_obj).replace(tzinfo=kolkata_tz)
+        else:
+            session_start = now_kolkata  # fallback: now
+
+        if end_time_obj:
+            session_end = datetime.combine(today_kolkata, end_time_obj).replace(tzinfo=kolkata_tz)
+            # Handle crossing midnight
+            if session_end < session_start:
+                session_end += timedelta(days=1)
+        else:
+            session_end = now_kolkata  # fallback: now
+
+        # ── 5. Calculate minutes worked for this session ─────────────────────
+        delta_minutes = max(0, int((session_end - session_start).total_seconds() / 60))
+        delta_hours   = round(delta_minutes / 60, 2)
+
+        # ── 6. Find all sibling plans (same catalog / task / title, same day) ─
+        catalog_item_id = today_plan.catalog_item_id
+        task_id = (
+            today_plan.catalog_item.task_id
+            if (today_plan.catalog_item and today_plan.catalog_item.task)
+            else None
+        )
+
+        if task_id:
+            sibling_plans = TodayPlan.objects.filter(
+                user=request.user,
+                catalog_item__task_id=task_id,
+                plan_date=today_plan.plan_date
+            )
+        elif catalog_item_id:
+            sibling_plans = TodayPlan.objects.filter(
+                user=request.user,
+                catalog_item_id=catalog_item_id,
+                plan_date=today_plan.plan_date
+            )
+        else:
+            sibling_plans = TodayPlan.objects.filter(
+                user=request.user,
+                custom_title=today_plan.custom_title,
+                plan_date=today_plan.plan_date
+            )
+
+        print(f'[BULK-STOP] Found {sibling_plans.count()} sibling plans')
+
         with transaction.atomic():
-            for activity_log in activity_logs:
-                print(f'[BULK-STOP] Processing log ID {activity_log.id}: current_status={activity_log.status}')
-                
-                # Update start time if provided
-                if start_time_str:
-                    try:
-                        start_time_obj = None
-                        for fmt in ['%I:%M %p', '%H:%M']:
-                            try:
-                                start_time_obj = datetime.strptime(start_time_str, fmt).time()
-                                break
-                            except ValueError:
-                                continue
-                        
-                        if start_time_obj:
-                            if activity_log.actual_start_time:
-                                base_date = activity_log.actual_start_time.astimezone(kolkata_tz).date()
-                            else:
-                                base_date = today_kolkata
-                            
-                            res_start_dt = datetime.combine(base_date, start_time_obj).replace(tzinfo=kolkata_tz)
-                            activity_log.actual_start_time = res_start_dt
-                    except Exception as e:
-                        print(f'Error updating start time: {e}')
-                
-                # Update end time if provided
-                if end_time_str:
-                    try:
-                        end_time_obj = None
-                        for fmt in ['%I:%M %p', '%H:%M']:
-                            try:
-                                end_time_obj = datetime.strptime(end_time_str, fmt).time()
-                                break
-                            except ValueError:
-                                continue
-                        
-                        if end_time_obj:
-                            start_local = activity_log.actual_start_time.astimezone(kolkata_tz)
-                            log_date = start_local.date()
-                            
-                            res_end_dt = datetime.combine(log_date, end_time_obj).replace(tzinfo=kolkata_tz)
-                            
-                            # If end time is earlier than start time, it means it spanned across midnight
-                            if res_end_dt < activity_log.actual_start_time:
-                                res_end_dt += timedelta(days=1)
-                            
-                            activity_log.actual_end_time = res_end_dt
-                    except (ValueError, TypeError) as e:
-                        print(f'Error updating end time: {e}')
-                        activity_log.actual_end_time = current_kolkata_time
-                else:
-                    activity_log.actual_end_time = current_kolkata_time
-                
-                # Calculate time worked
-                activity_log.calculate_time_worked()
-                
-                # Add extra minutes to all entries
-                activity_log.extra_minutes = extra_minutes
-                
-                # Update work notes
-                if work_notes:
-                    activity_log.work_notes = work_notes
-                
-                # Update status fields based on completion flag
-                activity_log.is_task_completed = is_completed
-                if is_completed:
-                    activity_log.status = 'COMPLETED'
-                elif is_pending_selected:
-                    activity_log.status = 'PENDING'
-                
-                activity_log.save()
-                print(f'[BULK-STOP] Saved log ID {activity_log.id}: new_status={activity_log.status}, completed={is_completed}, pending_selected={is_pending_selected}')
-                
-                total_minutes_worked += activity_log.minutes_worked
-            
-            # --- CUMULATIVE SYNC LOGIC ---
-            # Fetch ALL logs for this plan to handle synchronization and cumulative calculation
-            all_logs_for_plan = ActivityLog.objects.filter(
+
+            # ── 7. Determine the status for this new session ─────────────────
+            if is_completed:
+                new_session_status = 'COMPLETED'
+            elif is_pending_selected:
+                new_session_status = 'PENDING'
+            else:
+                new_session_status = 'COMPLETED'  # "Save Progress" without marking = finished session
+
+            # ── 8. Create a BRAND NEW activity log for this session ──────────
+            #    We ALWAYS create a new record. Old records are never touched here.
+            new_log = ActivityLog.objects.create(
+                user=request.user,
                 today_plan=today_plan,
+                actual_start_time=session_start,
+                actual_end_time=session_end,
+                minutes_worked=delta_minutes,
+                hours_worked=delta_hours,
+                status=new_session_status,
+                is_task_completed=is_completed,
+                work_notes=work_notes,
+                extra_minutes=0,         # calculated below
+                is_unplanned=today_plan.is_unplanned,
+            )
+            print(f'[BULK-STOP] Created new ActivityLog id={new_log.id} '
+                  f'status={new_log.status} minutes={delta_minutes}')
+
+            # ── 9. Update the TodayPlan notes if a planned remark was sent ───
+            if planned_remark is not None:
+                today_plan.notes = planned_remark
+                today_plan.save(update_fields=['notes'])
+
+            # ── 10. All sibling logs (including the one just created) ─────────
+            all_sibling_logs = ActivityLog.objects.filter(
+                today_plan__in=sibling_plans,
                 user=request.user
             )
-            
-            # Calculate total cumulative minutes worked across all sessions
-            total_cumulative_minutes = sum(log.minutes_worked for log in all_logs_for_plan)
-            planned_duration = today_plan.planned_duration_minutes or 0
-            
-            # Auto-calculate extra minutes if we exceeded the plan
-            calculated_extra_minutes = max(0, total_cumulative_minutes - planned_duration)
-            
-            # Prioritize manual extra_minutes over total calculated value if manual was provided
-            final_extra_minutes = extra_minutes if extra_minutes > 0 else calculated_extra_minutes
-            
-            # Update tomorrow's plan or sync statuses
-            if is_completed:
-                # Synchronize status across all related logs
-                all_logs_for_plan.update(
-                    status='COMPLETED',
-                    is_task_completed=True
-                )
-                
-                # Update today's plan status and notes
-                if planned_remark is not None:
-                    today_plan.notes = planned_remark
-                today_plan.status = 'COMPLETED'
-                today_plan.save()
 
-                # Remove from Pending table if it was there
+            # ── 11. Calculate cumulative extra minutes for today ──────────────
+            total_worked_today  = sum(log.minutes_worked for log in all_sibling_logs)
+            total_planned_today = sum(p.planned_duration_minutes or 0 for p in sibling_plans)
+
+            if is_completed or is_pending_selected:
+                auto_extra = max(0, total_worked_today - total_planned_today)
+                final_extra = extra_minutes_input if extra_minutes_input > 0 else auto_extra
+            else:
+                final_extra = 0
+
+            # Apply extra minutes to the new log only
+            if final_extra > 0:
+                new_log.extra_minutes = final_extra
+                new_log.save(update_fields=['extra_minutes'])
+
+            # ── 12. Propagate status to ALL sibling logs if completing/pending ─
+            if is_completed:
+                # Mark every session for this task today as COMPLETED
+                all_sibling_logs.update(status='COMPLETED', is_task_completed=True)
+
+                # Mark all sibling plans as COMPLETED
+                sibling_plans.update(status='COMPLETED')
+
+                # Mark the underlying Task as DONE if it exists
+                if task_id:
+                    from .models import Task
+                    Task.objects.filter(id=task_id).update(
+                        status='DONE',
+                        completed_at=today_kolkata
+                    )
+
+                # Clean up any pending records for this task
                 Pending.objects.filter(
-                    today_plan=today_plan,
+                    today_plan__in=sibling_plans,
                     user=request.user
                 ).delete()
-                
-                # Apply the calculated extra minutes to the current logs being stopped
 
-                for log in activity_logs:
-                    log.extra_minutes = final_extra_minutes
-                    log.save()
-                    
             elif is_pending_selected:
-                # Synchronize status across all related logs
-                all_logs_for_plan.update(
-                    status='PENDING',
-                    is_task_completed=False
-                )
-                
-                # User explicitly marked as pending
+                # Mark every session for this task today as PENDING
+                all_sibling_logs.update(status='PENDING', is_task_completed=False)
+
+                # Keep plans in IN_ACTIVITY so they stay visible in Today's Plan
+                sibling_plans.filter(status='COMPLETED').update(status='IN_ACTIVITY')
+
+                # Create or update a single Pending record (de-duplicated)
                 existing_pending = Pending.objects.filter(
                     today_plan=today_plan,
                     user=request.user,
-                    created_at__date=today_kolkata
                 ).first()
-                
-                # Update extra minutes for current sessions
-                if final_extra_minutes > 0:
-                    for log in activity_logs:
-                        log.extra_minutes = final_extra_minutes
-                        log.save()
 
-                if not existing_pending:
-                    # Create a new pending entry
-                    Pending.objects.create(
-                        today_plan=today_plan,
-                        user=request.user,
-                        minutes_left=minutes_left or 0,
-                        extra_minutes=final_extra_minutes,
-                        original_plan_date=today_plan.plan_date,
-                        reason='Task moved to pending',
-                        work_notes=work_notes # Sync work notes
-                    )
-                
-                # Also update today_plan notes if provided
-                if planned_remark is not None:
-                    today_plan.notes = planned_remark
-                    today_plan.save()
-                else:
-                    # Update existing pending entry
-                    existing_pending.extra_minutes = calculated_extra_minutes
-                    if minutes_left is not None:
-                        existing_pending.minutes_left = minutes_left
+                if existing_pending:
+                    existing_pending.minutes_left  = minutes_left
+                    existing_pending.extra_minutes = final_extra
+                    existing_pending.work_notes    = work_notes
                     existing_pending.save()
-                
-                # Safety rollback: Ensure TodayPlan stays in an active state
-                # even if it was previously marked as COMPLETED.
-                if today_plan.status == 'COMPLETED':
-                    today_plan.status = 'IN_ACTIVITY'
-                    today_plan.save()
+                else:
+                    Pending.objects.create(
+                        user=request.user,
+                        today_plan=today_plan,
+                        original_plan_date=today_plan.plan_date,
+                        minutes_left=minutes_left,
+                        extra_minutes=final_extra,
+                        reason='Task moved to pending',
+                        work_notes=work_notes,
+                        status='PENDING',
+                    )
 
-                
+        # ── 13. Return response ───────────────────────────────────────────────
+        final_status = 'COMPLETED' if is_completed else ('PENDING' if is_pending_selected else 'SAVED')
+        print(f'[BULK-STOP] Done. New log id={new_log.id}, final_status={final_status}, '
+              f'minutes={delta_minutes}, extra={final_extra}')
 
-                # We no longer set today_plan.status = 'MOVED_TO_PENDING' here
-                # to ensure it stays visible in the Today's Plan quadrants.
-                # The Pending record created above handles display in the Pending list.
-                # today_plan.status = 'MOVED_TO_PENDING' 
-                # today_plan.save()
-
-            else:
-                # Just saving times without completion/pending selection
-                if calculated_extra_minutes > 0:
-                    for log in activity_logs:
-                        log.extra_minutes = calculated_extra_minutes
-                        log.save()
-
-        
         return Response({
-            "message": f"Updated {activity_logs.count()} activity logs",
-            "total_time_worked": {
-                "minutes": total_minutes_worked,
-                "hours": total_hours_worked
+            'message': f'Session recorded ({final_status})',
+            'activity_log': ActivityLogSerializer(new_log).data,
+            'total_time_worked': {
+                'minutes': total_worked_today,
+                'hours': round(total_worked_today / 60, 2),
             },
-            "status": "COMPLETED" if is_completed else ("PENDING" if is_pending_selected else "UPDATED"),
-            "activity_count": activity_logs.count()
+            'status': final_status,
         })
-        print(f'[BULK-STOP] ✅ Completed: Updated {activity_logs.count()} logs. Final status: {("COMPLETED" if is_completed else ("PENDING" if is_pending_selected else "UPDATED"))}')
     
     @action(detail=False, methods=['get'])
     def my_logs(self, request):

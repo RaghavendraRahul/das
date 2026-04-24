@@ -3,7 +3,9 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_state.dart';
 import 'package:project_pm/src/features/dashboard/models/search_result.dart';
+
 import 'package:project_pm/src/features/dashboard/global_search_providers.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:project_pm/src/routes/app_router.dart';

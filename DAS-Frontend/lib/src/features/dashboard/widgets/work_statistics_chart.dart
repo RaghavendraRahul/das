@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
+import '../dashboard_state.dart';
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Colour palette shared across charts
@@ -138,6 +140,7 @@ class _Body extends HookConsumerWidget {
               isDark: isDark,
             ),
           ),
+
         ],
       ),
     );
@@ -187,7 +190,7 @@ class _Header extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Project Work Status',
+              'Project Analytics',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,

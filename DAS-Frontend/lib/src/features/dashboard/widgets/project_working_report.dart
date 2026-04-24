@@ -10,6 +10,7 @@ import 'package:project_pm/src/features/projects/models/project_model.dart';
 import 'package:project_pm/src/features/projects/models/task_model.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import '../dashboard_providers.dart';
+import '../dashboard_state.dart';
 import '../../projects/project_providers.dart';
 
 // Enums removed in favor of direct String-based state management via providers
@@ -104,11 +105,14 @@ class ProjectWorkingReport extends HookConsumerWidget {
                             monthYear: selectedMonth,
                             isDark: isDark,
                             scope: effectiveFilter,
+                            userId: selectedUserId,
                             searchQuery: searchQuery,
                           )
                         : _MonthlyTaskDetailView(
                             monthYear: selectedMonth,
                             isDark: isDark,
+                            scope: effectiveFilter,
+                            userId: selectedUserId,
                             searchQuery: searchQuery,
                           ))
                     : SizedBox(
@@ -252,7 +256,7 @@ class _HeaderSection extends StatelessWidget {
               items: const {
                 'Projects': _SegmentItem(label: 'Projects', icon: Icons.pie_chart_outline),
                 'Tasks': _SegmentItem(label: 'Tasks', icon: Icons.check_circle_outline),
-                'Hours': _SegmentItem(label: 'Hours', icon: Icons.access_time),
+                // 'Hours': _SegmentItem(label: 'Hours', icon: Icons.access_time), // Removed as per request
               },
               onChanged: onViewChanged,
               isDark: isDark,
@@ -449,33 +453,28 @@ class _ConnectedProjectChart extends ConsumerWidget {
     return chartDataAsync.when(
       data: (Map<String, dynamic> data) {
         final List<dynamic> rawDataList = data['data'] ?? [];
-        if (rawDataList.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.bar_chart_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
-                const SizedBox(height: 16),
-                Text("No project data available for $selectedYear", 
-                  style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
-              ],
-            ),
-          );
-        }
-
         final List<FlSpot> spots = [];
         final Map<int, String> xLabels = {};
-
-        double maxX = rawDataList.length.toDouble() - 1;
         double maxY = 0;
 
-        for (int i = 0; i < rawDataList.length; i++) {
-          final item = rawDataList[i];
-          final count = (item['count'] as num).toDouble();
-          spots.add(FlSpot(i.toDouble(), count));
-          xLabels[i] = item['month_year']?.toString() ?? '';
-          if (count > maxY) maxY = count;
+        if (rawDataList.isEmpty) {
+          final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          for (int i = 0; i < months.length; i++) {
+            spots.add(FlSpot(i.toDouble(), 0));
+            xLabels[i] = '${months[i]} $selectedYear';
+          }
+        } else {
+          for (int i = 0; i < rawDataList.length; i++) {
+            final item = rawDataList[i];
+            final count = (item['count'] as num).toDouble();
+            spots.add(FlSpot(i.toDouble(), count));
+            xLabels[i] = item['month_year']?.toString() ?? '';
+            if (count > maxY) maxY = count;
+          }
         }
+
+        double maxX = spots.length.toDouble() - 1;
+        if (maxX < 0) maxX = 0;
 
         return _buildLineChart(
           context: context,
@@ -526,34 +525,28 @@ class _ConnectedTaskChart extends ConsumerWidget {
     return chartDataAsync.when(
       data: (Map<String, dynamic> data) {
         final List<dynamic> rawDataList = data['data'] ?? [];
-        if (rawDataList.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.task_alt_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
-                const SizedBox(height: 16),
-                Text("No task analysis available for $selectedYear", 
-                  style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
-              ],
-            ),
-          );
-        }
-
         final List<FlSpot> spots = [];
         final Map<int, String> xLabels = {};
-
-        double maxX = rawDataList.length.toDouble() - 1;
         double maxY = 0;
 
-        for (int i = 0; i < rawDataList.length; i++) {
-          final item = rawDataList[i];
-          final count = (item['count'] as num).toDouble();
-          spots.add(FlSpot(i.toDouble(), count));
-          xLabels[i] =
-              item['month_year']?.toString() ?? item['date']?.toString() ?? '';
-          if (count > maxY) maxY = count;
+        if (rawDataList.isEmpty) {
+          final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          for (int i = 0; i < months.length; i++) {
+            spots.add(FlSpot(i.toDouble(), 0));
+            xLabels[i] = '${months[i]} $selectedYear';
+          }
+        } else {
+          for (int i = 0; i < rawDataList.length; i++) {
+            final item = rawDataList[i];
+            final count = (item['count'] as num).toDouble();
+            spots.add(FlSpot(i.toDouble(), count));
+            xLabels[i] = item['month_year']?.toString() ?? item['date']?.toString() ?? '';
+            if (count > maxY) maxY = count;
+          }
         }
+
+        double maxX = spots.length.toDouble() - 1;
+        if (maxX < 0) maxX = 0;
 
         return _buildLineChart(
           context: context,
@@ -621,30 +614,24 @@ class _HoursLineChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (data.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.timer_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
-            const SizedBox(height: 16),
-            Text("No hours worked metadata for $selectedYear", 
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
-          ],
-        ),
-      );
-    }
-
     final List<FlSpot> spots = [];
     final Map<int, String> xLabels = {};
     double maxY = 0;
 
-    for (int i = 0; i < data.length; i++) {
-      final item = data[i];
-      final achieved = (item['achieved'] as num).toDouble();
-      spots.add(FlSpot(i.toDouble(), achieved));
-      xLabels[i] = item['month']?.toString() ?? '';
-      if (achieved > maxY) maxY = achieved;
+    if (data.isEmpty) {
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      for (int i = 0; i < months.length; i++) {
+        spots.add(FlSpot(i.toDouble(), 0));
+        xLabels[i] = '${months[i]} $selectedYear';
+      }
+    } else {
+      for (int i = 0; i < data.length; i++) {
+        final item = data[i];
+        final achieved = (item['achieved'] as num).toDouble();
+        spots.add(FlSpot(i.toDouble(), achieved));
+        xLabels[i] = item['month']?.toString() ?? '';
+        if (achieved > maxY) maxY = achieved;
+      }
     }
 
     return _buildLineChart(
@@ -737,18 +724,25 @@ class _MonthlyProjectDetailView extends ConsumerWidget {
   final String monthYear;
   final bool isDark;
   final String scope;
+  final int? userId;
   final String? searchQuery;
 
   const _MonthlyProjectDetailView({
     required this.monthYear,
     required this.isDark,
     required this.scope,
+    this.userId,
     this.searchQuery,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectsAsync = ref.watch(monthlyCompletedProjectsProvider(monthYear));
+    final projectsAsync = ref.watch(monthlyCompletedProjectsProvider(MonthlyReportParams(
+      monthYear: monthYear,
+      userId: userId,
+      scope: scope,
+      search: searchQuery,
+    )));
 
     return SizedBox(
       height: 340,
@@ -1042,17 +1036,26 @@ Widget _buildLineChart({
 class _MonthlyTaskDetailView extends ConsumerWidget {
   final String monthYear;
   final bool isDark;
+  final String scope;
+  final int? userId;
   final String? searchQuery;
 
   const _MonthlyTaskDetailView({
     required this.monthYear,
     required this.isDark,
+    required this.scope,
+    this.userId,
     this.searchQuery,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tasksAsync = ref.watch(monthlyCompletedTasksProvider(monthYear));
+    final tasksAsync = ref.watch(monthlyCompletedTasksProvider(MonthlyReportParams(
+      monthYear: monthYear,
+      userId: userId,
+      scope: scope,
+      search: searchQuery,
+    )));
 
     return Column(
       children: [

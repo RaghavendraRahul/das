@@ -215,7 +215,7 @@ class _FilteredDashboardStatsProviderElement
 }
 
 String _$dashboardOverviewStatsHash() =>
-    r'f435f0fde7412649c2843478e3ce0c7e27070e5a';
+    r'466f9cf8219bc38bc13528391ba4aad1f52f3a1c';
 
 /// Provider to fetch backend-calculated summary statistics
 ///
@@ -236,6 +236,9 @@ typedef DashboardOverviewStatsRef
     = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
 String _$usersForStatsHash() => r'd095821330473d9f1dc133c588d75e247ce00fdf';
 
+/// Selected user ID for project work statistics
+/// By default, NO user is selected to allow "Select User" dropdown hint.
+/// State providers for Project Working Report section
 /// Provider for fetching users list for stats dropdown
 ///
 /// Copied from [usersForStats].
@@ -288,7 +291,7 @@ final statsProjectsProvider = AutoDisposeFutureProvider<List<dynamic>>.internal(
 
 typedef StatsProjectsRef = AutoDisposeFutureProviderRef<List<dynamic>>;
 String _$projectCompletionChartHash() =>
-    r'98b5e1f6bcd15b1d343624e5096036b66c631eee';
+    r'72a1176b120caa66d49fc7078681b806bef9bc42';
 
 /// See also [projectCompletionChart].
 @ProviderFor(projectCompletionChart)
@@ -423,7 +426,7 @@ class _ProjectCompletionChartProviderElement
 }
 
 String _$taskCompletionChartHash() =>
-    r'f01e499a2060c09b7cf8f409e62fd859ece90a3f';
+    r'27470ca0695eb7dca798b88525f9f3b4646a8067';
 
 /// See also [taskCompletionChart].
 @ProviderFor(taskCompletionChart)

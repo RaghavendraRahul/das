@@ -10,7 +10,9 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:project_pm/src/routes/app_router.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_state.dart';
 import 'package:project_pm/src/features/dashboard/global_search_providers.dart';
+
 import 'package:project_pm/src/features/dashboard/models/search_result.dart';
 import 'package:project_pm/src/shared/widgets/global_search_overlay.dart';
 import 'package:flutter/services.dart';

@@ -8,6 +8,7 @@ import 'package:project_pm/src/routes/app_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../critical_attention_provider.dart';
 import '../dashboard_providers.dart';
+import '../dashboard_state.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 
 enum StatCategory { portfolio, timeline, completion, attention }

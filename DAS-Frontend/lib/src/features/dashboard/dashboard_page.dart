@@ -6,6 +6,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_state.dart';
+
 import 'package:project_pm/src/features/dashboard/widgets/project_overview_stats.dart';
 import 'package:project_pm/src/features/dashboard/widgets/work_statistics_chart.dart';
 import 'package:project_pm/src/features/dashboard/widgets/project_working_report.dart';

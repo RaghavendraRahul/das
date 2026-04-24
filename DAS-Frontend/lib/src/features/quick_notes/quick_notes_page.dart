@@ -24,7 +24,6 @@ class QuickNotesPage extends HookConsumerWidget {
     final selectedNoteId = useState<String?>(null);
     final isSelectionMode = useState(false);
     final selectedIds = useState<Set<String>>({});
-    final selectedFont = ref.watch(quickNoteFontProvider);
 
     // If notes exist but none selected, select the first one
     useEffect(() {
@@ -82,7 +81,7 @@ class QuickNotesPage extends HookConsumerWidget {
                           child: CustomPaint(
                             painter: _DottedBackgroundPainter(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.05)
+                                  ? Colors.white.withValues(alpha: 0.05)
                                   : Colors.grey.shade300,
                               mousePosition: mousePos.value,
                             ),
@@ -211,6 +210,7 @@ class QuickNotesPage extends HookConsumerWidget {
                     .addNote("", color);
                 selectedNoteId.value = newNote.id;
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("Failed to create note: $e")),
                 );
@@ -334,8 +334,8 @@ class _StickyNotesSidebar extends HookWidget {
       width: 280,
       decoration: BoxDecoration(
         color: isDark
-            ? const Color(0xFF111827).withOpacity(0.8)
-            : Colors.white.withOpacity(0.8),
+            ? const Color(0xFF111827).withValues(alpha: 0.8)
+            : Colors.white.withValues(alpha: 0.8),
         border: Border(
             left: BorderSide(
                 color: isDark ? Colors.white10 : Colors.grey.shade200)),
@@ -395,7 +395,7 @@ class _StickyNotesSidebar extends HookWidget {
                               }
                             },
                             icon: const Icon(Icons.delete_outline, size: 20),
-                            color: Colors.red.withOpacity(0.8),
+                            color: Colors.red.withValues(alpha: 0.8),
                           ),
                         ],
                       )
@@ -448,10 +448,10 @@ class _StickyNotesSidebar extends HookWidget {
                         final noteHeight = constraints.maxHeight;
                         
                         return DragTarget<int>(
-                          onWillAccept: (data) => data != index,
-                          onAccept: (oldIndex) {
+                          onWillAcceptWithDetails: (details) => details.data != index,
+                          onAcceptWithDetails: (details) {
                             stopAutoscroll();
-                            onReorder(oldIndex, index);
+                            onReorder(details.data, index);
                           },
                           onLeave: (data) => stopAutoscroll(),
                           onMove: (details) {
@@ -481,7 +481,7 @@ class _StickyNotesSidebar extends HookWidget {
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: isHovered ? [
                                   BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
+                                    color: Colors.blue.withValues(alpha: 0.3),
                                     blurRadius: 10,
                                     spreadRadius: 2
                                   )
@@ -615,11 +615,11 @@ class _SidebarNoteItem extends HookConsumerWidget {
                         width: 60,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.5),
+                          color: Colors.white.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -638,7 +638,7 @@ class _SidebarNoteItem extends HookConsumerWidget {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.blue, width: 2)),
                   ),
@@ -668,7 +668,7 @@ class _SidebarNoteItem extends HookConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.outfit(
                                   fontSize: 12,
-                                  color: Colors.black.withOpacity(0.8),
+                                  color: Colors.black.withValues(alpha: 0.8),
                                   fontWeight: FontWeight.w700),
                             ),
                           ),
@@ -682,7 +682,7 @@ class _SidebarNoteItem extends HookConsumerWidget {
                             style: _getSafeTextStyle(
                               selectedFont,
                               fontSize: 13,
-                              color: Colors.black.withOpacity(0.7),
+                              color: Colors.black.withValues(alpha: 0.7),
                               height: 1.25,
                               fontWeight: FontWeight.w500,
                             ),
@@ -705,7 +705,7 @@ class _SidebarNoteItem extends HookConsumerWidget {
                                   child: Icon(
                                     Icons.drag_handle,
                                     size: 18,
-                                    color: Colors.black.withOpacity(0.35),
+                                    color: Colors.black.withValues(alpha: 0.35),
                                   ),
                                 ),
                               ),
@@ -734,7 +734,7 @@ class _SidebarNoteItem extends HookConsumerWidget {
                     decoration: BoxDecoration(
                         color: isMultiSelected
                             ? Colors.blue
-                            : Colors.white.withOpacity(0.8),
+                            : Colors.white.withValues(alpha: 0.8),
                         shape: BoxShape.circle,
                         border: Border.all(
                             color: isMultiSelected
@@ -791,7 +791,7 @@ class _StickyNotePainter extends CustomPainter {
       ..close();
 
     // Shadow
-    canvas.drawShadow(paperPath, Colors.black.withOpacity(0.2), 4.0, true);
+    canvas.drawShadow(paperPath, Colors.black.withValues(alpha: 0.2), 4.0, true);
 
     // Main Paper with Subtle Gradient
     final paperGradient = LinearGradient(
@@ -846,7 +846,7 @@ class _TapeTexturePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..strokeWidth = 1;
 
     // Draw some subtle "fiber" lines for tape texture
@@ -856,7 +856,7 @@ class _TapeTexturePainter extends CustomPainter {
 
     // Rough edges
     final roughPaint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
+      ..color = Colors.white.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
 
@@ -888,11 +888,11 @@ class _QuickActionButton extends StatelessWidget {
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -953,7 +953,7 @@ class _EditableStickyNote extends HookConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha: 0.15),
                     blurRadius: 30,
                     spreadRadius: 2,
                     offset: const Offset(10, 20),
@@ -1002,7 +1002,7 @@ class _EditableStickyNote extends HookConsumerWidget {
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.2,
-                                color: Colors.black.withOpacity(0.8),
+                                color: Colors.black.withValues(alpha: 0.8),
                               ),
                             ),
                           ),
@@ -1011,7 +1011,7 @@ class _EditableStickyNote extends HookConsumerWidget {
                           IconButton(
                             onPressed: onDelete,
                             icon: const Icon(Icons.delete_outline, size: 20),
-                            color: Colors.red.shade700.withOpacity(0.7),
+                            color: Colors.red.shade700.withValues(alpha: 0.7),
                             tooltip: "Delete Note",
                           ),
                         ],
@@ -1039,7 +1039,7 @@ class _EditableStickyNote extends HookConsumerWidget {
                           selectedFont,
                           fontSize: 18,
                           height: 1.6,
-                          color: Colors.black.withOpacity(0.85),
+                          color: Colors.black.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1082,7 +1082,7 @@ class _DottedBackgroundPainter extends CustomPainter {
           final scale = 1.0 + (1.5 * (1.0 - (distance / maxInteractionRadius)));
           radius = baseRadius * scale;
 
-          final interactionColor = color.withOpacity((color.opacity +
+          final interactionColor = color.withValues(alpha: (color.a +
                   (0.3 * (1.0 - (distance / maxInteractionRadius))))
               .clamp(0.0, 1.0));
           paint.color = interactionColor;
@@ -1114,7 +1114,7 @@ class _QuickNoteFontSelector extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.05),
+        color: Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -1123,7 +1123,7 @@ class _QuickNoteFontSelector extends ConsumerWidget {
           Icon(
             Icons.title_rounded,
             size: 14,
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withValues(alpha: 0.5),
           ),
           const SizedBox(width: 4),
           DropdownButtonHideUnderline(
@@ -1131,13 +1131,13 @@ class _QuickNoteFontSelector extends ConsumerWidget {
               value: selectedFont,
               isDense: true,
               icon: Icon(Icons.keyboard_arrow_down_rounded,
-                  size: 16, color: Colors.black.withOpacity(0.5)),
+                  size: 16, color: Colors.black.withValues(alpha: 0.5)),
               dropdownColor: isDark ? const Color(0xFF1F2937) : Colors.white,
               style: _getSafeTextStyle(
                 selectedFont,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
               ),
               items: availableQuickNoteFonts
                   .map((font) => DropdownMenuItem<String>(

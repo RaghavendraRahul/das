@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
+import '../dashboard_state.dart';
+
 import 'package:project_pm/src/core/providers/user_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────

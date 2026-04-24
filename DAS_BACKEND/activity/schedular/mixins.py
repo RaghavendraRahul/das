@@ -165,6 +165,17 @@ class TaskQuerySetMixin(RoleBasedQuerySetMixin):
         elif end_date:
             queryset = queryset.filter(due_date__lte=end_date)
 
+        # NEW: Completion date filtering logic (to match chart data and project drill-down)
+        completion_start = self.request.query_params.get('completion_start_date')
+        completion_end = self.request.query_params.get('completion_end_date')
+
+        if completion_start or completion_end:
+            queryset = queryset.filter(status='DONE')
+            if completion_start:
+                queryset = queryset.filter(completed_at__gte=completion_start)
+            if completion_end:
+                queryset = queryset.filter(completed_at__lte=completion_end)
+
         # Check if this is for planner catalog - restrict to assigned tasks only
         for_planner = self.request.query_params.get('for_planner', '').lower() == 'true'
         

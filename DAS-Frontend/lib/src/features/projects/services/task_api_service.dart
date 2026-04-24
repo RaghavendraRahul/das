@@ -523,13 +523,17 @@ class TaskApiService {
   Future<List<TaskModel>> getTasks({
     String? startDate,
     String? endDate,
+    String? userId,
     String? search,
+    Map<String, dynamic>? params,
   }) async {
     try {
       final queryParams = {
         if (startDate != null) 'start_date': startDate,
         if (endDate != null) 'end_date': endDate,
+        if (userId != null) 'user_id': userId,
         if (search != null && search.isNotEmpty) 'search': search,
+        ...?params,
       };
       final response = await _dio.get('/tasks/', queryParameters: queryParams);
       if (response.statusCode == 200) {

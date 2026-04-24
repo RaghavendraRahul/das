@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_repository.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_service.dart';
 import '../../core/database/database_provider.dart';
@@ -12,20 +11,16 @@ import 'models/search_result.dart';
 import 'global_search_service.dart';
 import 'search_history_service.dart';
 
+import 'dashboard_state.dart';
+
 part 'dashboard_providers.g.dart';
 
-/// Provider for injected header actions (e.g. toggles, filters)
-final headerActionsProvider = StateProvider<Widget?>((ref) => null);
+// headerActionsProvider moved to dashboard_state.dart
+
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PROPER STATE MANAGEMENT: Dashboard filter state providers
+// Dashboard filter state providers (Moved to dashboard_state.dart)
 // ─────────────────────────────────────────────────────────────────────────────
-final dashboardProjectTypeProvider = StateProvider<String>((ref) => 'my');
-final dashboardSearchQueryProvider = StateProvider<String>((ref) => '');
-
-// Global Search State
-final globalSearchQueryProvider = StateProvider<String>((ref) => '');
-final isSearchFocusedProvider = StateProvider<bool>((ref) => false);
 
 @riverpod
 DashboardRepository dashboardRepository(DashboardRepositoryRef ref) {
@@ -179,12 +174,14 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
 Future<Map<String, dynamic>> dashboardOverviewStats(DashboardOverviewStatsRef ref) async {
   final filter = ref.watch(dashboardProjectTypeProvider);
   final search = ref.watch(dashboardSearchQueryProvider);
+  final selectedUserId = ref.watch(selectedStatsUserIdProvider);
   final apiService = ref.watch(taskApiServiceProvider);
   
   try {
     // Pass optional search as query param to the statistics endpoint
     return await apiService.getDashboardStatistics(
       filter: filter,
+      userId: selectedUserId?.toString(),
       search: search.isNotEmpty ? search : null,
     );
   } catch (e) {
@@ -195,29 +192,15 @@ Future<Map<String, dynamic>> dashboardOverviewStats(DashboardOverviewStatsRef re
 
 /// Selected user ID for project work statistics
 /// By default, NO user is selected to allow "Select User" dropdown hint.
-final selectedStatsUserIdProvider = StateProvider<int?>((ref) => null);
+// selectedStatsUserIdProvider moved to dashboard_state.dart
 
-/// Options: 'all', 'today', 'week', 'month'
-final selectedStatsPeriodProvider = StateProvider<String>((ref) => 'month');
+// All UI state providers moved to dashboard_state.dart
 
-/// Dashboard Date Range Filter for Overview Stats
-/// If null, it shows absolute total/overall data
-final dashboardDateRangeProvider = StateProvider<DateTimeRange?>((ref) => null);
-
-/// Selected project ID for project work statistics
-final selectedStatsProjectIdProvider = StateProvider<int?>((ref) => null);
 
 /// State providers for Project Working Report section
-final workingReportScopeProvider = StateProvider<String>((ref) => 'My');
-final workingReportViewProvider = StateProvider<String>((ref) => 'Projects');
-final workingReportYearProvider = StateProvider<int>((ref) => DateTime.now().year);
+// workingReportScopeProvider moved to dashboard_state.dart
+// Working Report state providers moved to dashboard_state.dart
 
-/// Selected month string for drill-down project detail (e.g., 'March 2026')
-/// If null, the chart is shown. If not null, the project list is shown.
-final workingReportDetailMonthProvider = StateProvider<String?>((ref) => null);
-
-/// Type of drill-down content: 'Projects', 'Tasks', or 'Hours'
-final workingReportDrillDownTypeProvider = StateProvider<String>((ref) => 'Projects');
 
 
 /// Provider for fetching users list for stats dropdown
@@ -350,7 +333,62 @@ Future<Map<String, dynamic>> projectCompletionChart(
     ProjectCompletionChartRef ref, ProjectChartParams params) async {
   try {
     final repo = ref.watch(dashboardRepositoryProvider);
-    // Explicitly pass params to repo call
+    final apiService = ref.watch(taskApiServiceProvider);
+
+    // FIX: If filter is 'my', we manually calculate from project list to ensure 
+    // strict "Assigned to Me" logic as requested. The dedicated chart endpoint 
+    // is too broad for Admins (includes projects they completed but aren't assigned to).
+    if (params.filter == 'my') {
+      final startDate = '${params.year}-01-01';
+      final endDate = '${params.year}-12-31';
+      
+      final projects = await apiService.getProjects(
+        allProjects: true,
+        params: {
+          'filter': 'my',
+          if (params.userId != null) 'user_id': params.userId,
+          'completion_start_date': startDate,
+          'completion_end_date': endDate,
+          if (params.search != null && params.search!.isNotEmpty) 'search': params.search,
+        },
+      );
+
+      // Group by month
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      final monthlyCounts = List.filled(12, 0);
+
+      // LOCAL FILTERING: Ensure we only count projects where the user is an assignee
+      final currentUserIdStr = ref.watch(currentUserIdProvider);
+      final currentUserId = int.tryParse(currentUserIdStr ?? '');
+      final targetUserId = params.userId ?? currentUserId;
+
+      for (final p in projects) {
+        final isAssigned = (p.assigneeIds?.contains(targetUserId) ?? false) ||
+            p.projectLeadId == targetUserId ||
+            p.handledById == targetUserId;
+
+        if (isAssigned && p.completedDate != null && p.completedDate!.year == params.year) {
+          monthlyCounts[p.completedDate!.month - 1]++;
+        }
+      }
+
+      final List<Map<String, dynamic>> dataList = [];
+      for (int i = 0; i < months.length; i++) {
+        dataList.add({
+          'month_year': '${months[i]} ${params.year}',
+          'count': monthlyCounts[i],
+        });
+      }
+
+      return {
+        'data': dataList,
+      };
+    }
+
+    // Default: Use backend chart endpoint for 'team' or 'all' views
     return await repo.fetchProjectCompletionChart(
       params.year, 
       params.filter, 
@@ -403,6 +441,56 @@ Future<Map<String, dynamic>> taskCompletionChart(
     TaskCompletionChartRef ref, TaskChartParams params) async {
   try {
     final repo = ref.watch(dashboardRepositoryProvider);
+
+    // FIX: Similar to projectCompletionChart, if filter is 'my', we manually calculate
+    // to ensure strict "Assigned to Me" logic for Admins.
+    if (params.filter == 'my') {
+      final apiService = ref.watch(taskApiServiceProvider);
+      
+      final tasks = await apiService.getTasks(
+        startDate: params.startDate,
+        endDate: params.endDate,
+        userId: params.userId?.toString(),
+        search: params.search,
+        params: {'filter': 'my'},
+      );
+
+      // Group by month
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      final monthlyCounts = List.filled(12, 0);
+
+      // Parse year from startDate (format: yyyy-MM-dd)
+      final year = int.tryParse(params.startDate.split('-')[0]) ?? DateTime.now().year;
+
+      // LOCAL FILTERING: Ensure we only count tasks where the user is an assignee
+      final currentUserIdStr = ref.watch(currentUserIdProvider);
+      final currentUserId = int.tryParse(currentUserIdStr ?? '');
+      final targetUserId = params.userId ?? currentUserId;
+
+      for (final t in tasks) {
+        final isAssigned = t.assigneesList?.any((a) => a.user == targetUserId) ?? false;
+        
+        if (isAssigned && t.completedAt != null && t.completedAt!.year == year) {
+          monthlyCounts[t.completedAt!.month - 1]++;
+        }
+      }
+
+      final List<Map<String, dynamic>> dataList = [];
+      for (int i = 0; i < months.length; i++) {
+        dataList.add({
+          'month_year': '${months[i]} $year',
+          'count': monthlyCounts[i],
+        });
+      }
+
+      return {
+        'data': dataList,
+      };
+    }
+
     return await repo.fetchTaskCompletionChart(
         params.startDate, params.endDate, params.filter, params.userId, params.search);
   } catch (e) {

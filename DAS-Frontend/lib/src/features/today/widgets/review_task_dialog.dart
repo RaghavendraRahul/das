@@ -712,6 +712,7 @@ void showReviewTaskDialog(
                       ref.invalidate(apiActiveTaskProvider);
                       ref.invalidate(apiTodayPlanProvider);
                       ref.invalidate(apiPendingItemsProvider(todayStr));
+                      ref.invalidate(apiAllPendingItemsProvider); // Refresh Catalog Pending section
 
                       if (context.mounted) {
                         Navigator.pop(context);

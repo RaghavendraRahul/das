@@ -2296,7 +2296,7 @@ class _AdminEmployeeDashboardProviderElement
 }
 
 String _$monthlyCompletedProjectsHash() =>
-    r'63da39c15d5d3ffcd8348218765129f2f6b61fb0';
+    r'fe8437b3557d335e612461f07f5a30dab143ffff';
 
 /// See also [monthlyCompletedProjects].
 @ProviderFor(monthlyCompletedProjects)
@@ -2310,10 +2310,10 @@ class MonthlyCompletedProjectsFamily
 
   /// See also [monthlyCompletedProjects].
   MonthlyCompletedProjectsProvider call(
-    String monthYear,
+    MonthlyReportParams params,
   ) {
     return MonthlyCompletedProjectsProvider(
-      monthYear,
+      params,
     );
   }
 
@@ -2322,7 +2322,7 @@ class MonthlyCompletedProjectsFamily
     covariant MonthlyCompletedProjectsProvider provider,
   ) {
     return call(
-      provider.monthYear,
+      provider.params,
     );
   }
 
@@ -2346,11 +2346,11 @@ class MonthlyCompletedProjectsProvider
     extends AutoDisposeFutureProvider<List<ProjectModel>> {
   /// See also [monthlyCompletedProjects].
   MonthlyCompletedProjectsProvider(
-    String monthYear,
+    MonthlyReportParams params,
   ) : this._internal(
           (ref) => monthlyCompletedProjects(
             ref as MonthlyCompletedProjectsRef,
-            monthYear,
+            params,
           ),
           from: monthlyCompletedProjectsProvider,
           name: r'monthlyCompletedProjectsProvider',
@@ -2361,7 +2361,7 @@ class MonthlyCompletedProjectsProvider
           dependencies: MonthlyCompletedProjectsFamily._dependencies,
           allTransitiveDependencies:
               MonthlyCompletedProjectsFamily._allTransitiveDependencies,
-          monthYear: monthYear,
+          params: params,
         );
 
   MonthlyCompletedProjectsProvider._internal(
@@ -2371,10 +2371,10 @@ class MonthlyCompletedProjectsProvider
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.monthYear,
+    required this.params,
   }) : super.internal();
 
-  final String monthYear;
+  final MonthlyReportParams params;
 
   @override
   Override overrideWith(
@@ -2390,7 +2390,7 @@ class MonthlyCompletedProjectsProvider
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        monthYear: monthYear,
+        params: params,
       ),
     );
   }
@@ -2402,14 +2402,13 @@ class MonthlyCompletedProjectsProvider
 
   @override
   bool operator ==(Object other) {
-    return other is MonthlyCompletedProjectsProvider &&
-        other.monthYear == monthYear;
+    return other is MonthlyCompletedProjectsProvider && other.params == params;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, monthYear.hashCode);
+    hash = _SystemHash.combine(hash, params.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -2417,8 +2416,8 @@ class MonthlyCompletedProjectsProvider
 
 mixin MonthlyCompletedProjectsRef
     on AutoDisposeFutureProviderRef<List<ProjectModel>> {
-  /// The parameter `monthYear` of this provider.
-  String get monthYear;
+  /// The parameter `params` of this provider.
+  MonthlyReportParams get params;
 }
 
 class _MonthlyCompletedProjectsProviderElement
@@ -2427,12 +2426,12 @@ class _MonthlyCompletedProjectsProviderElement
   _MonthlyCompletedProjectsProviderElement(super.provider);
 
   @override
-  String get monthYear =>
-      (origin as MonthlyCompletedProjectsProvider).monthYear;
+  MonthlyReportParams get params =>
+      (origin as MonthlyCompletedProjectsProvider).params;
 }
 
 String _$monthlyCompletedTasksHash() =>
-    r'68304fd1b8c8601410e8f925562680761cf1cba5';
+    r'ffd8f20ef5284f31fba33e2c3fc620a4d7065e11';
 
 /// See also [monthlyCompletedTasks].
 @ProviderFor(monthlyCompletedTasks)
@@ -2445,10 +2444,10 @@ class MonthlyCompletedTasksFamily extends Family<AsyncValue<List<TaskModel>>> {
 
   /// See also [monthlyCompletedTasks].
   MonthlyCompletedTasksProvider call(
-    String monthYear,
+    MonthlyReportParams params,
   ) {
     return MonthlyCompletedTasksProvider(
-      monthYear,
+      params,
     );
   }
 
@@ -2457,7 +2456,7 @@ class MonthlyCompletedTasksFamily extends Family<AsyncValue<List<TaskModel>>> {
     covariant MonthlyCompletedTasksProvider provider,
   ) {
     return call(
-      provider.monthYear,
+      provider.params,
     );
   }
 
@@ -2481,11 +2480,11 @@ class MonthlyCompletedTasksProvider
     extends AutoDisposeFutureProvider<List<TaskModel>> {
   /// See also [monthlyCompletedTasks].
   MonthlyCompletedTasksProvider(
-    String monthYear,
+    MonthlyReportParams params,
   ) : this._internal(
           (ref) => monthlyCompletedTasks(
             ref as MonthlyCompletedTasksRef,
-            monthYear,
+            params,
           ),
           from: monthlyCompletedTasksProvider,
           name: r'monthlyCompletedTasksProvider',
@@ -2496,7 +2495,7 @@ class MonthlyCompletedTasksProvider
           dependencies: MonthlyCompletedTasksFamily._dependencies,
           allTransitiveDependencies:
               MonthlyCompletedTasksFamily._allTransitiveDependencies,
-          monthYear: monthYear,
+          params: params,
         );
 
   MonthlyCompletedTasksProvider._internal(
@@ -2506,10 +2505,10 @@ class MonthlyCompletedTasksProvider
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.monthYear,
+    required this.params,
   }) : super.internal();
 
-  final String monthYear;
+  final MonthlyReportParams params;
 
   @override
   Override overrideWith(
@@ -2525,7 +2524,7 @@ class MonthlyCompletedTasksProvider
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        monthYear: monthYear,
+        params: params,
       ),
     );
   }
@@ -2537,14 +2536,13 @@ class MonthlyCompletedTasksProvider
 
   @override
   bool operator ==(Object other) {
-    return other is MonthlyCompletedTasksProvider &&
-        other.monthYear == monthYear;
+    return other is MonthlyCompletedTasksProvider && other.params == params;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, monthYear.hashCode);
+    hash = _SystemHash.combine(hash, params.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -2552,8 +2550,8 @@ class MonthlyCompletedTasksProvider
 
 mixin MonthlyCompletedTasksRef
     on AutoDisposeFutureProviderRef<List<TaskModel>> {
-  /// The parameter `monthYear` of this provider.
-  String get monthYear;
+  /// The parameter `params` of this provider.
+  MonthlyReportParams get params;
 }
 
 class _MonthlyCompletedTasksProviderElement
@@ -2562,7 +2560,8 @@ class _MonthlyCompletedTasksProviderElement
   _MonthlyCompletedTasksProviderElement(super.provider);
 
   @override
-  String get monthYear => (origin as MonthlyCompletedTasksProvider).monthYear;
+  MonthlyReportParams get params =>
+      (origin as MonthlyCompletedTasksProvider).params;
 }
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

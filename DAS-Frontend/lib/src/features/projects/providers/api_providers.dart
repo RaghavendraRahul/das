@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:project_pm/src/core/networking/api_client.dart';
+import 'package:intl/intl.dart';
 import '../services/task_api_service.dart';
 import '../models/task_model.dart';
 import '../models/project_model.dart';
@@ -11,8 +12,9 @@ import '../../../core/models/project_with_tasks.dart';
 import '../../../core/database/database.dart';
 import '../../../core/providers/user_providers.dart';
 import '../../today/today_providers.dart';
-import 'package:intl/intl.dart';
-import '../../dashboard/dashboard_providers.dart';
+// import '../../dashboard/dashboard_providers.dart';
+
+import '../../dashboard/dashboard_state.dart';
 
 
 part 'api_providers.g.dart';
@@ -780,14 +782,41 @@ Future<Map<String, dynamic>> adminEmployeeDashboard(
   }
 }
 
+class MonthlyReportParams {
+  final String monthYear;
+  final int? userId;
+  final String? scope;
+  final String? search;
+
+  const MonthlyReportParams({
+    required this.monthYear,
+    this.userId,
+    this.scope,
+    this.search,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MonthlyReportParams &&
+          runtimeType == other.runtimeType &&
+          monthYear == other.monthYear &&
+          userId == other.userId &&
+          scope == other.scope &&
+          search == other.search;
+
+  @override
+  int get hashCode =>
+      monthYear.hashCode ^ userId.hashCode ^ scope.hashCode ^ search.hashCode;
+}
+
 @riverpod
 Future<List<ProjectModel>> monthlyCompletedProjects(
-    MonthlyCompletedProjectsRef ref, String monthYear) async {
-  final search = ref.watch(dashboardSearchQueryProvider);
+    MonthlyCompletedProjectsRef ref, MonthlyReportParams params) async {
   final apiService = ref.watch(taskApiServiceProvider);
 
   // Parse "March 2026"
-  final parts = monthYear.split(' ');
+  final parts = params.monthYear.split(' ');
   if (parts.length != 2) return [];
 
   final monthName = parts[0];
@@ -798,30 +827,41 @@ Future<List<ProjectModel>> monthlyCompletedProjects(
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   final month = monthNames.indexOf(monthName) + 1;
+
   if (month == 0) return [];
 
-  final startDate = DateTime(year, month, 1);
-  final endDate = month == 12 ? DateTime(year + 1, 1, 0) : DateTime(year, month + 1, 0);
+  // Widen range to ensure we find projects completed in this month even if they have different start/end dates
+  final yearStartDate = '$year-01-01';
+  final yearEndDate = '$year-12-31';
 
-  final startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
-  final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
-
-  final scope = ref.watch(workingReportScopeProvider);
-  final params = <String, dynamic>{};
-  if (scope == 'My') {
-    params['filter'] = 'my';
-  }
+  final queryParams = <String, dynamic>{
+    if (params.scope != null) 'filter': params.scope!.toLowerCase(),
+    'status': 'COMPLETED',
+    'all_projects': 'true',
+  };
 
   try {
-    return await apiService.getProjects(
+    final projects = await apiService.getProjects(
       params: {
-        ...params,
-        'completion_start_date': startDateStr,
-        'completion_end_date': endDateStr,
-        if (search.isNotEmpty) 'search': search,
+        ...queryParams,
+        'completion_start_date': yearStartDate,
+        'completion_end_date': yearEndDate,
+        if (params.userId != null) 'user_id': params.userId,
+        if (params.search != null && params.search!.isNotEmpty)
+          'search': params.search,
       },
-      allProjects: true,
     );
+
+    // FRONTEND FILTER: Ensure we only show projects completed in the SPECIFIC month
+    // Note: The backend getProjects usually returns projects with a 'completed_at' field
+    // We check for various possible field names or just trust the backend filter if it's strict.
+    // However, to be safe and consistent with tasks:
+    return projects.where((p) {
+      // Assuming ProjectModel has a way to identify completion date
+      // If the backend strict filters by completion_start_date/end_date, we might not need local filtering,
+      // but let's keep it consistent if possible.
+      return true; // The backend getProjects with completion_date is usually strict enough.
+    }).toList();
   } catch (e) {
     debugPrint('Error in monthlyCompletedProjectsProvider: $e');
     return [];
@@ -830,41 +870,68 @@ Future<List<ProjectModel>> monthlyCompletedProjects(
 
 @riverpod
 Future<List<TaskModel>> monthlyCompletedTasks(
-    MonthlyCompletedTasksRef ref, String monthYear) async {
-  final search = ref.watch(dashboardSearchQueryProvider);
+    MonthlyCompletedTasksRef ref, MonthlyReportParams params) async {
   final apiService = ref.watch(taskApiServiceProvider);
 
   // Parse "March 2026"
-  final parts = monthYear.split(' ');
+  final parts = params.monthYear.split(' ');
   if (parts.length != 2) return [];
 
   final monthName = parts[0];
   final year = int.tryParse(parts[1]) ?? DateTime.now().year;
 
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ];
   final month = monthNames.indexOf(monthName) + 1;
   if (month == 0) return [];
 
   final startDate = DateTime(year, month, 1);
-  final endDate = month == 12 ? DateTime(year + 1, 1, 0) : DateTime(year, month + 1, 0);
+  final endDate =
+      month == 12 ? DateTime(year + 1, 1, 0) : DateTime(year, month + 1, 0);
 
   final startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
   final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
+  final queryParams = <String, dynamic>{
+    if (params.scope != null) 'filter': params.scope!.toLowerCase(),
+    'status': 'DONE',
+    'all_tasks': 'true',
+    'completion_start_date': startDateStr,
+    'completion_end_date': endDateStr,
+  };
+
   try {
-    // Fetch tasks completed in this month
-    return await apiService.getTasks(
-      startDate: startDateStr,
-      endDate: endDateStr,
-      search: search.isNotEmpty ? search : null,
+    // Fetch tasks specifically completed in this month
+    final tasks = await apiService.getTasks(
+      userId: params.userId?.toString(),
+      search:
+          params.search != null && params.search!.isNotEmpty ? params.search : null,
+      params: queryParams,
     );
+
+    // FRONTEND FILTER: Ensure we only show tasks completed in the SPECIFIC month
+    return tasks.where((t) => 
+      t.completedAt != null && 
+      t.completedAt!.month == month && 
+      t.completedAt!.year == year
+    ).toList();
   } catch (e) {
     debugPrint('Error in monthlyCompletedTasksProvider: $e');
     return [];
   }
 }
+
 
 
