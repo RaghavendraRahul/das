@@ -193,7 +193,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     void goBack() {
       if (step.value == CreationStep.tasks) {
         step.value = CreationStep.details;
-      } else if (step.value == CreationStep.details) {
+      } else if (step.value == CreationStep.details ||
+          step.value == CreationStep.createClient) {
         step.value = CreationStep.type;
         selectedType.value = null;
       }
@@ -260,7 +261,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                             top: Radius.circular(24)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -320,8 +321,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                           _Breadcrumb(
                             currentStep: step.value,
                             isDark: isDark,
-                            isProject:
-                                selectedType.value == WorkspaceType.project,
+                            selectedType: selectedType.value,
                           ),
                         ],
                       ),
@@ -368,7 +368,13 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                   maxDate: maxDate, minDate: minDate),
                           () => step.value = CreationStep.tasks,
                           plannedHoursController,
-                          () => step.value = CreationStep.details,
+                          () {
+                            if (selectedType.value == WorkspaceType.client) {
+                              step.value = CreationStep.createClient;
+                            } else {
+                              step.value = CreationStep.details;
+                            }
+                          },
                           editingTaskIndex,
                           (msg) => localError.value = msg,
                           selectedClientId,
@@ -1097,7 +1103,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 OutlinedButton(
-                  onPressed: () => step.value = CreationStep.type,
+                  onPressed: onBack,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF05263E),
                     padding: const EdgeInsets.symmetric(
@@ -2383,18 +2389,22 @@ class _AddTaskForm extends HookConsumerWidget {
 class _Breadcrumb extends StatelessWidget {
   final CreationStep currentStep;
   final bool isDark;
-  final bool isProject;
+  final WorkspaceType? selectedType;
   const _Breadcrumb(
       {required this.currentStep,
       required this.isDark,
-      required this.isProject});
+      required this.selectedType});
 
   @override
   Widget build(BuildContext context) {
     final steps = [
       _step("TYPE", CreationStep.type),
-      _step("DETAILS", CreationStep.details),
-      if (isProject) _step("TASKS", CreationStep.tasks),
+      if (selectedType == WorkspaceType.client)
+        _step("CLIENT", CreationStep.createClient)
+      else
+        _step("DETAILS", CreationStep.details),
+      if (selectedType == WorkspaceType.project)
+        _step("TASKS", CreationStep.tasks),
     ];
 
     return Row(
@@ -2577,7 +2587,6 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const brandNavy = Color(0xFF05263E);
-    const brandAccent = Color(0xFF7EC8F4);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -2940,7 +2949,7 @@ Widget _buildClientDropdown(
                     value: id,
                     child: Text(name, style: GoogleFonts.outfit(fontSize: 14)),
                   );
-                }).toList(),
+                })
               ],
               onChanged: (value) {
                 selectedClientId.value = value;
