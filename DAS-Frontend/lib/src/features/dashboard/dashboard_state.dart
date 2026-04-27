@@ -20,6 +20,7 @@ final workingReportDrillDownTypeProvider = StateProvider<String>((ref) => 'Proje
 // User & Project Selection for Statistics
 final selectedStatsUserIdProvider = StateProvider<int?>((ref) => null);
 final selectedStatsProjectIdProvider = StateProvider<int?>((ref) => null);
+final selectedStatsClientIdProvider = StateProvider<int?>((ref) => null);
 final selectedStatsPeriodProvider = StateProvider<String>((ref) => 'month');
 
 // Header UI injection

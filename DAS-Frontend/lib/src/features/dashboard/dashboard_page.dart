@@ -265,7 +265,7 @@ class DashboardPage extends HookConsumerWidget {
                                     selectedStatusFilter.value = status;
                                   },
                                   onNavigateToProject: (_) {
-                                    context.navigateTo(const ProjectPlanRoute());
+                                    context.navigateTo(const ProjectOverviewRoute());
                                   },
                                 ),
                               ),
@@ -441,7 +441,7 @@ class _SearchResultItem extends ConsumerWidget {
     return InkWell(
       onTap: () {
         ref.read(selectedProjectIdProvider.notifier).state = project.id;
-        context.router.navigate(const ProjectPlanRoute());
+        context.router.navigate(const ProjectOverviewRoute());
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(

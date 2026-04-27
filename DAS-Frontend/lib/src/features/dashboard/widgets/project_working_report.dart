@@ -795,7 +795,7 @@ class _ProjectDetailCard extends ConsumerWidget {
     return InkWell(
       onTap: () {
         ref.read(selectedProjectIdProvider.notifier).state = 'api_project_${project.id}';
-        context.router.navigate(const ProjectPlanRoute());
+        context.router.navigate(const ProjectOverviewRoute());
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(

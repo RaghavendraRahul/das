@@ -8,11 +8,30 @@ import '../../core/models/project_with_tasks.dart';
 import 'providers/api_providers.dart';
 import '../../core/providers/user_providers.dart';
 import 'models/task_model.dart';
+import 'package:project_pm/src/core/theme/theme_provider.dart';
 
 part 'project_providers.g.dart';
 
-/// Selected project ID - set when user clicks a project card
-final selectedProjectIdProvider = StateProvider<String?>((ref) => null);
+/// Selected project ID - persisted across refreshes
+final selectedProjectIdProvider = StateProvider<String?>((ref) {
+  // Access SharedPreferences (already initialized in main.dart)
+  final prefs = ref.watch(sharedPreferencesProvider);
+  const key = 'selected_project_id';
+
+  // Load initial value
+  final savedId = prefs.getString(key);
+
+  // Listen for state changes and persist them
+  ref.listenSelf((previous, next) {
+    if (next != null) {
+      prefs.setString(key, next);
+    } else {
+      prefs.remove(key);
+    }
+  });
+
+  return savedId;
+});
 
 @riverpod
 ProjectRepository projectRepository(ProjectRepositoryRef ref) {

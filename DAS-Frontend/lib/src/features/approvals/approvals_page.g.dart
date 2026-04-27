@@ -75,7 +75,7 @@ final apiTaskCompletionsProvider =
 
 typedef ApiTaskCompletionsRef
     = AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$apiNewClientsHash() => r'8f3c7a2d1e4b5c9d7f2a0e8c5d1b3f7a';
+String _$apiNewClientsHash() => r'07021aab15ab737fe234039afc0975b605d548c4';
 
 /// See also [apiNewClients].
 @ProviderFor(apiNewClients)

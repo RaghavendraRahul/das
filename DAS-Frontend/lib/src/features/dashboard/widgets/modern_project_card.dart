@@ -52,6 +52,7 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
               widget.isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E);
           break;
         case 'on_hold':
+        case 'on hold':
           projectColor = Colors.orange;
           break;
         default:
@@ -299,6 +300,7 @@ class _ProjectHeader extends StatelessWidget {
           statusText = 'Open';
           break;
         case 'on_hold':
+        case 'on hold':
           statusColor = Colors.orange;
           statusText = 'On Hold';
           break;
@@ -941,9 +943,67 @@ class _ProjectFooter extends StatelessWidget {
               const SizedBox(width: 6),
               _DaysRemainingPill(days: daysRemaining),
             ],
+            // Completion status for finished projects
+            if (isCompleted && project.completedDate != null && dueDateVal != null) ...[
+              const SizedBox(width: 8),
+              _CompletionStatusPill(
+                diff: DateTime(project.completedDate!.year, project.completedDate!.month,
+                        project.completedDate!.day)
+                    .difference(DateTime(dueDateVal.year, dueDateVal.month, dueDateVal.day))
+                    .inDays,
+              ),
+            ],
           ],
         ),
       ],
+    );
+  }
+}
+
+class _CompletionStatusPill extends StatelessWidget {
+  final int diff;
+  const _CompletionStatusPill({required this.diff});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color bg;
+    final Color fg;
+    final String label;
+
+    if (diff < 0) {
+      // Early
+      bg = isDark ? const Color(0xFF064E3B) : Colors.green.shade50;
+      fg = isDark ? const Color(0xFF34D399) : Colors.green.shade700;
+      label = '${diff.abs()}d early';
+    } else if (diff > 0) {
+      // Late
+      bg = isDark ? const Color(0xFF450A0A) : Colors.red.shade50;
+      fg = isDark ? const Color(0xFFF87171) : Colors.red.shade700;
+      label = '${diff}d late';
+    } else {
+      // On time
+      bg = isDark ? const Color(0xFF1E293B) : Colors.blue.shade50;
+      fg = isDark ? const Color(0xFF60A5FA) : Colors.blue.shade700;
+      label = 'On time';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: fg.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: fg,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 }

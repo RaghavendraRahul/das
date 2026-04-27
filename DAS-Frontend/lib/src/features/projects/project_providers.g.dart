@@ -162,7 +162,7 @@ final analyticsDataProvider =
 );
 
 typedef AnalyticsDataRef = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
-String _$approvedClientsHash() => r'a1e8f5d9c3b7f2e1d9c4a5b6f2e3d1c0';
+String _$approvedClientsHash() => r'58097b03d993ce89f07487faf94f33d0423b66d9';
 
 /// Fetch all approved clients for project/routine creation
 ///

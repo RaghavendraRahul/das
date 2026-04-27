@@ -64,20 +64,8 @@ class ShellPage extends ConsumerWidget {
     final selectedProjectId = ref.watch(selectedProjectIdProvider);
     final onProjectSubPage = _isProjectSubPage(currentViewMode);
 
-    // Auto-RESTORE project selection after a browser refresh:
-    // When on a project sub-page but selectedProjectId is null (wiped from memory),
-    // pick the first available project to restore sidebar + header state.
-    if (selectedProjectId == null && onProjectSubPage) {
-      final allProjects = ref.read(projectsWithTasksProvider).valueOrNull;
-      if (allProjects != null && allProjects.isNotEmpty) {
-        Future.microtask(() {
-          if (ref.context.mounted) {
-            ref.read(selectedProjectIdProvider.notifier).state =
-                allProjects.first.project.id;
-          }
-        });
-      }
-    }
+    // RESTORE logic is now handled by the persisted selectedProjectIdProvider itself
+    // so we don't need to manually pick the first project here anymore.
 
     // isProjectSelected is true when:
     // 1. We have a selected project ID and are on a project sub-page, OR
@@ -85,15 +73,9 @@ class ShellPage extends ConsumerWidget {
     //    This prevents the sidebar from flickering to dashboard mode during async restore.
     final isProjectSelected = onProjectSubPage;
 
-    // Auto-clear project selection when navigating back to global pages (Dashboard, Planner, etc.)
-    // This ensures that browser back-button navigation correctly resets the sidebar state.
-    if (selectedProjectId != null && !onProjectSubPage) {
-      Future.microtask(() {
-        if (ref.context.mounted) {
-          ref.read(selectedProjectIdProvider.notifier).state = null;
-        }
-      });
-    }
+    // We no longer auto-clear selectedProjectId when navigating away.
+    // This allows the app to remember your "last active project" even if you 
+    // go to the Dashboard and then back to the Plan page.
 
     // Dynamic Title Logic
     final projectAsync = ref.watch(currentProjectProvider);

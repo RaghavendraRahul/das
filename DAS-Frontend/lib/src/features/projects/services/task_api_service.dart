@@ -969,9 +969,10 @@ class TaskApiService {
 
   // --- Dashboard Extras ---
 
-  Future<List<dynamic>> getUsersForStats() async {
+  Future<List<dynamic>> getUsersForStats({int? projectId}) async {
     try {
-      final response = await _dio.get('/dashboard/users-for-stats/');
+      final queryParams = projectId != null ? {'project_id': projectId} : null;
+      final response = await _dio.get('/dashboard/users-for-stats/', queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['users'] ?? [];
       }
@@ -1361,6 +1362,18 @@ class TaskApiService {
     } catch (e) {
       print('Error fetching member dashboard: $e');
       return {};
+    }
+  }
+
+  Future<List<dynamic>> getClientsForStats() async {
+    try {
+      final response = await _dio.get('/clients/', queryParameters: {'is_approved': true});
+      if (response.statusCode == 200) {
+        return response.data as List<dynamic>;
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 

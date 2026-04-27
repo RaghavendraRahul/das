@@ -433,7 +433,7 @@ class _PaginatedDashboardProjectsProviderElement
 }
 
 String _$projectsPageProjectsHash() =>
-    r'4cdac35a7831f819ce334ee3056f1b40970f00c4';
+    r'18eb8b53fc5ca43a763c811cdf89952aac150bbd';
 
 /// Independent provider for the Projects Page (My Projects / Team Projects).
 /// Completely separate from [paginatedDashboardProjectsProvider] so that
@@ -466,11 +466,13 @@ class ProjectsPageProjectsFamily
     required int page,
     String? filter,
     String? search,
+    String? status,
   }) {
     return ProjectsPageProjectsProvider(
       page: page,
       filter: filter,
       search: search,
+      status: status,
     );
   }
 
@@ -482,6 +484,7 @@ class ProjectsPageProjectsFamily
       page: provider.page,
       filter: provider.filter,
       search: provider.search,
+      status: provider.status,
     );
   }
 
@@ -516,12 +519,14 @@ class ProjectsPageProjectsProvider
     required int page,
     String? filter,
     String? search,
+    String? status,
   }) : this._internal(
           (ref) => projectsPageProjects(
             ref as ProjectsPageProjectsRef,
             page: page,
             filter: filter,
             search: search,
+            status: status,
           ),
           from: projectsPageProjectsProvider,
           name: r'projectsPageProjectsProvider',
@@ -535,6 +540,7 @@ class ProjectsPageProjectsProvider
           page: page,
           filter: filter,
           search: search,
+          status: status,
         );
 
   ProjectsPageProjectsProvider._internal(
@@ -547,11 +553,13 @@ class ProjectsPageProjectsProvider
     required this.page,
     required this.filter,
     required this.search,
+    required this.status,
   }) : super.internal();
 
   final int page;
   final String? filter;
   final String? search;
+  final String? status;
 
   @override
   Override overrideWith(
@@ -571,6 +579,7 @@ class ProjectsPageProjectsProvider
         page: page,
         filter: filter,
         search: search,
+        status: status,
       ),
     );
   }
@@ -586,7 +595,8 @@ class ProjectsPageProjectsProvider
     return other is ProjectsPageProjectsProvider &&
         other.page == page &&
         other.filter == filter &&
-        other.search == search;
+        other.search == search &&
+        other.status == status;
   }
 
   @override
@@ -595,6 +605,7 @@ class ProjectsPageProjectsProvider
     hash = _SystemHash.combine(hash, page.hashCode);
     hash = _SystemHash.combine(hash, filter.hashCode);
     hash = _SystemHash.combine(hash, search.hashCode);
+    hash = _SystemHash.combine(hash, status.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -610,6 +621,9 @@ mixin ProjectsPageProjectsRef
 
   /// The parameter `search` of this provider.
   String? get search;
+
+  /// The parameter `status` of this provider.
+  String? get status;
 }
 
 class _ProjectsPageProjectsProviderElement
@@ -623,6 +637,8 @@ class _ProjectsPageProjectsProviderElement
   String? get filter => (origin as ProjectsPageProjectsProvider).filter;
   @override
   String? get search => (origin as ProjectsPageProjectsProvider).search;
+  @override
+  String? get status => (origin as ProjectsPageProjectsProvider).status;
 }
 
 String _$apiTasksHash() => r'156208f57f2f50a6e9db6b36f8735cf0f0e50de9';

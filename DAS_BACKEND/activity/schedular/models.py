@@ -522,7 +522,7 @@ class Task(models.Model):
     
     def regenerate_recurring_task(self):
         """Regenerate a new instance of this recurring task"""
-        if self.task_type != 'RECURRING' or not self.recurrence_pattern:
+        if not self.recurrence_pattern:
             return None
         from datetime import timedelta
         from dateutil.relativedelta import relativedelta

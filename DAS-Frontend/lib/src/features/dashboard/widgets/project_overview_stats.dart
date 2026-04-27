@@ -70,7 +70,7 @@ class ProjectOverviewStats extends ConsumerWidget {
               onSelectProject: (projectId) {
                 Navigator.of(ctx).pop();
                 ref.read(selectedProjectIdProvider.notifier).state = projectId;
-                context.router.navigate(const ProjectPlanRoute());
+                context.router.navigate(const ProjectOverviewRoute());
               },
             ),
           );

@@ -25,6 +25,7 @@ class ProjectsPage extends HookConsumerWidget {
     final isEmployee = currentUserAsync.valueOrNull?.role == 'EMPLOYEE';
 
     final selectedProjectType = useState<String>(isEmployee ? 'my' : 'team');
+    final selectedStatus = useState<String?>(null); // Default to 'All' to show everything initially
 
     // Sync state if employee role is detected after initial build
     useEffect(() {
@@ -64,14 +65,15 @@ class ProjectsPage extends HookConsumerWidget {
         filter: selectedProjectType.value == 'team'
             ? null
             : selectedProjectType.value,
-        search: searchQuery.value));
+        search: searchQuery.value,
+        status: selectedStatus.value));
 
     // Watch page-1 counts for BOTH tabs in parallel — no extra API calls,
     // Riverpod caches these; they resolve from the same provider family.
     final myCountAsync = ref.watch(
-        projectsPageProjectsProvider(page: 1, filter: 'my', search: ''));
+        projectsPageProjectsProvider(page: 1, filter: 'my', search: '', status: selectedStatus.value));
     final teamCountAsync = ref.watch(
-        projectsPageProjectsProvider(page: 1, filter: null, search: ''));
+        projectsPageProjectsProvider(page: 1, filter: null, search: '', status: selectedStatus.value));
 
     final myCount = myCountAsync.valueOrNull?.count;
     final teamCount = teamCountAsync.valueOrNull?.count;
@@ -153,6 +155,63 @@ class ProjectsPage extends HookConsumerWidget {
                     ),
                   ),
                   Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF374151) : Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: isDark
+                              ? Colors.transparent
+                              : Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _StatusButton(
+                          label: 'All',
+                          icon: Icons.filter_list_rounded,
+                          isSelected: selectedStatus.value == null,
+                          onTap: () {
+                            selectedStatus.value = null;
+                            currentPage.value = 1;
+                          },
+                          isDark: isDark,
+                        ),
+                        Container(
+                            width: 1,
+                            height: 24,
+                            color: isDark
+                                ? Colors.grey.shade600
+                                : Colors.grey.shade300),
+                        _StatusButton(
+                          label: 'Active',
+                          icon: Icons.play_arrow_outlined,
+                          isSelected: selectedStatus.value == 'ACTIVE',
+                          onTap: () {
+                            selectedStatus.value = 'ACTIVE';
+                            currentPage.value = 1;
+                          },
+                          isDark: isDark,
+                        ),
+                        Container(
+                            width: 1,
+                            height: 24,
+                            color: isDark
+                                ? Colors.grey.shade600
+                                : Colors.grey.shade300),
+                        _StatusButton(
+                          label: 'Completed',
+                          icon: Icons.check_circle_outline,
+                          isSelected: selectedStatus.value == 'COMPLETED',
+                          onTap: () {
+                            selectedStatus.value = 'COMPLETED';
+                            currentPage.value = 1;
+                          },
+                          isDark: isDark,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
                     height: 42,
                     width: 300,
                     decoration: BoxDecoration(
@@ -220,7 +279,8 @@ class ProjectsPage extends HookConsumerWidget {
                           filter: selectedProjectType.value == 'team'
                               ? null
                               : selectedProjectType.value,
-                          search: searchQuery.value));
+                          search: searchQuery.value,
+                          status: selectedStatus.value));
                     },
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('New Project',
@@ -305,7 +365,7 @@ class ProjectsPage extends HookConsumerWidget {
                                     .read(sidebarCollapsedProvider.notifier)
                                     .state = false;
                                 context.router
-                                    .navigate(const ProjectPlanRoute());
+                                    .navigate(const ProjectOverviewRoute());
                               },
                             );
                           },
@@ -423,6 +483,61 @@ class _ProjectTypeButton extends StatelessWidget {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _StatusButton({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final activeColor = label == 'Completed'
+        ? Colors.green.shade700
+        : (label == 'Active' ? Colors.blue.shade700 : const Color(0xFF05263E));
+    final textColor = isSelected
+        ? Colors.white
+        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: textColor),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: textColor,
+              ),
+            ),
           ],
         ),
       ),

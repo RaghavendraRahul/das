@@ -69,11 +69,19 @@ class WorkStatisticsChart extends HookConsumerWidget {
 
     // Auto-selection removed as per new "Selection-First" policy. 
     // The dropdown will now default to "Select User" and no metrics will show until picked.
-
-    // ── Reset project selection whenever user changes (Riverpod listener) ─────
-    ref.listen<int?>(selectedStatsUserIdProvider, (prev, next) {
+    // ── Cascading Resets ──────────────────────────────────────────────────────
+    // When client changes, reset project and user
+    ref.listen<int?>(selectedStatsClientIdProvider, (prev, next) {
       if (prev != next) {
         ref.read(selectedStatsProjectIdProvider.notifier).state = null;
+        ref.read(selectedStatsUserIdProvider.notifier).state = null;
+      }
+    });
+
+    // When project changes, reset user (since employees are filtered by project)
+    ref.listen<int?>(selectedStatsProjectIdProvider, (prev, next) {
+      if (prev != next) {
+        ref.read(selectedStatsUserIdProvider.notifier).state = null;
       }
     });
 
@@ -82,10 +90,6 @@ class WorkStatisticsChart extends HookConsumerWidget {
       loading: () => const _ShellBox(child: CircularProgressIndicator()),
       error: (e, _) => _ShellBox(child: Text('Error: $e')),
       data: (users) {
-        if (users.isEmpty) {
-          return const _ShellBox(
-              child: Text('No users available for statistics'));
-        }
         return statsAsync.when(
           loading: () =>
               const _ShellBox(child: CircularProgressIndicator()),
@@ -162,10 +166,14 @@ class _Header extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedUserId = ref.watch(selectedStatsUserIdProvider);
     final selectedProjectId = ref.watch(selectedStatsProjectIdProvider);
+    final selectedClientId = ref.watch(selectedStatsClientIdProvider);
     
-    // Use the proper API-driven provider for projects list
+    // Use the proper API-driven providers
     final projectsAsync = ref.watch(statsProjectsProvider);
     final allProjects = projectsAsync.value ?? [];
+    
+    final clientsAsync = ref.watch(clientsForStatsProvider);
+    final allClients = clientsAsync.value ?? [];
 
     String projectLabel = 'All Projects';
     if (projectsAsync.isLoading) {
@@ -177,7 +185,6 @@ class _Header extends ConsumerWidget {
       if (found != null) {
         projectLabel = found['name'] as String;
       } else {
-        // If the selected project is not in the new user's list, label as All
         projectLabel = 'All Projects';
       }
     }
@@ -206,6 +213,52 @@ class _Header extends ConsumerWidget {
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
+            // Client Dropdown
+            Container(
+              height: 32,
+              width: 140, // Added fixed width for visibility
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0B1A2E) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF162D4A) : const Color(0xFFD4E2F0),
+                ),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int?>(
+                  value: allClients.any((c) => c['id'] == selectedClientId) ? selectedClientId : null,
+                  hint: Text(clientsAsync.isLoading ? 'Loading...' : 'Select Client',
+                      style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? const Color(0xFFE0F2FE) : const Color(0xFF4B6A8A))),
+                  icon: Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 16, color: isDark ? const Color(0xFF7EC8F4) : Colors.grey.shade500),
+                  isDense: true,
+                  isExpanded: true, // Added isExpanded
+                  dropdownColor: isDark ? const Color(0xFF0B1A2E) : Colors.white,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : const Color(0xFF0D1B2A),
+                  ),
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('All Clients', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                    ),
+                    ...allClients.map((c) => DropdownMenuItem<int?>(
+                          value: c['id'] as int,
+                          child: Text(c['name'] as String),
+                        )),
+                  ],
+                  onChanged: (val) {
+                    ref.read(selectedStatsClientIdProvider.notifier).state = val;
+                  },
+                ),
+              ),
+            ),
             _SelectorPill(
               label: projectLabel,
               icon: Icons.assignment_outlined,
@@ -225,7 +278,7 @@ class _Header extends ConsumerWidget {
                 ),
               ),
               child: DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
+                child: DropdownButton<int?>(
                   value: users.any((u) => u['id'] == selectedUserId)
                       ? selectedUserId
                       : null,
@@ -244,16 +297,18 @@ class _Header extends ConsumerWidget {
                     fontWeight: FontWeight.w500,
                     color: isDark ? Colors.white : const Color(0xFF0D1B2A),
                   ),
-                  items: users
-                      .map((u) => DropdownMenuItem<int>(
-                            value: u['id'] as int,
-                            child: Text(u['name'] as String),
-                          ))
-                      .toList(),
+                  items: [
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('All Users', style: TextStyle(color: isDark ? Colors.blue.shade300 : Colors.blue.shade700, fontWeight: FontWeight.bold)),
+                    ),
+                    ...users.map((u) => DropdownMenuItem<int?>(
+                          value: u['id'] as int,
+                          child: Text(u['name'] as String),
+                        )),
+                  ],
                   onChanged: (val) {
-                    if (val != null) {
-                      ref.read(selectedStatsUserIdProvider.notifier).state = val;
-                    }
+                    ref.read(selectedStatsUserIdProvider.notifier).state = val;
                   },
                 ),
               ),

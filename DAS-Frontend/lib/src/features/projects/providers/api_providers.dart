@@ -154,6 +154,7 @@ Future<PaginatedResponse<ProjectWithTasks>> paginatedDashboardProjects(
       tasks: tasks,
       startDate: projectModel.startDate,
       dueDate: projectModel.dueDate,
+      completedDate: projectModel.completedDate,
       projectLeadId: projectModel.projectLeadId,
       projectAssignees: resolvedAssignees,
     );
@@ -175,13 +176,15 @@ Future<PaginatedResponse<ProjectWithTasks>> projectsPageProjects(
     ProjectsPageProjectsRef ref,
     {required int page,
     String? filter,
-    String? search}) async {
+    String? search,
+    String? status}) async {
   ref.keepAlive(); // Cache projects page data for instant tab switches
   final apiService = ref.watch(taskApiServiceProvider);
   try {
     final params = <String, dynamic>{};
     if (filter != null) params['filter'] = filter;
     if (search != null && search.isNotEmpty) params['search'] = search;
+    if (status != null) params['status'] = status;
 
     final keys = await apiService.getPaginatedProjects(page, params);
     final allTasks = await ref.watch(apiTasksProvider.future);
@@ -217,6 +220,7 @@ Future<PaginatedResponse<ProjectWithTasks>> projectsPageProjects(
         tasks: tasks,
         startDate: projectModel.startDate,
         dueDate: projectModel.dueDate,
+        completedDate: projectModel.completedDate,
         projectLeadId: projectModel.projectLeadId,
         projectAssignees: resolvedAssignees,
       );
@@ -755,6 +759,7 @@ Future<PaginatedResponse<ProjectWithTasks>> adminEmployeeProjects(
         tasks: tasks,
         startDate: projectModel.startDate,
         dueDate: projectModel.dueDate,
+        completedDate: projectModel.completedDate,
         projectLeadId: projectModel.projectLeadId,
         projectAssignees: resolvedAssignees,
       );

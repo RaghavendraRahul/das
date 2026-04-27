@@ -161,7 +161,6 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     // Course/Routine Specific (not handled in edit mode for now)
     final instructorController = useTextEditingController();
     final scheduleController = useTextEditingController();
-    final routineCategory = useState<String>('Work');
     final routineFrequency = useState<String>('Monthly');
 
     // Client Selection
@@ -360,7 +359,6 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                           projectAssignees,
                           instructorController,
                           scheduleController,
-                          routineCategory,
                           routineFrequency,
                           goBack,
                           (state, {DateTime? maxDate, DateTime? minDate}) =>
@@ -486,7 +484,6 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     ValueNotifier<List<int>> projectAssignees,
     TextEditingController instructorController,
     TextEditingController scheduleController,
-    ValueNotifier<String> routineCategory,
     ValueNotifier<String> routineFrequency,
     VoidCallback onBack,
     Function(ValueNotifier<DateTime?>, {DateTime? maxDate, DateTime? minDate})
@@ -752,29 +749,14 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                   _buildClientDropdown(
                       selectedClientId, approvedClientsAsync, "Client (Optional)", isDark),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: _buildDropdown(
-                              label: "Category",
-                              value: routineCategory.value,
-                              items: ["Work", "Health", "Personal", "Study"],
-                              onChanged: (val) {
-                                if (val != null) routineCategory.value = val;
-                              },
-                              isDark: isDark)),
-                      const SizedBox(width: 24),
-                      Expanded(
-                          child: _buildDropdown(
-                              label: "Frequency",
-                              value: routineFrequency.value,
-                              items: ["Monthly"],
-                              onChanged: (val) {
-                                if (val != null) routineFrequency.value = val;
-                              },
-                              isDark: isDark)),
-                    ],
-                  ),
+                  _buildDropdown(
+                      label: "Frequency",
+                      value: routineFrequency.value,
+                      items: ["Monthly"],
+                      onChanged: (val) {
+                        if (val != null) routineFrequency.value = val;
+                      },
+                      isDark: isDark),
                   const SizedBox(height: 24),
                   _buildTextField(descriptionController, "Description / Notes",
                       "Routine details...",
@@ -819,7 +801,6 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                               descriptionController.text,
                               instructorController.text,
                               scheduleController.text,
-                              routineCategory.value,
                               routineFrequency.value,
                               selectedClientId.value);
                         }
@@ -1541,7 +1522,6 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
       String desc,
       String instructor,
       String schedule,
-      String? category,
       String? frequency,
       int? clientId) async {
     try {
@@ -1551,7 +1531,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
         finalDescription =
             "Instructor: $instructor\nSchedule: $schedule\n\n$desc";
       } else if (type == WorkspaceType.routine) {
-        finalDescription = "Category: $category\nFrequency: $frequency\n\n$desc";
+        finalDescription = "Frequency: $frequency\n\n$desc";
       }
 
       final catalogType = type == WorkspaceType.course ? 'COURSE' : 'ROUTINE';

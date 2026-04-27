@@ -203,13 +203,26 @@ Future<Map<String, dynamic>> dashboardOverviewStats(DashboardOverviewStatsRef re
 
 
 
+/// Provider for fetching clients list for stats dropdown
+@riverpod
+Future<List<dynamic>> clientsForStats(ClientsForStatsRef ref) async {
+  ref.keepAlive();
+  final apiService = ref.watch(taskApiServiceProvider);
+  try {
+    return await apiService.getClientsForStats();
+  } catch (e) {
+    debugPrint('Error fetching clients for stats: $e');
+    return [];
+  }
+}
+
 /// Provider for fetching users list for stats dropdown
 @riverpod
 Future<List<dynamic>> usersForStats(UsersForStatsRef ref) async {
-  ref.keepAlive(); // Cache user list for stats dropdown
   final apiService = ref.watch(taskApiServiceProvider);
+  final selectedProjectId = ref.watch(selectedStatsProjectIdProvider);
   try {
-    return await apiService.getUsersForStats();
+    return await apiService.getUsersForStats(projectId: selectedProjectId);
   } catch (e) {
     print('Error fetching users for stats: $e');
     return [];
@@ -256,11 +269,14 @@ Future<Map<String, dynamic>> projectWorkStats(
   final selectedProjectId = ref.watch(selectedStatsProjectIdProvider);
 
   try {
+    final selectedClientId = ref.watch(selectedStatsClientIdProvider);
+
     return await apiService.getProjectWorkStats(
       selectedUserId,
       startDate: startDate,
       endDate: endDate,
       projectId: selectedProjectId,
+      clientId: selectedClientId,
       search: search,
     );
   } catch (e) {
@@ -274,6 +290,7 @@ Future<Map<String, dynamic>> projectWorkStats(
 Future<List<dynamic>> statsProjects(StatsProjectsRef ref) async {
   final search = ref.watch(dashboardSearchQueryProvider);
   final selectedUserId = ref.watch(selectedStatsUserIdProvider);
+  final selectedClientId = ref.watch(selectedStatsClientIdProvider);
   final apiService = ref.watch(taskApiServiceProvider);
   try {
     // If no user is selected, return ALL projects for the dropdown.
@@ -281,6 +298,7 @@ Future<List<dynamic>> statsProjects(StatsProjectsRef ref) async {
     final projects = await apiService.getProjects(
       params: {
         if (selectedUserId != null) 'user_id': selectedUserId,
+        if (selectedClientId != null) 'client_id': selectedClientId,
         if (selectedUserId != null) 'filter': 'my',
         if (search.isNotEmpty) 'search': search,
       },

@@ -11,11 +11,14 @@ class ProjectWithTasks {
   final List<Map<String, dynamic>> projectAssignees;
   final int? projectLeadId;
 
+  final DateTime? completedDate;
+
   ProjectWithTasks({
     required this.project,
     required this.tasks,
     this.startDate,
     this.dueDate,
+    this.completedDate,
     this.projectLeadId,
     List<Map<String, dynamic>>? projectAssignees,
   }) : projectAssignees = projectAssignees ?? [];

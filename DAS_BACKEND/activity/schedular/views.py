@@ -240,7 +240,7 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
       ).all()  # Prefetch relationships to avoid N+1 queries
       
       filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-      filterset_fields = ['status', 'handled_by', 'created_by', 'project_lead']
+      filterset_fields = ['handled_by', 'created_by', 'project_lead']
       search_fields = ['name', 'description']
       ordering_fields = ['start_date', 'due_date', 'create_date', 'name']
       ordering = ['-create_date']
@@ -310,6 +310,12 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
 
           start_date = self.request.query_params.get('start_date')
           end_date = self.request.query_params.get('end_date')
+          status_param = self.request.query_params.get('status')
+          
+          if status_param == 'ongoing':
+              queryset = queryset.filter(status__in=['ACTIVE', 'ON HOLD'])
+          elif status_param:
+              queryset = queryset.filter(status=status_param)
           
           if start_date:
               queryset = queryset.filter(create_date__date__gte=start_date)
@@ -1937,7 +1943,7 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
             
             # Handle recurring task regeneration
             new_task_data = None
-            if task.task_type == 'RECURRING':
+            if task.recurrence_pattern:
                 new_task = task.regenerate_recurring_task()
                 if new_task:
                     new_task_data = TaskSerializer(new_task).data
@@ -1969,7 +1975,7 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
                 requested_by=user,
                 request_data={
                     'task_title': task.title,
-                    'project': task.project.name,
+                    'project': task.project.name if task.project else "No Project",
                     'completed_date': str(completion_date)
                 }
             )
@@ -2032,7 +2038,7 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
             
             # Handle recurring task regeneration
             new_task_data = None
-            if task.task_type == 'RECURRING':
+            if task.recurrence_pattern:
                 new_task = task.regenerate_recurring_task()
                 if new_task:
                     new_task_data = TaskSerializer(new_task).data
@@ -2115,20 +2121,21 @@ class TaskViewSet(TaskQuerySetMixin, viewsets.ModelViewSet):
             # --- Project De-completion Logic ---
             # If the parent project was completed or waiting for completion, reset it back to ACTIVE
             project = task.project
-            # COMPLETED status means the project card shows "Completed"
-            # REJECTED approval_status with ACTIVE status ensures it shows "Request Completion" button
-            current_status = project.status.lower()
-            current_approval = (project.approval_status or "").lower()
-            
-            if current_status == 'completed' or current_approval == 'pending_completion':
-                project.status = 'active'
-                project.approval_status = 'rejected' # Signify it was sent back for work
-                project.save()
+            if project:
+                # COMPLETED status means the project card shows "Completed"
+                # REJECTED approval_status with ACTIVE status ensures it shows "Request Completion" button
+                current_status = (project.status or "").lower()
+                current_approval = (project.approval_status or "").lower()
+                
+                if current_status == 'completed' or current_approval == 'pending_completion':
+                    project.status = 'ACTIVE'
+                    project.approval_status = 'rejected' # Signify it was sent back for work
+                    project.save()
             
         return Response({
             "message": "Task reopened successfully and project set to active",
             "task": TaskSerializer(task).data,
-            "project_status": project.status
+            "project_status": project.status if project else "No Project"
         })
 
 
@@ -2242,7 +2249,7 @@ class SubTaskViewSet(viewsets.ModelViewSet):
                 task.save(update_fields=['status', 'completed_at'])
                 
                 # Handle recurring task regeneration
-                if task.task_type == 'RECURRING':
+                if task.recurrence_pattern:
                     task.regenerate_recurring_task()
             
             # Otherwise, move to PENDING_APPROVAL and create request
@@ -4495,6 +4502,19 @@ class DashboardViewSet(viewsets.GenericViewSet):
         else:
             users = User.objects.filter(id=user.id, is_active=True)
         
+        # Filter by project if project_id is provided
+        project_id = request.query_params.get('project_id')
+        if project_id:
+            try:
+                project = Projects.objects.get(id=project_id)
+                users = users.filter(
+                    models.Q(id__in=project.assignees.values_list('id', flat=True)) | 
+                    models.Q(id=project.project_lead_id) | 
+                    models.Q(id=project.handled_by_id)
+                ).distinct()
+            except (Projects.DoesNotExist, ValueError):
+                pass
+        
         user_list = []
         for u in users:
             # For each user, count projects they are involved in
@@ -4525,6 +4545,7 @@ class DashboardViewSet(viewsets.GenericViewSet):
         project_id_filter = request.query_params.get('project_id')
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
+        client_id_filter = request.query_params.get('client_id')
 
         # Date parsing
         start_date = None
@@ -4560,6 +4581,9 @@ class DashboardViewSet(viewsets.GenericViewSet):
             models.Q(created_by=target_user) |
             models.Q(assignees=target_user)
         ).distinct()
+
+        if client_id_filter and client_id_filter != 'null' and client_id_filter != '':
+            all_user_projects = all_user_projects.filter(client_id=client_id_filter)
 
         all_projects_list = [
             {'id': p.id, 'name': p.name} for p in all_user_projects

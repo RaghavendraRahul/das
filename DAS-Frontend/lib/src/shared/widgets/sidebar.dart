@@ -59,7 +59,7 @@ class Sidebar extends HookConsumerWidget {
           _LogoArea(
             onTap: () {
               ref.read(selectedProjectIdProvider.notifier).state = null;
-              onViewModeChange(ViewMode.dashboard);
+              onViewModeChange(ViewMode.projects);
             },
           ),
 
@@ -109,7 +109,7 @@ class Sidebar extends HookConsumerWidget {
                     isActive: false,
                     onTap: () {
                       ref.read(selectedProjectIdProvider.notifier).state = null;
-                      onViewModeChange(ViewMode.dashboard);
+                      onViewModeChange(ViewMode.projects);
                     },
                   ),
                   const SizedBox(height: 4),

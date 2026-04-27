@@ -66,13 +66,13 @@ class AppHeader extends HookConsumerWidget {
          switch (item.type) {
             case SearchResultType.project:
               ref.read(selectedProjectIdProvider.notifier).state = 'api_project_${item.id}';
-              router.push(const ProjectPlanRoute());
+              router.push(const ProjectOverviewRoute());
               break;
             case SearchResultType.task:
             case SearchResultType.subtask:
               final pid = item.projectId ?? 0;
               ref.read(selectedProjectIdProvider.notifier).state = 'api_project_$pid';
-              router.push(const ProjectPlanRoute());
+              router.push(const ProjectOverviewRoute());
               break;
             case SearchResultType.catalog:
               router.navigate(const TodayRoute());
@@ -634,7 +634,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
                                       case 'PROJECT_UPDATED':
                                         if (n.referenceId != null) {
                                           ref.read(selectedProjectIdProvider.notifier).state = n.referenceId.toString();
-                                          router.push(const ProjectPlanRoute());
+                                          router.push(const ProjectOverviewRoute());
                                         } else { router.push(const ProjectsRoute()); }
                                         break;
                                       default: router.push(const NotificationsRoute());
@@ -820,7 +820,7 @@ class _CriticalAttentionButtonState extends ConsumerState<_CriticalAttentionButt
                                   title: Text(item.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                                   subtitle: Text(item.subtitle, style: TextStyle(fontSize: 12, color: widget.isDark ? Colors.grey.shade400 : Colors.grey.shade600)),
                                   dense: true,
-                                  onTap: () { _closeDropdown(); if (item.projectId.isNotEmpty) { ref.read(selectedProjectIdProvider.notifier).state = item.projectId; context.router.push(const ProjectPlanRoute()); } },
+                                  onTap: () { _closeDropdown(); if (item.projectId.isNotEmpty) { ref.read(selectedProjectIdProvider.notifier).state = item.projectId; context.router.push(const ProjectOverviewRoute()); } },
                                 );
                               },
                             );
