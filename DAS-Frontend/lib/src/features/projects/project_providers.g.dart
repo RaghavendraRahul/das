@@ -22,7 +22,7 @@ final projectRepositoryProvider =
 );
 
 typedef ProjectRepositoryRef = AutoDisposeProviderRef<ProjectRepository>;
-String _$currentProjectHash() => r'57950f459ceb3e9d60ee51288b215f99f8b855cd';
+String _$currentProjectHash() => r'12e4bf6be494baae77d7d6cbb3bdde307f81c3f8';
 
 /// See also [currentProject].
 @ProviderFor(currentProject)

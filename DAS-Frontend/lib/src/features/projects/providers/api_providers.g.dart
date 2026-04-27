@@ -2296,7 +2296,7 @@ class _AdminEmployeeDashboardProviderElement
 }
 
 String _$monthlyCompletedProjectsHash() =>
-    r'fe8437b3557d335e612461f07f5a30dab143ffff';
+    r'ed53dacf8a826c766e301c889e0b3f44a1ff582f';
 
 /// See also [monthlyCompletedProjects].
 @ProviderFor(monthlyCompletedProjects)
@@ -2431,7 +2431,7 @@ class _MonthlyCompletedProjectsProviderElement
 }
 
 String _$monthlyCompletedTasksHash() =>
-    r'ffd8f20ef5284f31fba33e2c3fc620a4d7065e11';
+    r'cbbc3f2eb2acd309c9f389b8f0b0d8e7413a32fc';
 
 /// See also [monthlyCompletedTasks].
 @ProviderFor(monthlyCompletedTasks)
