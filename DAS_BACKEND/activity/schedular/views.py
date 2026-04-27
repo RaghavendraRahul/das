@@ -10,11 +10,12 @@ from .serializers import (LoginSerializers, SignupWithOTPSerializer, VerifySignu
                           CatalogSerializer, TodayPlanSerializer, ActivityLogSerializer, 
                           PendingSerializer, DaySessionSerializer, TeamInstructionSerializer, UserSerializer, UserPreferenceSerializer, NotificationSerializer,
                           ProjectLineChartDataSerializer, TaskLineChartDataSerializer, CompletionChartDataSerializer,
-                          DailyPlannerSerializer, ProjectDashboardSerializer, ProjectAnalyticsSerializer, DailyTrendSerializer)
+                          DailyPlannerSerializer, ProjectDashboardSerializer, ProjectAnalyticsSerializer, DailyTrendSerializer,
+                          ClientSerializer, ClientDetailSerializer)
 from .utils import (create_otp_record, send_password_reset_confirmation, send_password_reset_otp, 
                     send_signup_otp_to_admin, send_account_approval_email, verify_otp)
 from .models import (User, Projects, ApprovalRequest, ApprovalResponse, Task, TaskAssignee, SubTask, StickyNote, 
-                     Catalog, TodayPlan, ActivityLog, Pending, DaySession, TeamInstruction, Notification, Employee, DailyPlanner)
+                     Catalog, TodayPlan, ActivityLog, Pending, DaySession, TeamInstruction, Notification, Employee, DailyPlanner, Client)
 from .mixins import ProjectQuerySetMixin, TaskQuerySetMixin
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -5646,6 +5647,192 @@ class ProjectWorkingHoursViewSet(viewsets.GenericViewSet):
             "total_minutes": total_minutes,
             "projects": projects_data
         })
+
+
+class ClientViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing clients with approval workflow"""
+    permission_classes = [AllowAny]  # DEVELOPMENT: Allow unauthenticated access
+    serializer_class = ClientSerializer
+    pagination_class = None
+    queryset = Client.objects.select_related('created_by').all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['is_approved', 'approval_status']
+    search_fields = ['client_name', 'company_name', 'email']
+    ordering_fields = ['created_at', 'client_name', 'approval_status']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        """Filter clients based on user role"""
+        user = self.request.user
+        queryset = Client.objects.select_related('created_by').all()
+        
+        # Admins see all clients
+        if user.is_authenticated and user.role == 'ADMIN':
+            return queryset
+        
+        # Other users see only approved clients + their own pending clients
+        if user.is_authenticated:
+            return queryset.filter(
+                models.Q(is_approved=True) | 
+                models.Q(created_by=user)
+            )
+        
+        # Unauthenticated users see only approved clients
+        return queryset.filter(is_approved=True)
+    
+    def get_serializer_class(self):
+        """Use detailed serializer for retrieve action"""
+        if self.action == 'retrieve':
+            return ClientDetailSerializer
+        return ClientSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new client with approval workflow:
+        - If created by admin, auto-approve
+        - If created by non-admin, create pending approval request
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user = request.user
+        
+        # Determine approval status based on user role
+        auto_approve = user.is_authenticated and user.role == 'ADMIN'
+        
+        # Save client
+        client = serializer.save(created_by=user)
+        
+        if auto_approve:
+            # Admin creation - auto approve
+            client.is_approved = True
+            client.approval_status = 'APPROVED'
+            client.save()
+        else:
+            # Non-admin creation - set to pending and create approval request
+            client.is_approved = False
+            client.approval_status = 'PENDING'
+            client.save()
+            
+            # Create approval request
+            ApprovalRequest.objects.create(
+                reference_type='CLIENT',
+                reference_id=client.id,
+                approval_type='CREATION',
+                requested_by=user,
+                status='PENDING',
+                request_data={
+                    'client_name': client.client_name,
+                    'company_name': client.company_name,
+                    'email': client.email,
+                    'phone_number': client.phone_number,
+                }
+            )
+        
+        # Return created client
+        output_serializer = self.get_serializer(client)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['get'], url_path='pending-approval')
+    def pending_approval(self, request):
+        """Get all clients pending approval (admin only)"""
+        user = request.user
+        
+        if not user.is_authenticated or user.role != 'ADMIN':
+            return Response(
+                {"error": "Only admins can view pending approvals"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        pending_clients = Client.objects.filter(approval_status='PENDING').select_related('created_by')
+        serializer = self.get_serializer(pending_clients, many=True)
+        
+        return Response({
+            'count': pending_clients.count(),
+            'clients': serializer.data
+        })
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve a client creation request (admin only)"""
+        user = request.user
+        
+        if not user.is_authenticated or user.role != 'ADMIN':
+            return Response(
+                {"error": "Only admins can approve clients"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        client = self.get_object()
+        
+        # Update client approval status
+        client.is_approved = True
+        client.approval_status = 'APPROVED'
+        client.save()
+        
+        # Update corresponding approval request
+        approval_request = ApprovalRequest.objects.filter(
+            reference_type='CLIENT',
+            reference_id=client.id,
+            approval_type='CREATION',
+            status='PENDING'
+        ).first()
+        
+        if approval_request:
+            ApprovalResponse.objects.create(
+                approval_request=approval_request,
+                action='APPROVED',
+                reviewed_by=user
+            )
+        
+        serializer = self.get_serializer(client)
+        return Response({
+            'message': 'Client approved successfully',
+            'client': serializer.data
+        })
+    
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject a client creation request (admin only)"""
+        user = request.user
+        
+        if not user.is_authenticated or user.role != 'ADMIN':
+            return Response(
+                {"error": "Only admins can reject clients"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        client = self.get_object()
+        rejection_reason = request.data.get('rejection_reason', 'No reason provided')
+        
+        # Update client approval status
+        client.is_approved = False
+        client.approval_status = 'REJECTED'
+        client.rejection_reason = rejection_reason
+        client.save()
+        
+        # Update corresponding approval request
+        approval_request = ApprovalRequest.objects.filter(
+            reference_type='CLIENT',
+            reference_id=client.id,
+            approval_type='CREATION',
+            status='PENDING'
+        ).first()
+        
+        if approval_request:
+            ApprovalResponse.objects.create(
+                approval_request=approval_request,
+                action='REJECTED',
+                reviewed_by=user,
+                rejection_reason=rejection_reason
+            )
+        
+        serializer = self.get_serializer(client)
+        return Response({
+            'message': 'Client rejected',
+            'client': serializer.data
+        })
+
 
     @action(detail=True, methods=['get'])
     def drilldown(self, request, pk=None):
