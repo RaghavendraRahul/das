@@ -11,7 +11,8 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:intl/intl.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
-import '../../../core/utils/user_color_service.dart';
+import 'package:flutter/services.dart';
+import 'package:project_pm/src/core/utils/user_color_service.dart';
 
 enum CreationStep { type, details, tasks }
 
@@ -161,7 +162,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     final instructorController = useTextEditingController();
     final scheduleController = useTextEditingController();
     final routineCategory = useState<String>('Work');
-    final routineFrequency = useState<String>('Daily');
+    final routineFrequency = useState<String>('Monthly');
 
     // Editing State for Tasks
     final editingTaskIndex = useState<int?>(null);
@@ -484,7 +485,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
               onTap: () => onSelectType(WorkspaceType.project),
             ),
             const SizedBox(height: 16),
-            _SelectionCard(
+            /* _SelectionCard(
               title: "Class / Course",
               description: "Syllabus, Lessons, and Training Modules.",
               icon: Icons.school_rounded,
@@ -493,9 +494,9 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
               isDark: isDark,
               onTap: () => onSelectType(WorkspaceType.course),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 16), */
             _SelectionCard(
-              title: "Routine Group",
+              title: "Routine Work",
               description: "Weekly meeting, CRM, and daily admin.",
               icon: Icons.coffee_rounded,
               type: WorkspaceType.routine,
@@ -673,8 +674,11 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                   const SizedBox(height: 24),
                   _buildTextField(
                       plannedHoursController, "Planned Hours", "e.g. 160",
-                      keyboardType: TextInputType.number),
-                ] else if (selectedType == WorkspaceType.course) ...[
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                      ]),
+                ] /* else if (selectedType == WorkspaceType.course) ...[
                   _buildTextField(
                       nameController, "Course Name", "e.g. Advanced Flutter"),
                   const SizedBox(height: 24),
@@ -693,7 +697,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                   _buildTextField(descriptionController,
                       "Description / Syllabus Summary", "Brief overview...",
                       maxLines: 4),
-                ] else if (selectedType == WorkspaceType.routine) ...[
+                ] */ else if (selectedType == WorkspaceType.routine) ...[
                   _buildTextField(
                       nameController, "Routine Name", "e.g. Daily Standup"),
                   const SizedBox(height: 24),
@@ -701,7 +705,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                     children: [
                       Expanded(
                           child: _buildDropdown(
-                              label: "Category",
+                              label: "Client",
                               value: routineCategory.value,
                               items: ["Work", "Health", "Personal", "Study"],
                               onChanged: (val) {
@@ -713,7 +717,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                           child: _buildDropdown(
                               label: "Frequency",
                               value: routineFrequency.value,
-                              items: ["Daily", "Weekly", "Monthly"],
+                              items: ["Monthly"],
                               onChanged: (val) {
                                 if (val != null) routineFrequency.value = val;
                               },
@@ -1392,7 +1396,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
             "Instructor: $instructor\nSchedule: $schedule\n\n$desc";
       } else if (type == WorkspaceType.routine) {
         finalDescription =
-            "Category: $category\nFrequency: $frequency\n\n$desc";
+            "Client: $category\nFrequency: $frequency\n\n$desc";
       }
 
       final catalogType = type == WorkspaceType.course ? 'COURSE' : 'ROUTINE';
@@ -1786,11 +1790,11 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
   String _getWorkspaceLabel(WorkspaceType type) {
     switch (type) {
       case WorkspaceType.project:
-        return "Devevelopement Project";
+        return "New Project";
       case WorkspaceType.course:
         return "Class / Course";
       case WorkspaceType.routine:
-        return "Routine Group";
+        return "Routine Work";
     }
   }
 }
@@ -1871,7 +1875,10 @@ class _AddTaskForm extends HookConsumerWidget {
                 Expanded(
                     child: _buildTextField(
                         taskPlannedHoursController, "Hours", "e.g. 8",
-                        keyboardType: TextInputType.number)),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                        ])),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildPriorityDropdown(
@@ -2085,7 +2092,10 @@ class _AddTaskForm extends HookConsumerWidget {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  if (taskNameController.text.isEmpty) return;
+                  if (taskNameController.text.isEmpty) {
+                    onError("TASK NAME REQUIRED: Please enter a name for this task.");
+                    return;
+                  }
 
                   if (taskAssignees.value.isEmpty) {
                     onError(
@@ -2371,19 +2381,25 @@ class _Badge extends StatelessWidget {
     const brandNavy = Color(0xFF05263E);
     const brandAccent = Color(0xFF7EC8F4);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: brandNavy.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: brandNavy.withValues(alpha: 0.15)),
+        color: brandNavy,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: brandNavy.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         label.toUpperCase(),
         style: GoogleFonts.outfit(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: isDark ? brandAccent : brandNavy,
-          letterSpacing: 1.0,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          letterSpacing: 1.2,
         ),
       ),
     );
@@ -2552,6 +2568,7 @@ Widget _buildTextField(
     bool readOnly = false,
     VoidCallback? onTap,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     VoidCallback? onSubmitted}) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2574,6 +2591,7 @@ Widget _buildTextField(
         readOnly: readOnly,
         onTap: onTap,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         onSubmitted: onSubmitted != null ? (_) => onSubmitted() : null,
         style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
