@@ -231,21 +231,12 @@ class _LogoArea extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-              ),
-              child: ClipOval(
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Image.asset(
-                    'assets/images/logo.jpeg',
-                    fit: BoxFit.contain,
-                  ),
-                ),
+            SizedBox(
+              width: 54,
+              height: 54,
+              child: Image.asset(
+                'assets/images/logo.jpeg',
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(height: 3),

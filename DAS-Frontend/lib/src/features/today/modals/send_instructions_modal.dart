@@ -6,6 +6,13 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/features/today/models/instruction_model.dart';
 import 'package:project_pm/src/features/today/services/instruction_service.dart';
 import '../../../core/utils/user_color_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+// Premium Design Tokens
+const _kSidebarBg = Color(0xFF05263E);
+const _kPrimaryBlue = Color(0xFF3B82F6);
+const _kInputBg = Color(0xFF0F172A);
+const _kBorderColor = Color(0xFF1E293B);
 
 class SendInstructionsModal extends HookConsumerWidget {
   const SendInstructionsModal({super.key});
@@ -32,356 +39,454 @@ class SendInstructionsModal extends HookConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
         width: 600,
-        padding: const EdgeInsets.all(24),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0B1424) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            )
+          ],
+          border: Border.all(
+            color: isDark ? _kBorderColor : Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
-            Row(
-              children: [
-                Icon(Icons.people_outline,
-                    color: Colors.blue.shade600, size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Send Team Instructions',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
+            // COMPACT HEADER
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_kSidebarBg, _kSidebarBg.withOpacity(0.9)],
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'TEAM INSTRUCTION',
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.8,
+                      ),
                     ),
                   ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
-                  tooltip: 'Close',
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Filter & Add Recipient Row
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Project Context Filter
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Filter: Project Context',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade600)),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String?>(
-                            value: selectedProject.value,
-                            isExpanded: true,
-                            hint: const Text('-- General / No Project --'),
-                            items: [
-                              const DropdownMenuItem<String?>(
-                                value: null,
-                                child: Text('-- General / No Project --'),
-                              ),
-                              ...projectsAsync.when(
-                                data: (projects) => projects.map((p) =>
-                                    DropdownMenuItem(
-                                        value: p.project.id,
-                                        child: Text(p.project.name))),
-                                loading: () => [],
-                                error: (_, __) => [],
-                              ),
-                            ],
-                            onChanged: (val) {
-                              selectedProject.value = val;
-                              // Clear recipients when project changes since members might differ
-                              selectedRecipients.value = [];
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
                   ),
-                ),
-                const SizedBox(width: 16),
-                // Add Recipient Dropdown
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Add Recipient',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade600)),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<User?>(
-                            value: null, // Always reset after selection
-                            isExpanded: true,
-                            hint: const Text('+ Add Person...'),
-                            items: [
-                              const DropdownMenuItem<User?>(
-                                value: null,
-                                child: Text('+ Add Person...'),
-                              ),
-                              ...allUsersAsync.when(
-                                data: (users) => users
-                                    .where((u) => !selectedRecipients.value
-                                        .any((r) => r.id == u.id))
-                                    .map((u) => DropdownMenuItem(
-                                        value: u, child: Text(u.name))),
-                                loading: () => [],
-                                error: (_, __) => [],
-                              ),
-                            ],
-                            onChanged: (User? user) {
-                              if (user != null) {
-                                selectedRecipients.value = [
-                                  ...selectedRecipients.value,
-                                  user
-                                ];
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Recipients List
-            Text.rich(
-              TextSpan(
-                text: 'Recipients ',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w600),
-                children: const [
-                  TextSpan(text: '*', style: TextStyle(color: Colors.red))
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              constraints: const BoxConstraints(minHeight: 60),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-                color: isDark ? Colors.black12 : Colors.grey.shade50,
-              ),
-              child: selectedRecipients.value.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No recipients selected yet. Add from dropdown above.',
-                        style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontStyle: FontStyle.italic,
-                            fontSize: 13),
-                      ),
-                    )
-                  : Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: selectedRecipients.value.map((user) {
-                        return Chip(
-                          label: Text(user.name,
-                              style: const TextStyle(fontSize: 12)),
-                          avatar: CircleAvatar(
-                            backgroundColor: UserColorService.getColorForUser(user.id),
-                            backgroundImage: user.avatarUrl.isNotEmpty
-                                ? NetworkImage(user.avatarUrl)
-                                : null,
-                            child: user.avatarUrl.isEmpty
-                                ? Text(user.name[0].toUpperCase(),
-                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))
-                                : null,
-                          ),
-                          onDeleted: () {
-                            selectedRecipients.value = selectedRecipients.value
-                                .where((u) => u.id != user.id)
-                                .toList();
-                          },
-                          backgroundColor:
-                              isDark ? Colors.grey.shade700 : Colors.white,
-                          side: BorderSide(color: Colors.grey.shade300),
-                        );
-                      }).toList(),
-                    ),
-            ),
-            const SizedBox(height: 16),
 
-            // Subject
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Subject / Title',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: subjectController,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. Plan for today, Urgent Task Update',
-                    hintStyle: TextStyle(color: Colors.grey.shade400),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Instructions
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text.rich(
-                    TextSpan(
-                      text: 'Instructions / Day Plan ',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w600),
-                      children: const [
-                        TextSpan(text: '*', style: TextStyle(color: Colors.red))
-                      ],
+                  // ROW: Project Filter & Add Recipient
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildFormField(
+                          label: 'PROJECT CONTEXT',
+                          child: _buildDropdownWrapper(
+                            isDark: isDark,
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String?>(
+                                value: selectedProject.value,
+                                isExpanded: true,
+                                dropdownColor: isDark ? _kInputBg : Colors.white,
+                                hint: Text('-- General --',
+                                    style: GoogleFonts.inter(fontSize: 12)),
+                                items: [
+                                  DropdownMenuItem<String?>(
+                                    value: null,
+                                    child: Text('-- General --',
+                                        style: GoogleFonts.inter(fontSize: 12)),
+                                  ),
+                                  ...projectsAsync.when(
+                                    data: (projects) => projects.map((p) =>
+                                        DropdownMenuItem(
+                                            value: p.project.id,
+                                            child: Text(p.project.name,
+                                                style: GoogleFonts.inter(
+                                                    fontSize: 12)))),
+                                    loading: () => [],
+                                    error: (_, __) => [],
+                                  ),
+                                ],
+                                onChanged: (val) {
+                                  selectedProject.value = val;
+                                  selectedRecipients.value = [];
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildFormField(
+                          label: 'ADD RECIPIENT',
+                          child: _buildDropdownWrapper(
+                            isDark: isDark,
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<User?>(
+                                value: null,
+                                isExpanded: true,
+                                dropdownColor: isDark ? _kInputBg : Colors.white,
+                                hint: Text('+ Add Member...',
+                                    style: GoogleFonts.inter(
+                                        fontSize: 12, color: _kPrimaryBlue)),
+                                items: [
+                                  DropdownMenuItem<User?>(
+                                    value: null,
+                                    child: Text('+ Add Member...',
+                                        style: GoogleFonts.inter(fontSize: 12)),
+                                  ),
+                                  ...allUsersAsync.when(
+                                    data: (users) => users
+                                        .where((u) => !selectedRecipients.value
+                                            .any((r) => r.id == u.id))
+                                        .map((u) => DropdownMenuItem(
+                                            value: u,
+                                            child: Text(u.name,
+                                                style: GoogleFonts.inter(
+                                                    fontSize: 12)))),
+                                    loading: () => [],
+                                    error: (_, __) => [],
+                                  ),
+                                ],
+                                onChanged: (User? user) {
+                                  if (user != null) {
+                                    selectedRecipients.value = [
+                                      ...selectedRecipients.value,
+                                      user
+                                    ];
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // RECIPIENTS SECTION
+                  _buildFormField(
+                    label: 'RECIPIENTS LIST',
+                    isRequired: true,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      constraints: const BoxConstraints(minHeight: 40, maxHeight: 80),
+                      decoration: BoxDecoration(
+                        color: isDark ? _kInputBg : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDark ? _kBorderColor : Colors.grey.shade200,
+                        ),
+                      ),
+                      child: selectedRecipients.value.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No recipients selected yet',
+                                style: GoogleFonts.inter(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12),
+                              ),
+                            )
+                          : SingleChildScrollView(
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: selectedRecipients.value.map((user) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? _kSidebarBg.withOpacity(0.3)
+                                          : Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? _kPrimaryBlue.withOpacity(0.3)
+                                            : Colors.blue.shade100,
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            user.name,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : Colors.blue.shade900,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          GestureDetector(
+                                            onTap: () {
+                                              selectedRecipients.value =
+                                                  selectedRecipients.value
+                                                      .where((u) => u.id != user.id)
+                                                      .toList();
+                                            },
+                                            child: Icon(
+                                              Icons.close_rounded,
+                                              size: 12,
+                                              color: isDark
+                                                  ? Colors.white54
+                                                  : Colors.blue.shade400,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Expanded(
+                  const SizedBox(height: 12),
+
+                  // SUBJECT FIELD
+                  _buildFormField(
+                    label: 'SUBJECT / TITLE',
+                    child: TextField(
+                      controller: subjectController,
+                      style: GoogleFonts.inter(fontSize: 13),
+                      decoration: _buildInputDecoration(
+                        isDark: isDark,
+                        hint: 'e.g. Daily Operations Plan...',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // INSTRUCTIONS FIELD
+                  _buildFormField(
+                    label: 'INSTRUCTIONS / DAY PLAN',
+                    isRequired: true,
                     child: TextField(
                       controller: instructionsController,
-                      maxLines: null,
-                      expands: true,
-                      textAlignVertical: TextAlignVertical.top,
-                      decoration: InputDecoration(
-                        hintText:
-                            'Outline the tasks, priorities, or feedback for the team...',
-                        hintStyle: TextStyle(color: Colors.grey.shade400),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        contentPadding: const EdgeInsets.all(16),
+                      maxLines: 3,
+                      minLines: 3,
+                      style: GoogleFonts.inter(fontSize: 13, height: 1.3),
+                      decoration: _buildInputDecoration(
+                        isDark: isDark,
+                        hint: 'Detail the tasks and priorities...',
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
 
-            // Actions
-            Row(
-              children: [
-                const Spacer(),
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+            // FOOTER ACTIONS
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : Colors.grey.shade50,
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? _kBorderColor : Colors.grey.shade200,
                   ),
-                  child: const Text('Cancel'),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: canSubmit && !isSending.value
-                      ? () async {
-                          isSending.value = true;
-                          try {
-                            final request = CreateTeamInstructionRequest(
-                              project: selectedProjectId,
-                              recipients: selectedRecipients.value
-                                  .map((u) => int.parse(u.id))
-                                  .toList(),
-                              subject: subjectController.text,
-                              instructions: instructionsController.text,
-                            );
+              ),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red.shade600,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    child: Text('Cancel',
+                        style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                  const Spacer(),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      gradient: canSubmit && !isSending.value
+                          ? const LinearGradient(
+                              colors: [_kPrimaryBlue, Color(0xFF2563EB)],
+                            )
+                          : null,
+                      color: canSubmit && !isSending.value
+                          ? null
+                          : Colors.grey.withOpacity(0.1),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: canSubmit && !isSending.value
+                          ? () async {
+                              isSending.value = true;
+                              try {
+                                final request = CreateTeamInstructionRequest(
+                                  project: selectedProjectId,
+                                  recipients: selectedRecipients.value
+                                      .map((u) => int.parse(u.id))
+                                      .toList(),
+                                  subject: subjectController.text,
+                                  instructions: instructionsController.text,
+                                );
 
-                            await ref
-                                .read(instructionServiceProvider)
-                                .sendInstruction(request);
+                                await ref
+                                    .read(instructionServiceProvider)
+                                    .sendInstruction(request);
 
-                            if (context.mounted) {
-                              Navigator.of(context).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      'Instructions sent to ${selectedRecipients.value.length} people!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              } catch (e) {
+                                // Error handled by service
+                              } finally {
+                                isSending.value = false;
+                              }
                             }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: ${e.toString()}'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          } finally {
-                            isSending.value = false;
-                          }
-                        }
-                      : null,
-                  icon: isSending.value
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSending.value)
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          else ...[
+                            const Icon(Icons.rocket_launch_rounded, size: 14),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            isSending.value
+                                ? 'SENDING...'
+                                : 'SEND INSTRUCTION (${selectedRecipients.value.length})',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
-                        )
-                      : const Icon(Icons.send, size: 18),
-                  label: Text(isSending.value
-                      ? 'Sending...'
-                      : 'Send Instruction (${selectedRecipients.value.length})'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981), // Emerald Green
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // --- REUSABLE PREMIUM UI HELPERS ---
+
+  Widget _buildFormField({
+    required String label,
+    required Widget child,
+    bool isRequired = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: _kPrimaryBlue.withOpacity(0.8),
+                letterSpacing: 0.5,
+              ),
+            ),
+            if (isRequired)
+              const Text(' *', style: TextStyle(color: Colors.red, fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildDropdownWrapper({required bool isDark, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? _kInputBg : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? _kBorderColor : Colors.grey.shade300,
+        ),
+      ),
+      child: child,
+    );
+  }
+
+  InputDecoration _buildInputDecoration({
+    required bool isDark,
+    required String hint,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: GoogleFonts.inter(
+        color: isDark ? Colors.white24 : Colors.grey.shade400,
+        fontSize: 13,
+      ),
+      filled: true,
+      fillColor: isDark ? _kInputBg : Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: isDark ? _kBorderColor : Colors.grey.shade300,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _kPrimaryBlue, width: 1.5),
       ),
     );
   }

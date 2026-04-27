@@ -127,7 +127,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'hrm',
         'USER': 'root', 
-        'PASSWORD': 'AnandSQL@07',
+        'PASSWORD': 'Rahul@16012001',
         'HOST': '127.0.0.1',  
         'PORT': '3306',  
         'CONN_MAX_AGE': 600,

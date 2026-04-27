@@ -60,9 +60,40 @@ class ShellPage extends ConsumerWidget {
     // Map the URL path to the ViewMode
     final currentViewMode = _viewModeFromPath(currentPath);
 
-    // Check if a project is selected
+    // Check if a project is selected AND we are currently on a project sub-page
     final selectedProjectId = ref.watch(selectedProjectIdProvider);
-    final isProjectSelected = selectedProjectId != null;
+    final onProjectSubPage = _isProjectSubPage(currentViewMode);
+
+    // Auto-RESTORE project selection after a browser refresh:
+    // When on a project sub-page but selectedProjectId is null (wiped from memory),
+    // pick the first available project to restore sidebar + header state.
+    if (selectedProjectId == null && onProjectSubPage) {
+      final allProjects = ref.read(projectsWithTasksProvider).valueOrNull;
+      if (allProjects != null && allProjects.isNotEmpty) {
+        Future.microtask(() {
+          if (ref.context.mounted) {
+            ref.read(selectedProjectIdProvider.notifier).state =
+                allProjects.first.project.id;
+          }
+        });
+      }
+    }
+
+    // isProjectSelected is true when:
+    // 1. We have a selected project ID and are on a project sub-page, OR
+    // 2. We are on a project sub-page (URL says so) even if ID isn't restored yet
+    //    This prevents the sidebar from flickering to dashboard mode during async restore.
+    final isProjectSelected = onProjectSubPage;
+
+    // Auto-clear project selection when navigating back to global pages (Dashboard, Planner, etc.)
+    // This ensures that browser back-button navigation correctly resets the sidebar state.
+    if (selectedProjectId != null && !onProjectSubPage) {
+      Future.microtask(() {
+        if (ref.context.mounted) {
+          ref.read(selectedProjectIdProvider.notifier).state = null;
+        }
+      });
+    }
 
     // Dynamic Title Logic
     final projectAsync = ref.watch(currentProjectProvider);
@@ -445,7 +476,8 @@ class ShellPage extends ConsumerWidget {
   }
 
   bool _isProjectSubPage(ViewMode mode) {
-    return mode == ViewMode.plan ||
+    return mode == ViewMode.projectOverview ||
+        mode == ViewMode.plan ||
         mode == ViewMode.gantt ||
         mode == ViewMode.grid;
   }

@@ -78,7 +78,8 @@ class GlobalSearchAPIView(APIView):
 
         for t in tasks_qs[:10]:
             results.append({
-                'id': t.project.id if t.project else 0,
+                'id': t.id,
+                'project_id': t.project.id if t.project else 0,
                 'type': 'TASK',
                 'title': t.title,
                 'subtitle': f"Project: {t.project.name if t.project else 'No Project'} • {t.status}",
@@ -103,7 +104,8 @@ class GlobalSearchAPIView(APIView):
             proj_id = s.task.project.id if s.task and s.task.project else 0
             proj_name = s.task.project.name if s.task and s.task.project else ''
             results.append({
-                'id': proj_id,
+                'id': s.id,
+                'project_id': proj_id,
                 'type': 'SUBTASK',
                 'title': s.title,
                 'subtitle': f"{proj_name} › {s.task.title if s.task else ''}",

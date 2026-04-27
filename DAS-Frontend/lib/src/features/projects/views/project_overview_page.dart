@@ -7,6 +7,10 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/core/database/database.dart';
 
+// ── Design tokens (matching sidebar theme) ──────────────────────────────────
+const _kSidebarBg = Color(0xFF05263E);
+const _kPrimaryBlue = Color(0xFF3B82F6);
+
 @RoutePage()
 class ProjectOverviewPage extends HookConsumerWidget {
   const ProjectOverviewPage({super.key});
@@ -15,9 +19,9 @@ class ProjectOverviewPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final projectAsync = ref.watch(currentProjectProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final bgColor = isDark ? const Color(0xFF0B1426) : const Color(0xFFF8FAFC);
     final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
+    final borderColor = isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -146,13 +150,18 @@ class ProjectOverviewPage extends HookConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [_kPrimaryBlue.withOpacity(0.2), _kPrimaryBlue.withOpacity(0.05)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _kPrimaryBlue.withOpacity(0.2)),
             ),
-            child: Icon(Icons.business_center_outlined,
-                size: 26, color: Colors.blue.shade600),
+            child: const Icon(Icons.dashboard_customize_rounded,
+                size: 28, color: _kPrimaryBlue),
           ),
           const SizedBox(width: 18),
           Expanded(
@@ -160,58 +169,30 @@ class ProjectOverviewPage extends HookConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('PROJECT OVERVIEW',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.orbitron(
                         fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade500,
-                        letterSpacing: 1.3)),
-                const SizedBox(height: 4),
-                Consumer(builder: (context, ref, _) {
-                  final allProjects =
-                      ref.watch(projectsWithTasksProvider).valueOrNull ?? [];
-                  if (allProjects.length <= 1) {
-                    return Text(p.name,
-                        style: GoogleFonts.inter(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black87));
-                  }
-                  return DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: p.id,
-                      isDense: true,
-                      isExpanded: true,
-                      icon: Icon(Icons.keyboard_arrow_down_rounded,
-                          size: 18,
-                          color: isDark ? Colors.white60 : Colors.black45),
-                      dropdownColor:
-                          isDark ? const Color(0xFF1F2937) : Colors.white,
+                        fontWeight: FontWeight.w800,
+                        color: _kPrimaryBlue,
+                        letterSpacing: 2.0)),
+                const SizedBox(height: 6),
+                Text(p.name,
+                    style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : _kSidebarBg,
+                        letterSpacing: -0.5),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                if (p.context.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(p.context,
                       style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black87),
-                      items: allProjects
-                          .map((proj) => DropdownMenuItem<String>(
-                                value: proj.project.id,
-                                child: Text(proj.project.name,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: isDark
-                                            ? Colors.white
-                                            : Colors.grey.shade800)),
-                              ))
-                          .toList(),
-                      onChanged: (id) {
-                        if (id != null) {
-                          ref.read(selectedProjectIdProvider.notifier).state =
-                              id;
-                        }
-                      },
-                    ),
-                  );
-                }),
+                          fontSize: 13,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                          height: 1.3),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
               ],
             ),
           ),
@@ -327,10 +308,11 @@ class ProjectOverviewPage extends HookConsumerWidget {
                           : Colors.grey.shade600)),
               const SizedBox(height: 2),
               Text(chip.value,
-                  style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: chip.color)),
+                  style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: chip.color,
+                      letterSpacing: -0.5)),
             ],
           ),
         ],
@@ -347,7 +329,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
       padding: const EdgeInsets.all(22),
       decoration: _cardDeco(cardColor, borderColor),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionHead('Description & Context', Icons.notes_rounded, isDark),
+        _sectionHead('Description & Context', Icons.notes_rounded, isDark, _kPrimaryBlue),
         const SizedBox(height: 14),
         Text(p.context,
             style: GoogleFonts.inter(
@@ -372,7 +354,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
       padding: const EdgeInsets.all(22),
       decoration: _cardDeco(cardColor, borderColor),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionHead('Key Metrics', Icons.insights_rounded, isDark),
+        _sectionHead('Key Metrics', Icons.insights_rounded, isDark, _kPrimaryBlue),
         const SizedBox(height: 20),
         Text('Overall Progress',
             style: GoogleFonts.inter(
@@ -436,7 +418,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
       decoration: _cardDeco(cardColor, borderColor),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          _sectionHead('Task Summary', Icons.assignment_outlined, isDark),
+          _sectionHead('Task Summary', Icons.assignment_outlined, isDark, _kPrimaryBlue),
           _badge('$total Total', Colors.blue, isDark),
         ]),
         const SizedBox(height: 20),
@@ -481,9 +463,10 @@ class ProjectOverviewPage extends HookConsumerWidget {
           padding: const EdgeInsets.only(left: 2, bottom: 14),
           child: Text('Tasks & Milestones',
               style: GoogleFonts.outfit(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black87)),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : _kSidebarBg,
+                  letterSpacing: -0.5)),
         ),
         ...pwt.tasks.map((twa) =>
             _buildTaskCard(twa, isDark, cardColor, borderColor)),
@@ -526,10 +509,11 @@ class ProjectOverviewPage extends HookConsumerWidget {
                     ),
                     Expanded(
                       child: Text(task.name,
-                          style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white : Colors.grey.shade900)),
+                          style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : _kSidebarBg,
+                              letterSpacing: -0.2)),
                     ),
                     const SizedBox(width: 10),
                     // Status chip
@@ -607,11 +591,11 @@ class ProjectOverviewPage extends HookConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Milestones',
-              style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+              style: GoogleFonts.orbitron(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
-                  letterSpacing: 0.8)),
+                  letterSpacing: 1.5)),
           const SizedBox(height: 10),
           ...milestones.asMap().entries.map((entry) {
             final i = entry.key;
@@ -741,7 +725,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
       decoration: _cardDeco(cardColor, borderColor),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          _sectionHead('Team Members', Icons.people_alt_outlined, isDark),
+          _sectionHead('Team Members', Icons.people_alt_outlined, isDark, _kPrimaryBlue),
           const Spacer(),
           if (assignees.isNotEmpty) ...[
             _stackedPreviews(assignees, pwt.projectLeadId, isDark, cardColor),
@@ -775,12 +759,13 @@ class ProjectOverviewPage extends HookConsumerWidget {
                         Flexible(
                             child: Text(name,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                style: GoogleFonts.outfit(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
                                     color: isDark
                                         ? Colors.white
-                                        : Colors.black87))),
+                                        : _kSidebarBg,
+                                    letterSpacing: -0.2))),
                         const SizedBox(width: 7),
                         if (isLead)
                           _roleBadge('Lead', Colors.amber, isDark)
@@ -822,17 +807,18 @@ class ProjectOverviewPage extends HookConsumerWidget {
   // ---------------------------------------------------------------------------
   // SHARED SMALL HELPERS
   // ---------------------------------------------------------------------------
-  Widget _sectionHead(String title, IconData icon, bool isDark) {
+  Widget _sectionHead(String title, IconData icon, bool isDark, [Color? iconColor]) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon,
           size: 18,
-          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-      const SizedBox(width: 9),
+          color: iconColor ?? (isDark ? Colors.grey.shade400 : Colors.grey.shade600)),
+      const SizedBox(width: 10),
       Text(title,
           style: GoogleFonts.outfit(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : Colors.grey.shade800)),
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : const Color(0xFF05263E),
+              letterSpacing: -0.2)),
     ]);
   }
 
@@ -872,10 +858,11 @@ class ProjectOverviewPage extends HookConsumerWidget {
                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade600)),
             const SizedBox(height: 2),
             Text(value,
-                style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87)),
+                style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : _kSidebarBg,
+                    letterSpacing: -0.3)),
           ]),
         ),
       ]),
@@ -1101,12 +1088,16 @@ class ProjectOverviewPage extends HookConsumerWidget {
   BoxDecoration _cardDeco(Color cardColor, Color borderColor) {
     return BoxDecoration(
       color: cardColor,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       border: Border.all(color: borderColor),
       boxShadow: [
         BoxShadow(
-            color: Colors.black.withOpacity(0.025),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 4)),
+        BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
             offset: const Offset(0, 2))
       ],
     );

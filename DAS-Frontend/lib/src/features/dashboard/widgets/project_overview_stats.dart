@@ -76,85 +76,82 @@ class ProjectOverviewStats extends ConsumerWidget {
           );
         }
 
-        return Column(
-          children: [
-            LayoutBuilder(builder: (context, constraints) {
-              int crossAxisCount = 1;
-              if (constraints.maxWidth > 700) crossAxisCount = 2;
-              if (constraints.maxWidth > 1400) crossAxisCount = 4;
-
-              return GridView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisExtent: 200,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                ),
-                children: [
-                  _StatCard(
-                    title: "Project Portfolio",
-                    count: totalProjects,
-                    sub1: activeProjects,
-                    sub1Label: "Active Files",
-                    sub2: completedProjects,
-                    sub2Label: "Completed",
-                    icon: Icons.account_balance_wallet_rounded,
-                    isPrimary: false,
-                    strokeColor: const Color(0xFF3B82F6),
-                    progressOverride: totalProjects > 0
-                        ? (completedProjects / totalProjects)
-                        : 0,
-                    onTap: () => showCategoryModal(StatCategory.portfolio),
-                  ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
-                  _StatCard(
-                    title: "Timeline Health",
-                    count: activeProjects,
-                    sub1: onTrackCount,
-                    sub1Label: "On-Track",
-                    sub2: overdueCount,
-                    sub2Label: "Delayed",
-                    icon: Icons.shield_rounded,
-                    isSub2Alert: overdueCount > 0,
-                    // Risk view: progress = % of delayed projects
-                    // 0% = all healthy ✅   |   100% = all overdue 🔴
-                    progressOverride: activeProjects > 0
-                        ? (overdueCount / activeProjects)
-                        : 0.0,
-                    strokeColor: const Color(0xFF1D4ED8), // Fixed Royal Blue
-                    onTap: () => showCategoryModal(StatCategory.timeline),
-                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
-                  _StatCard(
-                    title: "Task Efficiency",
-                    count: totalTasks,
-                    sub1: completedTasks,
-                    sub1Label: "Completed",
-                    sub2: pendingTasks,
-                    sub2Label: "Pending",
-                    icon: Icons.bolt_rounded,
-                    strokeColor: const Color(0xFF14B8A6),
-                    onTap: () => showCategoryModal(StatCategory.completion),
-                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
-                  _StatCard(
-                    title: "Critical Attention",
-                    count: totalAttentionCount,
-                    sub1: criticalCount,
-                    sub1Label: "Blockers",
-                    sub2: rejectedCount,
-                    sub2Label: "Rejected",
-                    icon: Icons.priority_high_rounded,
-                    isSub1Alert: criticalCount > 0,
-                    isSub2Alert: rejectedCount > 0,
-                    isCritical: totalAttentionCount > 0,
-                    strokeColor: const Color(0xFFEF4444),
-                    progressOverride: totalAttentionCount > 0 ? 0.0 : 1.0,
-                    onTap: () => showCategoryModal(StatCategory.attention),
-                  ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
-                ],
-              );
-            }),
-          ],
+        // Always render 4 cards in a single horizontal row.
+        // Using Row + Expanded guarantees they never wrap and always fill the screen.
+        return SizedBox(
+          height: 200,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _StatCard(
+                  title: "Project Portfolio",
+                  count: totalProjects,
+                  sub1: activeProjects,
+                  sub1Label: "Active Files",
+                  sub2: completedProjects,
+                  sub2Label: "Completed",
+                  icon: Icons.account_balance_wallet_rounded,
+                  isPrimary: false,
+                  strokeColor: const Color(0xFF3B82F6),
+                  progressOverride: totalProjects > 0
+                      ? (completedProjects / totalProjects)
+                      : 0,
+                  onTap: () => showCategoryModal(StatCategory.portfolio),
+                ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _StatCard(
+                  title: "Timeline Health",
+                  count: activeProjects,
+                  sub1: onTrackCount,
+                  sub1Label: "On-Track",
+                  sub2: overdueCount,
+                  sub2Label: "Delayed",
+                  icon: Icons.shield_rounded,
+                  isSub2Alert: overdueCount > 0,
+                  progressOverride: activeProjects > 0
+                      ? (overdueCount / activeProjects)
+                      : 0.0,
+                  strokeColor: const Color(0xFF1D4ED8),
+                  onTap: () => showCategoryModal(StatCategory.timeline),
+                ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _StatCard(
+                  title: "Task Efficiency",
+                  count: totalTasks,
+                  sub1: completedTasks,
+                  sub1Label: "Completed",
+                  sub2: pendingTasks,
+                  sub2Label: "Pending",
+                  icon: Icons.bolt_rounded,
+                  strokeColor: const Color(0xFF14B8A6),
+                  onTap: () => showCategoryModal(StatCategory.completion),
+                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _StatCard(
+                  title: "Critical Attention",
+                  count: totalAttentionCount,
+                  sub1: criticalCount,
+                  sub1Label: "Blockers",
+                  sub2: rejectedCount,
+                  sub2Label: "Rejected",
+                  icon: Icons.priority_high_rounded,
+                  isSub1Alert: criticalCount > 0,
+                  isSub2Alert: rejectedCount > 0,
+                  isCritical: totalAttentionCount > 0,
+                  strokeColor: const Color(0xFFEF4444),
+                  progressOverride: totalAttentionCount > 0 ? 0.0 : 1.0,
+                  onTap: () => showCategoryModal(StatCategory.attention),
+                ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -662,6 +659,8 @@ class _StatCardState extends State<_StatCard> {
                         // TITLE
                         Text(
                           widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -671,28 +670,32 @@ class _StatCardState extends State<_StatCard> {
                         const SizedBox(height: 2),
                         
                         // MAIN METRIC
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              widget.count.toString(),
-                              style: GoogleFonts.outfit(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.grey.shade900,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                widget.count.toString(),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.grey.shade900,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Total",
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.normal,
-                                color: isDark ? Colors.white70 : Colors.black,
+                              const SizedBox(width: 8),
+                              Text(
+                                "Total",
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.normal,
+                                  color: isDark ? Colors.white70 : Colors.black,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         
                         const Spacer(),
@@ -800,6 +803,8 @@ class _SubStatSmall extends StatelessWidget {
         ),
         Text(
           label.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w700,

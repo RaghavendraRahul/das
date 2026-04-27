@@ -475,7 +475,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
         return Column(
           children: [
             _SelectionCard(
-              title: "Development Project",
+              title: "New Project",
               description: "Software, Design, Marketing tasks with deadlines.",
               icon: Icons.developer_mode_rounded,
               type: WorkspaceType.project,

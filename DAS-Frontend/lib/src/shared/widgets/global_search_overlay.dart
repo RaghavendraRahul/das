@@ -10,6 +10,7 @@ import 'package:project_pm/src/features/dashboard/global_search_providers.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:project_pm/src/routes/app_router.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
+import 'package:project_pm/src/core/providers/user_providers.dart';
 
 class GlobalSearchOverlay extends HookConsumerWidget {
   final LayerLink layerLink;
@@ -184,25 +185,37 @@ class GlobalSearchOverlay extends HookConsumerWidget {
     );
   }
 
-  void _handleNavigation(BuildContext context, WidgetRef ref, GlobalSearchResult result) {
-    // Capture router and notifier BEFORE closing overlay — context becomes invalid after onClose()
+  Future<void> _handleNavigation(BuildContext context, WidgetRef ref, GlobalSearchResult result) async {
     final router = AutoRouter.of(context);
     final projectIdNotifier = ref.read(selectedProjectIdProvider.notifier);
+    final currentUser = ref.read(currentUserProvider).valueOrNull;
 
     ref.read(searchHistoryServiceProvider).addToHistory(result.title);
     onClose();
 
     switch (result.type) {
       case SearchResultType.project:
-        projectIdNotifier.state = result.id.toString();
+        projectIdNotifier.state = 'api_project_${result.id}';
         router.push(const ProjectPlanRoute());
         break;
       case SearchResultType.task:
       case SearchResultType.subtask:
-        projectIdNotifier.state = result.id.toString();
+        final pid = result.projectId ?? 0;
+        projectIdNotifier.state = 'api_project_$pid';
         router.push(const ProjectPlanRoute());
         break;
       case SearchResultType.employee:
+        if (currentUser?.role == 'ADMIN') {
+          try {
+            final allUsers = await ref.read(allUsersProvider.future);
+            final targetUser = allUsers.firstWhere((u) => u.id == result.id.toString());
+            router.push(AdminEmployeeViewRoute(employee: targetUser));
+          } catch (e) {
+            router.push(const TeamOverviewRoute());
+          }
+        } else {
+          router.push(const TeamOverviewRoute());
+        }
         break;
       case SearchResultType.catalog:
         router.navigate(const TodayRoute());

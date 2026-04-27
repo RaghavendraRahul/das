@@ -52,7 +52,7 @@ class AppHeader extends HookConsumerWidget {
     final currentUser = userAsync.valueOrNull;
 
     // Navigation and Logic Helpers
-    void handleNavigation(dynamic item) {
+    Future<void> handleNavigation(dynamic item) async {
       if (item is GlobalSearchResult) {
          ref.read(searchHistoryServiceProvider).addToHistory(item.title);
          final router = AutoRouter.of(context);
@@ -70,16 +70,25 @@ class AppHeader extends HookConsumerWidget {
               break;
             case SearchResultType.task:
             case SearchResultType.subtask:
-              ref.read(selectedProjectIdProvider.notifier).state = 'api_project_${item.id}';
+              final pid = item.projectId ?? 0;
+              ref.read(selectedProjectIdProvider.notifier).state = 'api_project_$pid';
               router.push(const ProjectPlanRoute());
               break;
             case SearchResultType.catalog:
               router.navigate(const TodayRoute());
               break;
             case SearchResultType.employee:
-              // For employees, we might want to navigate to Team Overview or Admin Employee View if we have the user object
-              // For now, take them to the team overview
-              router.push(const TeamOverviewRoute());
+              if (currentUser?.role == 'ADMIN') {
+                try {
+                  final allUsers = await ref.read(allUsersProvider.future);
+                  final targetUser = allUsers.firstWhere((u) => u.id == item.id.toString());
+                  router.push(AdminEmployeeViewRoute(employee: targetUser));
+                } catch (e) {
+                  router.push(const TeamOverviewRoute());
+                }
+              } else {
+                router.push(const TeamOverviewRoute());
+              }
               break;
          }
       } else if (item is String) {
@@ -240,26 +249,36 @@ class AppHeader extends HookConsumerWidget {
                           if (!isMobile)
                             CompositedTransformTarget(
                               link: layerLink,
-                              child: Container(
-                                height: 38,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                height: 42,
                                 width: 400,
                                 decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(20),
+                                  color: (ref.watch(isSearchFocusedProvider))
+                                      ? (isDark ? const Color(0xFF0F172A) : Colors.white)
+                                      : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: (ref.watch(isSearchFocusedProvider))
-                                        ? Colors.blue.withAlpha(150)
+                                        ? Colors.blue.withValues(alpha: 0.6)
                                         : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                                     width: (ref.watch(isSearchFocusedProvider)) ? 1.5 : 1.0,
                                   ),
                                   boxShadow: (ref.watch(isSearchFocusedProvider))
-                                      ? [BoxShadow(color: Colors.blue.withAlpha(20), blurRadius: 8, spreadRadius: 2)]
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.blue.withValues(alpha: 0.1),
+                                            blurRadius: 10,
+                                            spreadRadius: 2,
+                                          )
+                                        ]
                                       : null,
                                 ),
                                 child: TextField(
                                   controller: textController,
                                   focusNode: focusNode,
                                   onTap: showOverlay,
+                                  textAlignVertical: TextAlignVertical.center,
                                   onChanged: (value) {
                                     if (overlayState.value == null) showOverlay();
                                     ref.read(globalSearchIndexProvider.notifier).state = 0;
@@ -269,15 +288,28 @@ class AppHeader extends HookConsumerWidget {
                                       ref.read(globalSearchQueryProvider.notifier).state = value;
                                     });
                                   },
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    fontSize: 14,
+                                  ),
                                   decoration: InputDecoration(
-                                    hintText: 'Search anything... (Ctrl + K)',
+                                    isDense: true,
+                                    hintText: 'Search anything...',
                                     hintStyle: TextStyle(
-                                      color: isDark ? const Color(0xFFE2E8F0).withAlpha(150) : const Color(0xFF64748B),
-                                      fontSize: 13,
+                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                      fontSize: 14,
                                     ),
-                                    prefixIcon: Icon(Icons.search,
-                                        color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF64748B), 
-                                        size: 16),
+                                    prefixIcon: Icon(
+                                      Icons.search_rounded,
+                                      color: (ref.watch(isSearchFocusedProvider))
+                                          ? Colors.blue
+                                          : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                      size: 20,
+                                    ),
+                                    prefixIconConstraints: const BoxConstraints(
+                                      minWidth: 44,
+                                      minHeight: 42,
+                                    ),
                                     suffixIcon: textController.text.isNotEmpty
                                         ? MouseRegion(
                                             cursor: SystemMouseCursors.click,
@@ -286,25 +318,19 @@ class AppHeader extends HookConsumerWidget {
                                                 textController.clear();
                                                 ref.read(globalSearchQueryProvider.notifier).state = '';
                                               },
-                                              child: Icon(Icons.close_rounded,
+                                              child: Icon(Icons.cancel_rounded,
                                                   color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8), 
-                                                  size: 16),
+                                                  size: 18),
                                             ),
                                           )
-                                        : Padding(
-                                            padding: const EdgeInsets.only(right: 12.0),
-                                            child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Text("⌘ K", style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black26, fontWeight: FontWeight.bold)),
-                                              ],
-                                            ),
-                                          ),
+                                        : null,
+                                    filled: false,
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
                                     focusedBorder: InputBorder.none,
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(vertical: 10),
+                                    errorBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
                                   ),
                                 ),
                               ),
@@ -527,15 +553,24 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
               child: Material(
                 elevation: 8,
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 400),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: widget.isDark ? Colors.grey.shade700 : Colors.grey.shade200),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 5))],
-                  ),
-                  child: Column(
+                child: Focus(
+                  autofocus: true,
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+                      _closeDropdown();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: Container(
+                    constraints: const BoxConstraints(maxHeight: 400),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: widget.isDark ? Colors.grey.shade700 : Colors.grey.shade200),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 5))],
+                    ),
+                    child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Padding(
@@ -627,15 +662,15 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
-    final notifications = ref.watch(notificationPollingProvider);
-    final unreadCount = notifications.where((n) => !n.isRead).length;
+    final unreadCount = ref.watch(unreadCountProvider);
     return CompositedTransformTarget(
       link: _layerLink,
       child: Stack(

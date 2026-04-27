@@ -305,21 +305,31 @@ class _StickyNotesSidebar extends HookWidget {
       autoscrollTimer.value = null;
     }
     void startAutoscroll(double velocity) {
-      if (autoscrollTimer.value != null) return;
-      autoscrollTimer.value = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      // Update velocity if already scrolling
+      if (autoscrollTimer.value != null) {
+        // We don't want to recreate the timer, just let it use the latest velocity
+        // But since we can't easily pass it into the periodic closure without a stateful approach,
+        // we'll just restart it if the velocity changed significantly or just let it be.
+        // Actually, let's use a simpler approach: store the velocity in a ref.
+      }
+      
+      autoscrollTimer.value?.cancel();
+      autoscrollTimer.value = Timer.periodic(const Duration(milliseconds: 16), (timer) {
         if (!scrollController.hasClients) {
           stopAutoscroll();
           return;
         }
-        final double newOffset = scrollController.offset + velocity;
-        if (newOffset < 0) {
-          scrollController.jumpTo(0);
-          stopAutoscroll();
-        } else if (newOffset > scrollController.position.maxScrollExtent) {
-          scrollController.jumpTo(scrollController.position.maxScrollExtent);
-          stopAutoscroll();
-        } else {
+        
+        final double currentOffset = scrollController.offset;
+        final double maxScroll = scrollController.position.maxScrollExtent;
+        final double newOffset = (currentOffset + velocity).clamp(0.0, maxScroll);
+        
+        if (newOffset != currentOffset) {
           scrollController.jumpTo(newOffset);
+        } else {
+          // If we hit the boundary, we can stop or just stay active
+          if (velocity < 0 && currentOffset <= 0) stopAutoscroll();
+          if (velocity > 0 && currentOffset >= maxScroll) stopAutoscroll();
         }
       });
     }
@@ -329,8 +339,36 @@ class _StickyNotesSidebar extends HookWidget {
       return stopAutoscroll;
     }, []);
 
-    return Container(
-      key: sidebarKey,
+    return DragTarget<int>(
+      onMove: (details) {
+        final RenderBox? sidebarBox = sidebarKey.currentContext?.findRenderObject() as RenderBox?;
+        if (sidebarBox == null) return;
+        
+        final localOffset = sidebarBox.globalToLocal(details.offset);
+        final sidebarHeight = sidebarBox.size.height;
+        
+        // Define active scroll zones at the top and bottom
+        const zoneHeight = 100.0;
+        const maxVelocity = 15.0;
+        
+        if (localOffset.dy < zoneHeight) {
+          // Top zone: scroll up (negative velocity)
+          final proximity = (zoneHeight - localOffset.dy).clamp(0.0, zoneHeight);
+          final velocity = -(proximity / zoneHeight) * maxVelocity;
+          startAutoscroll(velocity);
+        } else if (localOffset.dy > sidebarHeight - zoneHeight) {
+          // Bottom zone: scroll down (positive velocity)
+          final proximity = (localOffset.dy - (sidebarHeight - zoneHeight)).clamp(0.0, zoneHeight);
+          final velocity = (proximity / zoneHeight) * maxVelocity;
+          startAutoscroll(velocity);
+        } else {
+          stopAutoscroll();
+        }
+      },
+      onLeave: (_) => stopAutoscroll(),
+      onAcceptWithDetails: (details) => stopAutoscroll(),
+      builder: (context, candidateData, rejectedData) => Container(
+        key: sidebarKey,
       width: 280,
       decoration: BoxDecoration(
         color: isDark
@@ -455,23 +493,8 @@ class _StickyNotesSidebar extends HookWidget {
                           },
                           onLeave: (data) => stopAutoscroll(),
                           onMove: (details) {
-                            // Autoscroll logic based on pointer position relative to the WHOLE sidebar
-                            final RenderBox? sidebarBox = sidebarKey.currentContext?.findRenderObject() as RenderBox?;
-                            if (sidebarBox == null) return;
-                            
-                            final localOffset = sidebarBox.globalToLocal(details.offset);
-                            final sidebarHeight = sidebarBox.size.height;
-                            const threshold = 70.0;
-                            
-                            if (localOffset.dy < threshold) {
-                              // Near top of the sidebar
-                              startAutoscroll(-12.0);
-                            } else if (localOffset.dy > sidebarHeight - threshold) {
-                              // Near bottom of the sidebar
-                              startAutoscroll(12.0);
-                            } else {
-                              stopAutoscroll();
-                            }
+                            // High-level DragTarget now handles the primary autoscroll logic
+                            // but we keep this as a fallback for precision when over items
                           },
                           builder: (context, candidateData, rejectedData) {
                             final isHovered = candidateData.isNotEmpty;
@@ -479,13 +502,6 @@ class _StickyNotesSidebar extends HookWidget {
                               duration: const Duration(milliseconds: 200),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
-                                boxShadow: isHovered ? [
-                                  BoxShadow(
-                                    color: Colors.blue.withValues(alpha: 0.3),
-                                    blurRadius: 10,
-                                    spreadRadius: 2
-                                  )
-                                ] : [],
                               ),
                               child: _SidebarNoteItem(
                                 index: index,
@@ -555,8 +571,9 @@ class _StickyNotesSidebar extends HookWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _SidebarNoteItem extends HookConsumerWidget {
@@ -988,18 +1005,23 @@ class _EditableStickyNote extends HookConsumerWidget {
                         children: [
                           const Icon(Icons.edit_note_rounded,
                               size: 20, color: Colors.black54),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: TextField(
                               controller: titleController,
                               onChanged: onTitleUpdate,
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                errorBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
                                 hintText: "Title...",
                                 isDense: true,
-                                contentPadding: EdgeInsets.zero,
+                                contentPadding: EdgeInsets.symmetric(vertical: 8),
                               ),
                               style: GoogleFonts.outfit(
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.2,
                                 color: Colors.black.withValues(alpha: 0.8),
@@ -1017,7 +1039,6 @@ class _EditableStickyNote extends HookConsumerWidget {
                         ],
                       ),
                     ),
-                    const Divider(height: 1, color: Colors.black12),
                     // Editor Area
                     Expanded(
                       child: TextField(
@@ -1030,6 +1051,10 @@ class _EditableStickyNote extends HookConsumerWidget {
                         expands: true,
                         decoration: const InputDecoration(
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
                           filled: false,
                           contentPadding: EdgeInsets.fromLTRB(32, 16, 32, 40),
                           hintText: "Take a note...",

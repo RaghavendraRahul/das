@@ -57,6 +57,7 @@ enum SearchResultType {
 
 class GlobalSearchResult {
   final int id;
+  final int? projectId;
   final SearchResultType type;
   final String title;
   final String subtitle;
@@ -65,6 +66,7 @@ class GlobalSearchResult {
 
   GlobalSearchResult({
     required this.id,
+    this.projectId,
     required this.type,
     required this.title,
     required this.subtitle,
@@ -75,6 +77,7 @@ class GlobalSearchResult {
   factory GlobalSearchResult.fromJson(Map<String, dynamic> json) {
     return GlobalSearchResult(
       id: json['id'],
+      projectId: json['project_id'],
       type: SearchResultType.fromString(json['type']),
       title: json['title'] ?? 'Untitled',
       subtitle: json['subtitle'] ?? '',

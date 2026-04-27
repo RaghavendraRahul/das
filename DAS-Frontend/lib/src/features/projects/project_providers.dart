@@ -27,15 +27,56 @@ Future<ProjectWithTasks?> currentProject(CurrentProjectRef ref) async {
 
   final selectedId = ref.watch(selectedProjectIdProvider);
 
-  // Use the API-backed projects instead of the local database watch.
+  // 1. Try to find in the cached full projects list
   final allProjects = await ref.watch(projectsWithTasksProvider.future);
 
   if (selectedId != null) {
-    try {
-      return allProjects.firstWhere((p) => p.project.id == selectedId);
-    } catch (_) {
-      return null; // Not found
+    final cached =
+        allProjects.where((p) => p.project.id == selectedId).firstOrNull;
+    if (cached != null) return cached;
+
+    // 2. If not in cached list, fetch specifically from API
+    if (selectedId.startsWith('api_project_')) {
+      final rawIdStr = selectedId.replaceFirst('api_project_', '');
+      final rawId = int.tryParse(rawIdStr);
+      if (rawId != null) {
+        try {
+          final projectModel = await ref.read(apiProjectProvider(rawId).future);
+          final allTasks = await ref.read(apiTasksProvider.future);
+          final allUsers = await ref.read(allUsersForProjectsProvider.future);
+
+          final projectTasks = allTasks.where((t) => t.project == rawId);
+          final localProject = projectModel.toLocalProject();
+
+          final tasks = projectTasks.map((taskModel) {
+            final assignees = <User>[];
+            if (taskModel.assigneesList != null) {
+              for (final a in taskModel.assigneesList!) {
+                try {
+                  assignees.add(
+                      allUsers.firstWhere((u) => u.id == a.user.toString()));
+                } catch (_) {}
+              }
+            }
+            return TaskWithAssignees(
+                task: taskModel.toLocalTask(localProject.id),
+                assignees: assignees);
+          }).toList();
+
+          return ProjectWithTasks(
+            project: localProject,
+            tasks: tasks,
+            startDate: projectModel.startDate,
+            dueDate: projectModel.dueDate,
+            projectLeadId: projectModel.projectLeadId,
+            projectAssignees: projectModel.projectAssignees ?? [],
+          );
+        } catch (e) {
+          debugPrint('❌ Error fetching individual project ($rawId): $e');
+        }
+      }
     }
+    return null; // Not found anywhere
   }
 
   // If no project is selected, return the first available project

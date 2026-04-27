@@ -85,11 +85,15 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                         color: Colors.grey.shade600,
                         letterSpacing: 1.0,
                       ),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                       decoration: const InputDecoration(
+                         isDense: true,
+                         border: InputBorder.none,
+                         focusedBorder: InputBorder.none,
+                         enabledBorder: InputBorder.none,
+                         errorBorder: InputBorder.none,
+                         disabledBorder: InputBorder.none,
+                         contentPadding: EdgeInsets.zero,
+                       ),
                       onSubmitted: (val) {
                         if (val.trim().isNotEmpty) {
                           ref

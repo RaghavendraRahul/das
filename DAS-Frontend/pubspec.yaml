@@ -69,3 +69,4 @@ flutter:
   assets:
     - .env
     - assets/images/logo.jpeg
+    - assets/images/merida_logo.png

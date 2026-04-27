@@ -171,7 +171,13 @@ class _ProjectPlanView extends HookConsumerWidget {
           ? (isPendingClosure
               ? _buildWaitingClosureFab(context, isDark)
               : _buildRequestClosureFab(
-                  context, ref, hasPendingTasks, isAdmin, isProjectRejected))
+                  context,
+                  ref,
+                  hasPendingTasks,
+                  isAdmin,
+                  isProjectRejected,
+                  todoTasks,
+                  approvalTasks))
           : (project.project.status == 'completed' && isAdmin
               ? _buildAdminReopenFab(context, ref)
               : null),
@@ -595,18 +601,17 @@ class _ProjectPlanView extends HookConsumerWidget {
     );
   }
 
-  Widget _buildRequestClosureFab(BuildContext context, WidgetRef ref,
-      bool hasPendingTasks, bool isAdmin, bool isProjectRejected) {
+  Widget _buildRequestClosureFab(
+      BuildContext context,
+      WidgetRef ref,
+      bool hasPendingTasks,
+      bool isAdmin,
+      bool isProjectRejected,
+      List<TaskWithAssignees> todoTasks,
+      List<TaskWithAssignees> approvalTasks) {
     return FloatingActionButton.extended(
       onPressed: () async {
-        if (hasPendingTasks) {
-          if (context.mounted) {
-            _showError(context,
-                'Cannot complete project. Some tasks are still pending.');
-          }
-          return;
-        }
-
+        // 1. ADMIN AUTO-BYPASS: Admins can always complete the project
         if (isAdmin) {
           try {
             await ref
@@ -615,11 +620,30 @@ class _ProjectPlanView extends HookConsumerWidget {
             _refreshProject(ref);
             if (context.mounted) _showSuccess(context, 'Project marked as Completed');
           } catch (e) {
-            if (context.mounted) _showError(context, 'Failed: $e');
+            String errorMsg = e.toString();
+            if (e is Exception && errorMsg.contains('400')) {
+               errorMsg = 'Cannot complete project. Some tasks are still pending.';
+            }
+            if (context.mounted) _showError(context, 'Failed: $errorMsg');
           }
           return;
         }
 
+        // 2. EMPLOYEE STRICT VALIDATION: Ensure ALL tasks are fully approved/completed
+        // This mirrors the backend's `project.tasks.exclude(status='DONE').count() > 0` check.
+        final unfinishedTasks = project.tasks.where((t) {
+          final s = t.task.approvalStatus?.toLowerCase();
+          return s != 'approved';
+        }).toList();
+
+        if (unfinishedTasks.isNotEmpty) {
+          if (context.mounted) {
+            _showError(context, 'Please complete all tasks first.');
+          }
+          return;
+        }
+
+        // 3. SHOW REQUEST DIALOG
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -651,7 +675,11 @@ class _ProjectPlanView extends HookConsumerWidget {
                     }
                     _refreshProject(ref);
                   } catch (e) {
-                    if (context.mounted) _showError(context, 'Failed: $e');
+                    String errorMsg = e.toString();
+                    if (errorMsg.contains('400')) {
+                      errorMsg = 'Please complete all tasks first.';
+                    }
+                    if (context.mounted) _showError(context, 'Failed: $errorMsg');
                   }
                 },
                 child: Text(isProjectRejected ? 'Resubmit' : 'Request Closure'),

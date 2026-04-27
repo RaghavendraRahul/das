@@ -709,6 +709,14 @@ class ProjectRepository {
       throw Exception('Cannot complete a rejected project. Please edit and resubmit it first.');
     }
 
+    // NEW: CENTRALIZED VALIDATION - Scan for any tasks not fully approved
+    // This is the "final gate" to prevent 400 errors from any UI entry point
+    final tasks = await (_db.select(_db.tasks)..where((t) => t.projectId.equals(projectId))).get();
+    final unfinished = tasks.where((t) => t.approvalStatus?.toLowerCase() != 'approved').toList();
+    if (unfinished.isNotEmpty) {
+      throw Exception('Please complete all tasks first.');
+    }
+
     if (_apiService != null) {
       try {
         final id = int.tryParse(projectId) ??

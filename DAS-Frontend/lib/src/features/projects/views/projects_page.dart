@@ -164,6 +164,7 @@ class ProjectsPage extends HookConsumerWidget {
                     ),
                     child: TextField(
                       controller: searchController,
+                      textAlignVertical: TextAlignVertical.center,
                       style: TextStyle(
                           color: isDark ? Colors.white : const Color(0xFF0B1B2F),
                           fontSize: 13),
@@ -178,7 +179,11 @@ class ProjectsPage extends HookConsumerWidget {
                             color: isDark
                                 ? Colors.grey.shade400
                                 : const Color(0xFF94A3B8),
-                            size: 16),
+                            size: 18),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 42,
+                        ),
                         suffixIcon:
                             searchController.text.isNotEmpty
                                 ? MouseRegion(
@@ -197,9 +202,7 @@ class ProjectsPage extends HookConsumerWidget {
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
                   ),

@@ -9,8 +9,8 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:intl/intl.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/providers/user_providers.dart';
-import '../../../core/utils/user_color_service.dart';
-import '../modals/create_new_workspace_modal.dart';
+import 'package:project_pm/src/core/utils/user_color_service.dart';
+import 'package:project_pm/src/features/dashboard/modals/create_new_workspace_modal.dart';
 
 class ModernProjectCard extends ConsumerStatefulWidget {
   final ProjectWithTasks project;
@@ -1109,21 +1109,6 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
             : () async {
                 setState(() => _isLoading = true);
                 try {
-                  final hasPendingTasks =
-                      project.tasks.any((t) => t.task.progress < 100);
-                  if (hasPendingTasks) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Cannot complete project. Some tasks are still pending.'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                    return;
-                  }
-
                   final isAdmin =
                       ref.read(currentUserProvider).valueOrNull?.role ==
                           'ADMIN';
@@ -1149,10 +1134,33 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
                         ),
                       );
                     }
-                  } else {
-                    await ref
-                        .read(projectRepositoryProvider)
-                        .requestProjectCompletion(project.project.id);
+                    return; // EXIT after admin completion
+                  }
+
+                  // 2. EMPLOYEE STRICT VALIDATION: Ensure ALL tasks are fully approved/completed
+                  // This mirrors the backend's `project.tasks.exclude(status='DONE').count() > 0` check.
+                  final unfinishedTasks = project.tasks.where((t) {
+                    final s = t.task.approvalStatus?.toLowerCase();
+                    return s != 'approved';
+                  }).toList();
+
+                  if (unfinishedTasks.isNotEmpty) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please complete all tasks first.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                    return;
+                  }
+
+                  // If we reach here, it's an employee with all tasks approved.
+                  // Trigger standard request closure logic
+                  await ref
+                      .read(projectRepositoryProvider)
+                      .requestProjectCompletion(project.project.id);
                     
                     // --- GLOBAL REACTIVITY ---
                     ref.invalidate(apiTasksProvider);
@@ -1172,22 +1180,25 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
                         ),
                       );
                     }
+                  } catch (e) {
+                    String errorMsg =
+                        e.toString().replaceAll("Exception:", "").trim();
+                    if (errorMsg.contains('400')) {
+                      errorMsg = 'Please complete all tasks first.';
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed: $errorMsg'),
+                          duration: const Duration(seconds: 3),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => _isLoading = false);
                   }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Failed: ${e.toString().replaceAll("Exception:", "").trim()}'),
-                        duration: const Duration(seconds: 3),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                } finally {
-                  if (mounted) setState(() => _isLoading = false);
-                }
-              },
+                },
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(6),
