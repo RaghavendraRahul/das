@@ -26,6 +26,7 @@ router.register(r'forgot-password', views.ForgotPasswordViewSet, basename='forgo
 router.register(r'reset-password', views.ResetPasswordViewSet, basename='reset-password')
 
 router.register(r'user-preferences', views.UserPreferencesViewSet, basename='user-preferences')
+router.register(r'clients', views.ClientViewSet, basename='clients')
 router.register(r'projects', views.ProjectViewSet, basename='projects')
 router.register(r'approval-requests', views.ApprovalRequestViewSet, basename='approval-requests')
 router.register(r'approval-responses', views.ApprovalResponseViewSet, basename='approval-responses')

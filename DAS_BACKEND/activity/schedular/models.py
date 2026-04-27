@@ -289,6 +289,9 @@ class Projects(models.Model):
     approval_status = models.CharField(max_length=50, null=True, blank=True, help_text='Current approval status: PENDING_COMPLETION, etc.')
     rejection_reason = models.TextField(null=True, blank=True)
     assignees = models.ManyToManyField(User, related_name='assigned_projects', blank=True)
+    
+    # Client link
+    client = models.ForeignKey('Client', on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', help_text='Client associated with this project')
 
     def get_planned_hours_total(self):
         """Sum of planned hours for all tasks in this project"""
@@ -310,12 +313,38 @@ class Projects(models.Model):
         return self.name
 
 
+class Client(models.Model):
+    """Model for client information"""
+    
+    client_name = models.CharField(max_length=255, help_text='Name of the client')
+    company_name = models.CharField(max_length=255, help_text='Name of the company')
+    phone_number = models.CharField(max_length=20, help_text='Client phone number')
+    email = models.EmailField(help_text='Client email address')
+    
+    # Approval fields
+    is_approved = models.BooleanField(default=False)
+    approval_status = models.CharField(max_length=50, null=True, blank=True, help_text='Current approval status: PENDING, APPROVED, REJECTED')
+    rejection_reason = models.TextField(null=True, blank=True, help_text='Reason for rejection if applicable')
+    
+    # Tracking fields
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_clients', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.client_name} ({self.company_name})"
+
+
 class ApprovalRequest(models.Model):
     """Model for users to request approvals"""
     
     REFERENCE_TYPE_CHOICES = (
         ('PROJECT', 'Project'),
         ('TASK', 'Task'),
+        ('CLIENT', 'Client'),
     )
     
     APPROVAL_TYPE_CHOICES = (
@@ -388,11 +417,12 @@ class Task(models.Model):
         ('PENDING_APPROVAL', 'Pending Approval'),
     )
     
-    TASK_TYPE_CHOICES = (
-        ('STANDARD', 'Standard'),
-        ('RECURRING', 'Recurring'),
-        ('ROUTINE', 'Routine'),
-    )
+    # TASK_TYPE_CHOICES - Not currently used, commented out for future use
+    # TASK_TYPE_CHOICES = (
+    #     ('STANDARD', 'Standard'),
+    #     ('RECURRING', 'Recurring'),
+    #     ('ROUTINE', 'Routine'),
+    # )
     
     RECURRENCE_PATTERN_CHOICES = (
         ('DAILY', 'Daily'),
@@ -403,12 +433,16 @@ class Task(models.Model):
     
     title = models.CharField(max_length=150)
     project = models.ForeignKey(Projects, on_delete=models.CASCADE, related_name='tasks')
-    task_type = models.CharField(max_length=20, choices=TASK_TYPE_CHOICES, default='STANDARD')
+    # task_type = models.CharField(max_length=20, choices=TASK_TYPE_CHOICES, default='STANDARD')  # Not used
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='MEDIUM')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     start_date = models.DateField(null=True, blank=True)
     due_date = models.DateField()
     planned_hours = models.FloatField(default=0.0)
+    
+    # Client link for routine tasks
+    client = models.ForeignKey('Client', on_delete=models.SET_NULL, null=True, blank=True, 
+                               related_name='routine_tasks', help_text='Client for this routine task')
 
     def clean(self):
         """Ensure task planned hours don't exceed project planned_hours budget"""

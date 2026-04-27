@@ -224,3 +224,18 @@ Future<Map<String, dynamic>> analyticsData(AnalyticsDataRef ref) async {
     };
   }
 }
+
+/// Fetch all approved clients for project/routine creation
+@riverpod
+Future<List<Map<String, dynamic>>> approvedClients(
+    ApprovedClientsRef ref) async {
+  final apiService = ref.watch(taskApiServiceProvider);
+
+  try {
+    return await apiService.getApprovedClients();
+  } catch (e) {
+    debugPrint('❌ Error fetching approved clients: $e');
+    return [];
+  }
+}
+

@@ -75,5 +75,22 @@ final apiTaskCompletionsProvider =
 
 typedef ApiTaskCompletionsRef
     = AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
+String _$apiNewClientsHash() => r'8f3c7a2d1e4b5c9d7f2a0e8c5d1b3f7a';
+
+/// See also [apiNewClients].
+@ProviderFor(apiNewClients)
+final apiNewClientsProvider =
+    AutoDisposeFutureProvider<List<Map<String, dynamic>>>.internal(
+  apiNewClients,
+  name: r'apiNewClientsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$apiNewClientsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef ApiNewClientsRef
+    = AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

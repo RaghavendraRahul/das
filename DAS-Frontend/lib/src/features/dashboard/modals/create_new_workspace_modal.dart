@@ -14,9 +14,9 @@ import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:flutter/services.dart';
 import 'package:project_pm/src/core/utils/user_color_service.dart';
 
-enum CreationStep { type, details, tasks }
+enum CreationStep { type, details, tasks, createClient }
 
-enum WorkspaceType { project, course, routine }
+enum WorkspaceType { project, course, routine, client }
 
 /// Helper model for temporary tasks during creation
 class _TempTask {
@@ -163,6 +163,18 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     final scheduleController = useTextEditingController();
     final routineCategory = useState<String>('Work');
     final routineFrequency = useState<String>('Monthly');
+
+    // Client Selection
+    final selectedClientId = useState<int?>(null);
+    final approvedClientsAsync = ref.watch(approvedClientsProvider);
+
+    // New Client Creation
+    final showNewClientForm = useState<bool>(false);
+    final newClientNameController = useTextEditingController();
+    final newClientCompanyController = useTextEditingController();
+    final newClientPhoneController = useTextEditingController();
+    final newClientEmailController = useTextEditingController();
+    final isCreatingClient = useState<bool>(false);
 
     // Editing State for Tasks
     final editingTaskIndex = useState<int?>(null);
@@ -359,6 +371,14 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                           () => step.value = CreationStep.details,
                           editingTaskIndex,
                           (msg) => localError.value = msg,
+                          selectedClientId,
+                          approvedClientsAsync,
+                          showNewClientForm,
+                          newClientNameController,
+                          newClientCompanyController,
+                          newClientPhoneController,
+                          newClientEmailController,
+                          isCreatingClient,
                         ),
                       ),
                     ),
@@ -470,6 +490,14 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     VoidCallback onContinue,
     ValueNotifier<int?> editingTaskIndex,
     Function(String) onError,
+    ValueNotifier<int?> selectedClientId,
+    AsyncValue<List<Map<String, dynamic>>> approvedClientsAsync,
+    ValueNotifier<bool> showNewClientForm,
+    TextEditingController newClientNameController,
+    TextEditingController newClientCompanyController,
+    TextEditingController newClientPhoneController,
+    TextEditingController newClientEmailController,
+    ValueNotifier<bool> isCreatingClient,
   ) {
     switch (step) {
       case CreationStep.type:
@@ -503,6 +531,16 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
               isSelected: selectedType == WorkspaceType.routine,
               isDark: isDark,
               onTap: () => onSelectType(WorkspaceType.routine),
+            ),
+            const SizedBox(height: 16),
+            _SelectionCard(
+              title: "Create Client",
+              description: "Add new client for projects and routines.",
+              icon: Icons.person_add_rounded,
+              type: WorkspaceType.client,
+              isSelected: selectedType == WorkspaceType.client,
+              isDark: isDark,
+              onTap: () => onSelectType(WorkspaceType.client),
             ),
             const Spacer(),
             const Spacer(),
@@ -657,6 +695,9 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                     if (projectLeadId.value == id) projectLeadId.value = null;
                   }),
                   const SizedBox(height: 24),
+                  _buildClientDropdown(
+                      selectedClientId, approvedClientsAsync, "Client (Optional)", isDark),
+                  const SizedBox(height: 24),
                   Row(
                     children: [
                       Expanded(
@@ -697,15 +738,19 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                   _buildTextField(descriptionController,
                       "Description / Syllabus Summary", "Brief overview...",
                       maxLines: 4),
-                ] */ else if (selectedType == WorkspaceType.routine) ...[
+                ] */
+                else if (selectedType == WorkspaceType.routine) ...[
                   _buildTextField(
                       nameController, "Routine Name", "e.g. Daily Standup"),
+                  const SizedBox(height: 24),
+                  _buildClientDropdown(
+                      selectedClientId, approvedClientsAsync, "Client (Optional)", isDark),
                   const SizedBox(height: 24),
                   Row(
                     children: [
                       Expanded(
                           child: _buildDropdown(
-                              label: "Client",
+                              label: "Category",
                               value: routineCategory.value,
                               items: ["Work", "Health", "Personal", "Study"],
                               onChanged: (val) {
@@ -769,7 +814,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                               instructorController.text,
                               scheduleController.text,
                               routineCategory.value,
-                              routineFrequency.value);
+                              routineFrequency.value,
+                              selectedClientId.value);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -888,7 +934,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                           projectDeadline.value,
                           taskList.value,
                           projectAssignees.value,
-                          projectLimit);
+                          projectLimit,
+                          selectedClientId.value);
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -1005,6 +1052,108 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                 taskMilestones)),
                       ],
                     ),
+            ),
+          ],
+        );
+
+      case CreationStep.createClient:
+        return Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Create New Client",
+                    style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF05263E),
+                        letterSpacing: -0.5)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildTextField(
+                        newClientNameController, "Client Name", "e.g. Acme Corp"),
+                    const SizedBox(height: 24),
+                    _buildTextField(
+                        newClientCompanyController, "Company Name", "e.g. XYZ Company"),
+                    const SizedBox(height: 24),
+                    _buildTextField(
+                        newClientPhoneController, "Phone Number", "e.g. +1-555-0123",
+                        keyboardType: TextInputType.phone),
+                    const SizedBox(height: 24),
+                    _buildTextField(
+                        newClientEmailController, "Email", "e.g. contact@example.com",
+                        keyboardType: TextInputType.emailAddress),
+                    const SizedBox(height: 48),
+                  ],
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                OutlinedButton(
+                  onPressed: () => step.value = CreationStep.type,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF05263E),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 20),
+                    side: const BorderSide(
+                        color: Color(0xFF05263E), width: 2),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(
+                    "BACK",
+                    style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        letterSpacing: 0.8),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (newClientNameController.text.isEmpty ||
+                        newClientCompanyController.text.isEmpty ||
+                        newClientPhoneController.text.isEmpty ||
+                        newClientEmailController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text("Please fill all fields"),
+                          backgroundColor: Colors.orange));
+                      return;
+                    }
+                    await _createClient(
+                        context,
+                        ref,
+                        newClientNameController.text,
+                        newClientCompanyController.text,
+                        newClientPhoneController.text,
+                        newClientEmailController.text);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 20),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: 6,
+                    shadowColor:
+                        const Color(0xFF10B981).withValues(alpha: 0.3),
+                  ),
+                  child: Text(
+                    "CREATE CLIENT",
+                    style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        letterSpacing: 0.8),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -1381,13 +1530,14 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
   Future<void> _createWorkspace(
       BuildContext context,
       WidgetRef ref,
-      WorkspaceType type,
+      WorkspaceType? type,
       String name,
       String desc,
       String instructor,
       String schedule,
       String? category,
-      String? frequency) async {
+      String? frequency,
+      int? clientId) async {
     try {
       final apiService = ref.read(taskApiServiceProvider);
       String finalDescription = desc;
@@ -1395,8 +1545,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
         finalDescription =
             "Instructor: $instructor\nSchedule: $schedule\n\n$desc";
       } else if (type == WorkspaceType.routine) {
-        finalDescription =
-            "Client: $category\nFrequency: $frequency\n\n$desc";
+        finalDescription = "Category: $category\nFrequency: $frequency\n\n$desc";
       }
 
       final catalogType = type == WorkspaceType.course ? 'COURSE' : 'ROUTINE';
@@ -1404,7 +1553,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
           name: name,
           description: finalDescription,
           catalogType: catalogType,
-          isActive: true);
+          isActive: true,
+          clientId: clientId);
       ref.invalidate(apiCatalogProvider);
       if (context.mounted) Navigator.pop(context);
     } catch (e) {
@@ -1424,7 +1574,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
       DateTime? deadline,
       List<_TempTask> tasks,
       List<int> assignees,
-      double plannedHours) async {
+      double plannedHours,
+      int? clientId) async {
     try {
       final apiService = ref.read(taskApiServiceProvider);
       final tasksPayload = tasks
@@ -1448,7 +1599,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
           deadline: deadline,
           tasks: tasksPayload,
           assignees: assignees,
-          plannedHours: plannedHours);
+          plannedHours: plannedHours,
+          clientId: clientId);
 
       ref.invalidate(apiProjectsProvider);
       ref.invalidate(apiTasksProvider);
@@ -1581,6 +1733,49 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
           SnackBar(
               content: Text("Error: $errorMsg"), backgroundColor: Colors.red),
         );
+      }
+    }
+  }
+
+  Future<void> _createClient(
+      BuildContext context,
+      WidgetRef ref,
+      String clientName,
+      String companyName,
+      String phoneNumber,
+      String email) async {
+    try {
+      final apiService = ref.read(taskApiServiceProvider);
+      await apiService.createClient(
+          clientName: clientName,
+          companyName: companyName,
+          phoneNumber: phoneNumber,
+          email: email);
+
+      ref.invalidate(approvedClientsProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Client created successfully"),
+              backgroundColor: Colors.green),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      String errorMsg = e.toString();
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map) {
+          errorMsg =
+              data.entries.map((ent) => "${ent.key}: ${ent.value}").join("\n");
+        } else if (data != null) {
+          errorMsg = data.toString();
+        }
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Error: $errorMsg"), backgroundColor: Colors.red));
       }
     }
   }
@@ -1795,6 +1990,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
         return "Class / Course";
       case WorkspaceType.routine:
         return "Routine Work";
+      case WorkspaceType.client:
+        return "Create Client";
     }
   }
 }
@@ -1877,8 +2074,8 @@ class _AddTaskForm extends HookConsumerWidget {
                         taskPlannedHoursController, "Hours", "e.g. 8",
                         keyboardType: TextInputType.number,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-                        ])),
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                    ])),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildPriorityDropdown(
@@ -2093,7 +2290,8 @@ class _AddTaskForm extends HookConsumerWidget {
               child: ElevatedButton.icon(
                 onPressed: () {
                   if (taskNameController.text.isEmpty) {
-                    onError("TASK NAME REQUIRED: Please enter a name for this task.");
+                    onError(
+                        "TASK NAME REQUIRED: Please enter a name for this task.");
                     return;
                   }
 
@@ -2663,6 +2861,108 @@ Widget _buildDropdown(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFF05263E), width: 2),
           ),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildClientDropdown(
+    ValueNotifier<int?> selectedClientId,
+    AsyncValue<List<Map<String, dynamic>>> clientsAsync,
+    String label,
+    bool isDark) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label.toUpperCase(),
+        style: GoogleFonts.outfit(
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
+          color: const Color(0xFF05263E),
+          letterSpacing: 0.8,
+        ),
+      ),
+      const SizedBox(height: 8),
+      SizedBox(
+        height: 56,
+        child: clientsAsync.when(
+          loading: () => const Center(
+              child: SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))),
+          error: (_, __) => const Padding(
+            padding: EdgeInsets.all(12.0),
+            child: Text("Error loading clients"),
+          ),
+          data: (clients) {
+            if (clients.isEmpty) {
+              return DropdownButtonFormField<int?>(
+                initialValue: null,
+                items: const [],
+                onChanged: null,
+                style: GoogleFonts.outfit(
+                    fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+                decoration: InputDecoration(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: "No approved clients available",
+                  hintStyle: GoogleFonts.outfit(
+                      fontSize: 13,
+                      color: Colors.grey.shade400,
+                      fontStyle: FontStyle.italic),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF05263E), width: 2),
+                  ),
+                ),
+              );
+            }
+            return DropdownButtonFormField<int?>(
+              initialValue: selectedClientId.value,
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text("Select a client", style: TextStyle(fontStyle: FontStyle.italic)),
+                ),
+                ...clients.map((client) {
+                  final id = client['id'] as int;
+                  final name = (client['client_name'] ?? client['name'] ?? 'Unknown') as String;
+                  return DropdownMenuItem<int?>(
+                    value: id,
+                    child: Text(name, style: GoogleFonts.outfit(fontSize: 14)),
+                  );
+                }).toList(),
+              ],
+              onChanged: (value) {
+                selectedClientId.value = value;
+              },
+              style: GoogleFonts.outfit(
+                  fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF05263E), width: 2),
+                ),
+              ),
+            );
+          },
         ),
       ),
     ],

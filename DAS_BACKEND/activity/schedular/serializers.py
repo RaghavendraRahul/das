@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (User, Projects, ApprovalRequest, ApprovalResponse, Task, TaskAssignee,
                      SubTask, StickyNote, Catalog, TodayPlan, ActivityLog, 
-                     Pending, DaySession, TeamInstruction, Notification, DailyPlanner)
+                     Pending, DaySession, TeamInstruction, Notification, DailyPlanner, Client)
 from django.contrib.auth import authenticate
 from .fields import LocalDateTimeField
 
@@ -143,6 +143,8 @@ class ProjectAssigneeSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     project_assignees = serializers.SerializerMethodField()
+    client_name = serializers.CharField(source='client.client_name', read_only=True, allow_null=True)
+    company_name = serializers.CharField(source='client.company_name', read_only=True, allow_null=True)
 
     class Meta:
         model = Projects
@@ -195,6 +197,8 @@ class ApprovalResponseSerializer(serializers.ModelSerializer):
         return data
 class TaskSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source='project.name', read_only=True)
+    client_name = serializers.CharField(source='client.client_name', read_only=True, allow_null=True)
+    company_name = serializers.CharField(source='client.company_name', read_only=True, allow_null=True)
     assignees_list = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
     subtasks = serializers.SerializerMethodField()
@@ -704,7 +708,7 @@ class GridViewTaskSerializer(serializers.ModelSerializer):
 
 
 class TaskCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating standard tasks with assignees and milestones"""
+    """Serializer for creating standard tasks with assignees, milestones, and client"""
     assignees = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
@@ -722,7 +726,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             'title', 'priority', 'start_date', 'due_date', 'planned_hours',
-            'github_link', 'figma_link', 'assignees', 'milestones'
+            'github_link', 'figma_link', 'assignees', 'milestones', 'client'
         ]
 
     def to_internal_value(self, data):
@@ -755,8 +759,8 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         assignees_data = validated_data.pop('assignees', [])
         milestones_data = validated_data.pop('milestones', [])
         
-        # Create the standard task
-        task = Task.objects.create(task_type='STANDARD', **validated_data)
+        # Create the task (task_type field removed - no longer used)
+        task = Task.objects.create(**validated_data)
         
         # Auto-add assignees to project
         self._auto_add_assignees_to_project(task, assignees_data)
@@ -803,7 +807,7 @@ class RecurringTaskCreateSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             'title', 'priority', 'start_date', 'next_occurrence', 'planned_hours',
-            'recurrence_pattern', 'assignees', 'milestones'
+            'recurrence_pattern', 'assignees', 'milestones', 'client'
         ]
     
     def _auto_add_assignees_to_project(self, task, user_ids):
@@ -828,9 +832,8 @@ class RecurringTaskCreateSerializer(serializers.ModelSerializer):
         assignees_data = validated_data.pop('assignees', [])
         milestones_data = validated_data.pop('milestones', [])
         
-        # Create the recurring task
+        # Create the recurring task (task_type field removed - no longer used)
         task = Task.objects.create(
-            task_type='RECURRING', 
             due_date=validated_data['next_occurrence'],  # Set due_date to next_occurrence
             **validated_data
         )
@@ -860,7 +863,7 @@ class RecurringTaskCreateSerializer(serializers.ModelSerializer):
 
 
 class RoutineTaskCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating routine tasks (no milestones, no GitHub/Figma)"""
+    """Serializer for creating routine tasks with client support"""
     assignees = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
@@ -869,7 +872,7 @@ class RoutineTaskCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Task
-        fields = ['title', 'priority', 'start_date', 'due_date', 'planned_hours', 'assignees']
+        fields = ['title', 'priority', 'start_date', 'due_date', 'planned_hours', 'assignees', 'client']
     
     def _auto_add_assignees_to_project(self, task, user_ids):
         """
@@ -911,8 +914,8 @@ class ProjectCreateWithTasksSerializer(serializers.Serializer):
     """Simplified serializer for creating a project with tasks from the frontend modal.
     
     Accepts only the fields the frontend collects:
-    - Project: name, description, project_lead, deadline, planned_hours
-    - Tasks: list of {name, priority, start_date, end_date, planned_hours, assignees[], milestones[]}
+    - Project: name, description, project_lead, deadline, planned_hours, client
+    - Tasks: list of {name, priority, start_date, end_date, planned_hours, assignees[], milestones[], client}
     
     Validation: Sum of task planned_hours must NOT exceed project planned_hours
     """
@@ -921,6 +924,7 @@ class ProjectCreateWithTasksSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, default='')
     deadline = serializers.DateField(required=False, allow_null=True)
     planned_hours = serializers.FloatField(required=False, default=0.0, help_text="Total planned hours budget for the project")
+    client = serializers.IntegerField(required=False, allow_null=True, help_text="ID of the Client for this project")
     assignees = serializers.ListField(
         child=serializers.IntegerField(),
         required=False,
@@ -935,7 +939,7 @@ class ProjectCreateWithTasksSerializer(serializers.Serializer):
         child=serializers.DictField(),
         required=False,
         default=[],
-        help_text="List of task objects with: name, priority, start_date, end_date, planned_hours, assignees (user IDs), milestones (title strings)"
+        help_text="List of task objects with: name, priority, start_date, end_date, planned_hours, assignees (user IDs), milestones (title strings), client (optional)"
     )
     
     def validate(self, data):
@@ -963,6 +967,7 @@ class ProjectCreateWithTasksSerializer(serializers.Serializer):
         tasks_data = validated_data.pop('tasks', [])
         deadline = validated_data.pop('deadline', None)
         project_lead_id = validated_data.pop('project_lead', None)
+        client_id = validated_data.pop('client', None)
         
         # Set smart defaults for required model fields
         today = date.today()
@@ -987,6 +992,7 @@ class ProjectCreateWithTasksSerializer(serializers.Serializer):
             name=validated_data['name'],
             description=validated_data.get('description', ''),
             project_lead_id=project_lead_id,
+            client_id=client_id,
             start_date=today,
             due_date=due,
             status='ACTIVE',
@@ -1034,11 +1040,12 @@ class ProjectCreateWithTasksSerializer(serializers.Serializer):
             task = Task.objects.create(
                 title=task_name,
                 project=project,
-                task_type='STANDARD',
+                # task_type field removed - no longer used
                 priority=priority,
                 start_date=start_date or today,
                 due_date=end_date or due,
                 planned_hours=float(t.get('planned_hours', 0.0)),  # Set task planned hours
+                client_id=t.get('client') or client_id,  # Use task client if provided, otherwise project client
             )
             
             # Create assignees and auto-add to project assignees
@@ -1136,3 +1143,58 @@ class DailyTrendSerializer(serializers.Serializer):
     date = serializers.DateField()
     planned = serializers.FloatField()
     achieved = serializers.FloatField()
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    """Serializer for Client model"""
+    created_by_email = serializers.EmailField(source='created_by.email', read_only=True, allow_null=True)
+    created_by_name = serializers.SerializerMethodField()
+    projects_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Client
+        fields = [
+            'id', 'client_name', 'company_name', 'phone_number', 'email',
+            'is_approved', 'approval_status', 'rejection_reason',
+            'created_by', 'created_by_email', 'created_by_name',
+            'created_at', 'updated_at', 'projects_count'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_approved', 'approval_status', 'rejection_reason']
+    
+    def get_created_by_name(self, obj):
+        """Get name of user who created the client"""
+        if obj.created_by:
+            return obj.created_by.employee_name or obj.created_by.email.split('@')[0]
+        return None
+    
+    def get_projects_count(self, obj):
+        """Get number of projects linked to this client"""
+        return obj.projects.count()
+
+
+class ClientDetailSerializer(serializers.ModelSerializer):
+    """Detailed serializer for Client with linked projects"""
+    created_by_email = serializers.EmailField(source='created_by.email', read_only=True, allow_null=True)
+    created_by_name = serializers.SerializerMethodField()
+    projects = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Client
+        fields = [
+            'id', 'client_name', 'company_name', 'phone_number', 'email',
+            'is_approved', 'approval_status', 'rejection_reason',
+            'created_by', 'created_by_email', 'created_by_name',
+            'created_at', 'updated_at', 'projects'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_approved', 'approval_status', 'rejection_reason']
+    
+    def get_created_by_name(self, obj):
+        """Get name of user who created the client"""
+        if obj.created_by:
+            return obj.created_by.employee_name or obj.created_by.email.split('@')[0]
+        return None
+    
+    def get_projects(self, obj):
+        """Get list of projects linked to this client"""
+        projects = obj.projects.all()
+        return [{'id': p.id, 'name': p.name, 'status': p.status} for p in projects]
