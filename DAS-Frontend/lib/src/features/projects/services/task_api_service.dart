@@ -109,6 +109,7 @@ class TaskApiService {
     required List<dynamic> tasks,
     List<int>? assignees,
     double? plannedHours,
+    int? clientId,
   }) async {
     try {
       final data = {
@@ -119,6 +120,7 @@ class TaskApiService {
         'tasks': tasks,
         'assignees': assignees,
         'planned_hours': plannedHours,
+        if (clientId != null) 'client': clientId,
       };
 
       final response =
@@ -494,8 +496,11 @@ class TaskApiService {
 
   Future<List<dynamic>> getPendingProjects({String? status}) async {
     try {
-      final queryParams = <String, dynamic>{if (status != null) 'status': status};
-      final response = await _dio.get('/approval-requests/new_projects/', queryParameters: queryParams);
+      final queryParams = <String, dynamic>{
+        if (status != null) 'status': status
+      };
+      final response = await _dio.get('/approval-requests/new_projects/',
+          queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['requests'];
       }
@@ -507,8 +512,11 @@ class TaskApiService {
 
   Future<List<dynamic>> getPendingProjectClosures({String? status}) async {
     try {
-      final queryParams = <String, dynamic>{if (status != null) 'status': status};
-      final response = await _dio.get('/approval-requests/project_closures/', queryParameters: queryParams);
+      final queryParams = <String, dynamic>{
+        if (status != null) 'status': status
+      };
+      final response = await _dio.get('/approval-requests/project_closures/',
+          queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['requests'];
       }
@@ -645,8 +653,11 @@ class TaskApiService {
 
   Future<List<dynamic>> getPendingTasks({String? status}) async {
     try {
-      final queryParams = <String, dynamic>{if (status != null) 'status': status};
-      final response = await _dio.get('/approval-requests/new_tasks/', queryParameters: queryParams);
+      final queryParams = <String, dynamic>{
+        if (status != null) 'status': status
+      };
+      final response = await _dio.get('/approval-requests/new_tasks/',
+          queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['requests'];
       }
@@ -658,12 +669,110 @@ class TaskApiService {
 
   Future<List<dynamic>> getPendingTaskCompletions({String? status}) async {
     try {
-      final queryParams = <String, dynamic>{if (status != null) 'status': status};
-      final response = await _dio.get('/approval-requests/task_completions/', queryParameters: queryParams);
+      final queryParams = <String, dynamic>{
+        if (status != null) 'status': status
+      };
+      final response = await _dio.get('/approval-requests/task_completions/',
+          queryParameters: queryParams);
       if (response.statusCode == 200) {
         return response.data['requests'];
       }
       throw Exception('Failed to fetch pending task completions');
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    }
+  }
+
+  // --- Clients ---
+
+  /// Fetch pending client approvals
+  Future<List<dynamic>> getPendingClients({String? status}) async {
+    try {
+      final queryParams = <String, dynamic>{
+        if (status != null) 'status': status
+      };
+      final response = await _dio.get('/clients/pending-approval/',
+          queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        // Handle both list and paginated responses
+        if (response.data is List) {
+          return response.data;
+        }
+        return response.data['results'] ?? response.data['requests'] ?? [];
+      }
+      throw Exception('Failed to fetch pending clients');
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    }
+  }
+
+  /// Approve a pending client
+  Future<Map<String, dynamic>> approveClient(int clientId) async {
+    try {
+      final response = await _dio.post('/clients/$clientId/approve/');
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('Failed to approve client');
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    }
+  }
+
+  /// Reject a pending client with optional reason
+  Future<Map<String, dynamic>> rejectClient(int clientId,
+      {String? reason}) async {
+    try {
+      final data = reason != null ? {'rejection_reason': reason} : null;
+      final response =
+          await _dio.post('/clients/$clientId/reject/', data: data);
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('Failed to reject client');
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    }
+  }
+
+  /// Fetch all approved clients
+  Future<List<Map<String, dynamic>>> getApprovedClients() async {
+    try {
+      final response = await _dio.get('/clients/', queryParameters: {'is_approved': true});
+      if (response.statusCode == 200) {
+        // Handle both list and paginated responses
+        if (response.data is List) {
+          return List<Map<String, dynamic>>.from(response.data);
+        }
+        // If paginated response
+        final results = response.data['results'] ?? response.data['clients'] ?? [];
+        return List<Map<String, dynamic>>.from(results);
+      }
+      throw Exception('Failed to fetch clients');
+    } on DioException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    }
+  }
+
+  /// Create a new client
+  Future<Map<String, dynamic>> createClient({
+    required String clientName,
+    required String companyName,
+    required String phoneNumber,
+    required String email,
+  }) async {
+    try {
+      final data = {
+        'client_name': clientName,
+        'company_name': companyName,
+        'phone_number': phoneNumber,
+        'email': email,
+      };
+      final response = await _dio.post('/clients/', data: data);
+      if (response.statusCode == 201) {
+        return response.data;
+      }
+      throw Exception('Failed to create client');
     } on DioException catch (e) {
       throw Exception('Network error: ${e.message}');
     }
@@ -750,6 +859,7 @@ class TaskApiService {
     String? description,
     String? catalogType,
     bool isActive = true,
+    int? clientId,
   }) async {
     try {
       final data = {
@@ -757,6 +867,7 @@ class TaskApiService {
         'description': description,
         'catalog_type': catalogType,
         'is_active': isActive,
+        if (clientId != null) 'client': clientId,
       };
       final response = await _dio.post('/catalog/', data: data);
       if (response.statusCode == 201) {
@@ -1155,7 +1266,6 @@ class TaskApiService {
     }
   }
 
-
   Future<List<CatalogModel>> getCourses() async {
     try {
       final response = await _dio
@@ -1308,12 +1418,12 @@ class TaskApiService {
     String? search,
   }) async {
     try {
-      final response = await _dio.get('/dashboard/statistics/',
-          queryParameters: {
-            if (filter != null) 'filter': filter,
-            if (userId != null) 'user_id': userId,
-            if (search != null && search.isNotEmpty) 'search': search,
-          });
+      final response =
+          await _dio.get('/dashboard/statistics/', queryParameters: {
+        if (filter != null) 'filter': filter,
+        if (userId != null) 'user_id': userId,
+        if (search != null && search.isNotEmpty) 'search': search,
+      });
       if (response.statusCode == 200) {
         return response.data;
       }

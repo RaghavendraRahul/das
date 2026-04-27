@@ -70,17 +70,30 @@ Future<List<Map<String, dynamic>>> apiTaskCompletions(
   }
 }
 
+// Provider for new client approval requests
+@riverpod
+Future<List<Map<String, dynamic>>> apiNewClients(ApiNewClientsRef ref) async {
+  final apiService = ref.watch(taskApiServiceProvider);
+  final viewMode = ref.watch(approvalsViewModeProvider);
+  try {
+    final result = await apiService.getPendingClients(status: viewMode);
+    return result.cast<Map<String, dynamic>>();
+  } catch (e) {
+    throw Exception('Failed to fetch new clients: $e');
+  }
+}
+
 @RoutePage()
 class ApprovalsPage extends HookConsumerWidget {
   const ApprovalsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tabController = useTabController(initialLength: 4);
+    final tabController = useTabController(initialLength: 5);
     // Listen to tabController to rebuild for badge color synchronization
     useListenable(tabController);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final viewMode = ref.watch(approvalsViewModeProvider);
 
     // Brand Colors
@@ -95,6 +108,7 @@ class ApprovalsPage extends HookConsumerWidget {
     final closures = ref.watch(apiProjectClosuresProvider);
     final tasks = ref.watch(apiNewTasksProvider);
     final completions = ref.watch(apiTaskCompletionsProvider);
+    final clients = ref.watch(apiNewClientsProvider);
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF111827) : Colors.grey.shade50,
@@ -117,7 +131,8 @@ class ApprovalsPage extends HookConsumerWidget {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
                       // Tab bar takes remaining space
@@ -135,16 +150,25 @@ class ApprovalsPage extends HookConsumerWidget {
                               borderRadius: BorderRadius.circular(22),
                               color: activeColor,
                             ),
-                            labelPadding: const EdgeInsets.symmetric(horizontal: 20),
+                            labelPadding:
+                                const EdgeInsets.symmetric(horizontal: 20),
                             labelStyle: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold, fontSize: 13.5, letterSpacing: 0.3),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                                letterSpacing: 0.3),
                             unselectedLabelStyle: GoogleFonts.outfit(
                                 fontWeight: FontWeight.w600, fontSize: 13.5),
                             tabs: [
-                              _buildApiTab(projects, 'New Projects', isDark, tabController.index == 0),
-                              _buildApiTab(closures, 'Project Closures', isDark, tabController.index == 1),
-                              _buildApiTab(tasks, 'New Tasks', isDark, tabController.index == 2),
-                              _buildApiTab(completions, 'Task Completions', isDark, tabController.index == 3),
+                              _buildApiTab(projects, 'New Projects', isDark,
+                                  tabController.index == 0),
+                              _buildApiTab(closures, 'Project Closures', isDark,
+                                  tabController.index == 1),
+                              _buildApiTab(tasks, 'New Tasks', isDark,
+                                  tabController.index == 2),
+                              _buildApiTab(completions, 'Task Completions',
+                                  isDark, tabController.index == 3),
+                              _buildApiTab(clients, 'New Clients', isDark,
+                                  tabController.index == 4),
                             ],
                           ),
                         ),
@@ -161,8 +185,10 @@ class ApprovalsPage extends HookConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildToggleBtn(context, ref, 'PENDING', 'Pending', viewMode, isDark),
-                            _buildToggleBtn(context, ref, 'HISTORY', 'History', viewMode, isDark),
+                            _buildToggleBtn(context, ref, 'PENDING', 'Pending',
+                                viewMode, isDark),
+                            _buildToggleBtn(context, ref, 'HISTORY', 'History',
+                                viewMode, isDark),
                           ],
                         ),
                       ),
@@ -182,6 +208,7 @@ class ApprovalsPage extends HookConsumerWidget {
                 _ProjectClosuresTab(isDark: isDark),
                 _ApiNewTasksTab(isDark: isDark),
                 _ApiTaskCompletionsTab(isDark: isDark),
+                _NewClientsTab(isDark: isDark),
               ],
             ),
           ),
@@ -232,14 +259,15 @@ class ApprovalsPage extends HookConsumerWidget {
     );
   }
 
-  Widget _buildToggleBtn(BuildContext context, WidgetRef ref, String value, String label, String currentVal, bool isDark) {
+  Widget _buildToggleBtn(BuildContext context, WidgetRef ref, String value,
+      String label, String currentVal, bool isDark) {
     final isSelected = value == currentVal;
     return GestureDetector(
       onTap: () => ref.read(approvalsViewModeProvider.notifier).state = value,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? (isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
@@ -249,7 +277,7 @@ class ApprovalsPage extends HookConsumerWidget {
           style: GoogleFonts.outfit(
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected 
+            color: isSelected
                 ? (isDark ? const Color(0xFF05263E) : Colors.white)
                 : (isDark ? Colors.white70 : Colors.black87),
           ),
@@ -325,27 +353,33 @@ class _ApiNewProjectsTab extends ConsumerWidget {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                        child: Text('Cancel',
+                            style: GoogleFonts.outfit(color: Colors.grey)),
                       ),
                       ElevatedButton(
                         onPressed: () {
                           if (reasonController.text.trim().isEmpty) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(content: Text('Please enter a rejection reason.')),
+                              const SnackBar(
+                                  content:
+                                      Text('Please enter a rejection reason.')),
                             );
                             return;
                           }
                           Navigator.pop(ctx, reasonController.text.trim());
                         },
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFB7185)),
-                        child: Text('Reject', style: GoogleFonts.outfit(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFB7185)),
+                        child: Text('Reject',
+                            style: GoogleFonts.outfit(color: Colors.white)),
                       ),
                     ],
                   ),
                 );
 
                 if (reason != null && reason.isNotEmpty) {
-                  await apiService.rejectRequest(project['approval_id'], reason: reason);
+                  await apiService.rejectRequest(project['approval_id'],
+                      reason: reason);
                   ref.invalidate(apiNewProjectsProvider);
                   ref.invalidate(apiProjectsProvider);
                   ref.invalidate(paginatedDashboardProjectsProvider);
@@ -715,8 +749,8 @@ class _ApiProjectCard extends HookWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black
-                        .withOpacity(isHovered.value ? 0.2 : 0.1),
+                    color:
+                        Colors.black.withOpacity(isHovered.value ? 0.2 : 0.1),
                     blurRadius: isHovered.value ? 20 : 10,
                     offset: Offset(0, isHovered.value ? 10 : 4),
                   ),
@@ -827,12 +861,12 @@ class _ApiProjectCard extends HookWidget {
                                 isDark),
                           _ExecutiveStatusChip(
                             label: 'Status: ${data['approval_request_status']}',
-                            color: data['approval_request_status'] == 'APPROVED' 
-                                ? const Color(0xFF10B981) 
+                            color: data['approval_request_status'] == 'APPROVED'
+                                ? const Color(0xFF10B981)
                                 : const Color(0xFFFB7185),
                             isDark: isDark,
-                            icon: data['approval_request_status'] == 'APPROVED' 
-                                ? Icons.check_circle_outline 
+                            icon: data['approval_request_status'] == 'APPROVED'
+                                ? Icons.check_circle_outline
                                 : Icons.block,
                           ),
                         ],
@@ -888,8 +922,7 @@ class _ApiTaskCard extends HookWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black
-                    .withOpacity(isHovered.value ? 0.2 : 0.05),
+                color: Colors.black.withOpacity(isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 15 : 5,
                 offset: Offset(0, isHovered.value ? 8 : 2),
               ),
@@ -1039,8 +1072,7 @@ class _ApiTaskCompletionCard extends HookWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black
-                    .withOpacity(isHovered.value ? 0.2 : 0.05),
+                color: Colors.black.withOpacity(isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 15 : 5,
                 offset: Offset(0, isHovered.value ? 8 : 2),
               ),
@@ -1078,7 +1110,8 @@ class _ApiTaskCompletionCard extends HookWidget {
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
-                              color: isDark ? Colors.white : Colors.grey.shade900,
+                              color:
+                                  isDark ? Colors.white : Colors.grey.shade900,
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -1122,12 +1155,12 @@ class _ApiTaskCompletionCard extends HookWidget {
                     else
                       _ExecutiveStatusChip(
                         label: '${data['approval_request_status']}',
-                        color: data['approval_request_status'] == 'APPROVED' 
-                            ? const Color(0xFF10B981) 
+                        color: data['approval_request_status'] == 'APPROVED'
+                            ? const Color(0xFF10B981)
                             : const Color(0xFFFB7185),
                         isDark: isDark,
-                        icon: data['approval_request_status'] == 'APPROVED' 
-                            ? Icons.check_circle_outline 
+                        icon: data['approval_request_status'] == 'APPROVED'
+                            ? Icons.check_circle_outline
                             : Icons.block,
                       ),
                   ],
@@ -1180,8 +1213,7 @@ class _ProjectClosureCard extends HookWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.purple
-                    .withOpacity(isHovered.value ? 0.2 : 0.05),
+                color: Colors.purple.withOpacity(isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 25 : 10,
                 offset: Offset(0, isHovered.value ? 12 : 4),
               ),
@@ -1289,12 +1321,12 @@ class _ProjectClosureCard extends HookWidget {
                     else
                       _ExecutiveStatusChip(
                         label: '${closure['approval_request_status']}',
-                        color: closure['approval_request_status'] == 'APPROVED' 
-                            ? const Color(0xFF10B981) 
+                        color: closure['approval_request_status'] == 'APPROVED'
+                            ? const Color(0xFF10B981)
                             : const Color(0xFFFB7185),
                         isDark: isDark,
-                        icon: closure['approval_request_status'] == 'APPROVED' 
-                            ? Icons.check_circle_outline 
+                        icon: closure['approval_request_status'] == 'APPROVED'
+                            ? Icons.check_circle_outline
                             : Icons.block,
                       ),
                   ],
@@ -1392,16 +1424,13 @@ class _ExecutiveActionButtonState extends State<_ExecutiveActionButton> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: widget.isPrimary
-                ? (_isHovered
-                    ? widget.color.withOpacity(0.8)
-                    : widget.color)
+                ? (_isHovered ? widget.color.withOpacity(0.8) : widget.color)
                 : (_isHovered
                     ? widget.color.withOpacity(0.1)
                     : Colors.transparent),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color:
-                  widget.color.withOpacity(widget.isPrimary ? 1.0 : 0.5),
+              color: widget.color.withOpacity(widget.isPrimary ? 1.0 : 0.5),
               width: 1.5,
             ),
             boxShadow: (widget.isPrimary && _isHovered)
@@ -1479,7 +1508,7 @@ Widget _buildRequesterInfo(String email, bool isDark) {
 
 Widget _buildSmartFooterDate(DateTime? date, bool isDark) {
   if (date == null) return const SizedBox.shrink();
-  
+
   return Row(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -1514,3 +1543,410 @@ Widget _buildSmartFooterDate(DateTime? date, bool isDark) {
   );
 }
 
+// New Clients Tab
+class _NewClientsTab extends ConsumerWidget {
+  final bool isDark;
+
+  const _NewClientsTab({required this.isDark});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final clients = ref.watch(apiNewClientsProvider);
+
+    return clients.when(
+      data: (clientsList) {
+        if (clientsList.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.business,
+                  size: 48,
+                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No pending client approvals',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    color:
+                        isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: clientsList.length,
+          itemBuilder: (context, index) {
+            final client = clientsList[index];
+            return _ClientApprovalCard(
+              data: client,
+              isDark: isDark,
+              onApprove: () => _handleApproveClient(context, ref, client['id']),
+              onReject: () =>
+                  _handleRejectClient(context, ref, client['id']),
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Text(
+          'Error: ${error.toString()}',
+          style: GoogleFonts.outfit(color: Colors.red),
+        ),
+      ),
+    );
+  }
+
+  void _handleApproveClient(BuildContext context, WidgetRef ref, int clientId) async {
+    try {
+      final apiService = ref.read(taskApiServiceProvider);
+      await apiService.approveClient(clientId);
+      ref.invalidate(apiNewClientsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Client approved successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to approve: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleRejectClient(BuildContext context, WidgetRef ref, int clientId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) => _RejectClientDialog(
+        isDark: isDark,
+        onConfirm: (reason) async {
+          try {
+            final apiService = ref.read(taskApiServiceProvider);
+            await apiService.rejectClient(clientId, reason: reason);
+            ref.invalidate(apiNewClientsProvider);
+            if (context.mounted) {
+              Navigator.of(dialogContext).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Client rejected successfully'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              Navigator.of(dialogContext).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to reject: ${e.toString()}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+}
+
+// Client Approval Card
+class _ClientApprovalCard extends HookWidget {
+  final Map<String, dynamic> data;
+  final bool isDark;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  const _ClientApprovalCard({
+    required this.data,
+    required this.isDark,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isHovering = useState(false);
+
+    final clientName = data['client_name'] ?? 'Unknown Client';
+    final companyName = data['company_name'] ?? 'Unknown Company';
+    final phoneNumber = data['phone_number'] ?? 'N/A';
+    final email = data['email'] ?? 'N/A';
+    final createdBy = data['created_by_name'] ?? 'Unknown User';
+    final createdAt = data['created_at'] != null
+        ? DateTime.parse(data['created_at'].toString())
+        : DateTime.now();
+
+    return MouseRegion(
+      onEnter: (_) => isHovering.value = true,
+      onExit: (_) => isHovering.value = false,
+      child: AnimatedContainer(
+        duration: 200.ms,
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.grey.shade900.withOpacity(isHovering.value ? 0.8 : 0.5)
+              : Colors.white.withOpacity(isHovering.value ? 1 : 0.9),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withOpacity(0.1)
+                : Colors.grey.shade200,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isHovering.value
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(
+                        isDark ? 0.3 : 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Client Name and Company
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7EC8F4).withOpacity(isDark ? 0.2 : 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.business_center,
+                      size: 20,
+                      color: Color(0xFF7EC8F4),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          clientName,
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          companyName,
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Contact Details
+              _buildContactDetail(
+                  'Phone', phoneNumber, Icons.phone, isDark),
+              const SizedBox(height: 8),
+              _buildContactDetail('Email', email, Icons.email, isDark),
+              const SizedBox(height: 12),
+              _buildRequesterInfo(createdBy, isDark),
+              const SizedBox(height: 20),
+              const Divider(height: 1),
+              const SizedBox(height: 20),
+              // Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildSmartFooterDate(createdAt, isDark),
+                  Row(
+                    children: [
+                      _ExecutiveActionButton(
+                        label: 'Reject',
+                        icon: Icons.block_flipped,
+                        color: const Color(0xFFFB7185),
+                        onPressed: onReject,
+                      ),
+                      const SizedBox(width: 12),
+                      _ExecutiveActionButton(
+                        label: 'Approve',
+                        icon: Icons.check_circle_outline,
+                        color: const Color(0xFF10B981),
+                        isPrimary: true,
+                        onPressed: onApprove,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn().slideY(begin: 0.1);
+  }
+
+  Widget _buildContactDetail(String label, String value, IconData icon, bool isDark) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Reject Client Dialog
+class _RejectClientDialog extends StatefulWidget {
+  final bool isDark;
+  final Function(String reason) onConfirm;
+
+  const _RejectClientDialog({
+    required this.isDark,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_RejectClientDialog> createState() => _RejectClientDialogState();
+}
+
+class _RejectClientDialogState extends State<_RejectClientDialog> {
+  final reasonController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: widget.isDark ? Colors.grey.shade900 : Colors.white,
+      title: Text(
+        'Reject Client',
+        style: GoogleFonts.outfit(
+          fontWeight: FontWeight.bold,
+          color: widget.isDark ? Colors.white : Colors.black87,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Provide a reason for rejecting this client (optional):',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              color: widget.isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: reasonController,
+            maxLines: 3,
+            style: GoogleFonts.outfit(
+              color: widget.isDark ? Colors.white : Colors.black87,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Enter rejection reason...',
+              hintStyle: GoogleFonts.outfit(
+                color: widget.isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+              ),
+              filled: true,
+              fillColor: widget.isDark
+                  ? Colors.grey.shade800
+                  : Colors.grey.shade100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: widget.isDark
+                      ? Colors.grey.shade700
+                      : Colors.grey.shade300,
+                ),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.outfit(
+              color: widget.isDark ? Colors.grey.shade300 : Colors.grey.shade600,
+            ),
+          ),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFB7185),
+          ),
+          onPressed: () {
+            widget.onConfirm(reasonController.text);
+            reasonController.dispose();
+          },
+          child: Text(
+            'Reject',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    reasonController.dispose();
+    super.dispose();
+  }
+}

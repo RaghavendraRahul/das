@@ -162,5 +162,24 @@ final analyticsDataProvider =
 );
 
 typedef AnalyticsDataRef = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
+String _$approvedClientsHash() => r'a1e8f5d9c3b7f2e1d9c4a5b6f2e3d1c0';
+
+/// Fetch all approved clients for project/routine creation
+///
+/// Copied from [approvedClients].
+@ProviderFor(approvedClients)
+final approvedClientsProvider =
+    AutoDisposeFutureProvider<List<Map<String, dynamic>>>.internal(
+  approvedClients,
+  name: r'approvedClientsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$approvedClientsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef ApprovedClientsRef
+    = AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member
