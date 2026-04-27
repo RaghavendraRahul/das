@@ -48,7 +48,8 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
       switch (status) {
         case 'active':
         case 'working':
-          projectColor = widget.isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E);
+          projectColor =
+              widget.isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E);
           break;
         case 'on_hold':
           projectColor = Colors.orange;
@@ -79,7 +80,7 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
             duration: const Duration(milliseconds: 300),
             decoration: BoxDecoration(
               color: widget.isDark ? const Color(0xFF1E293B) : Colors.white,
-              gradient: widget.isDark 
+              gradient: widget.isDark
                   ? LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -91,16 +92,19 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
                   : null,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: _isHovered 
-                    ? projectColor.withValues(alpha: 0.5) 
-                    : (widget.isDark ? Colors.white10 : Colors.indigo.withValues(alpha: 0.05)),
+                color: _isHovered
+                    ? projectColor.withValues(alpha: 0.5)
+                    : (widget.isDark
+                        ? Colors.white10
+                        : Colors.indigo.withValues(alpha: 0.05)),
                 width: _isHovered ? 2.0 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
                   color: _isHovered
                       ? projectColor.withValues(alpha: 0.25)
-                      : Colors.black.withValues(alpha: widget.isDark ? 0.3 : 0.06),
+                      : Colors.black
+                          .withValues(alpha: widget.isDark ? 0.3 : 0.06),
                   blurRadius: _isHovered ? 30 : 15,
                   spreadRadius: _isHovered ? 2 : 0,
                   offset: Offset(0, _isHovered ? 12 : 6),
@@ -138,7 +142,8 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
                           _ProjectHeader(project: widget.project.project),
                           if (status == 'active' &&
                               approvalStatus != 'rejected' &&
-                              (widget.project.project.rejectionReason?.isNotEmpty ??
+                              (widget.project.project.rejectionReason
+                                      ?.isNotEmpty ??
                                   false)) ...[
                             const SizedBox(height: 6),
                             _ReopenedBanner(
@@ -146,10 +151,13 @@ class _ModernProjectCardState extends ConsumerState<ModernProjectCard> {
                               isDark: widget.isDark,
                             ),
                           ],
-                          if (widget.project.project.approvalStatus?.toLowerCase() == 'rejected') ...[
+                          if (widget.project.project.approvalStatus
+                                  ?.toLowerCase() ==
+                              'rejected') ...[
                             const SizedBox(height: 6),
                             _RejectionBanner(
-                              rejectionReason: widget.project.project.rejectionReason,
+                              rejectionReason:
+                                  widget.project.project.rejectionReason,
                               projectWithTasks: widget.project,
                               isDark: widget.isDark,
                             ),
@@ -238,10 +246,12 @@ void _showEditModal(BuildContext context, ProjectWithTasks project) {
     barrierDismissible: true,
     barrierLabel: '',
     transitionDuration: const Duration(milliseconds: 300),
-    pageBuilder: (context, anim1, anim2) => CreateNewWorkspaceModal(projectToEdit: project),
+    pageBuilder: (context, anim1, anim2) =>
+        CreateNewWorkspaceModal(projectToEdit: project),
     transitionBuilder: (context, anim1, anim2, child) {
       return SlideTransition(
-        position: Tween(begin: const Offset(1, 0), end: const Offset(0, 0)).animate(anim1),
+        position: Tween(begin: const Offset(1, 0), end: const Offset(0, 0))
+            .animate(anim1),
         child: child,
       );
     },
@@ -284,7 +294,8 @@ class _ProjectHeader extends StatelessWidget {
       switch (status) {
         case 'active':
         case 'working':
-          statusColor = isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E);
+          statusColor =
+              isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E);
           statusText = 'Open';
           break;
         case 'on_hold':
@@ -313,7 +324,8 @@ class _ProjectHeader extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(
-                right: 100.0), // Room for top-right action buttons (Tasks, Edit, Reopen/Compare)
+                right:
+                    100.0), // Room for top-right action buttons (Tasks, Edit, Reopen/Compare)
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -569,7 +581,11 @@ class _TaskPreviewSection extends StatelessWidget {
                   height: 6,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isHighPriority ? Colors.red : (isDark ? const Color(0xFF7EC8F4) : const Color(0xFF05263E)),
+                    color: isHighPriority
+                        ? Colors.red
+                        : (isDark
+                            ? const Color(0xFF7EC8F4)
+                            : const Color(0xFF05263E)),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -704,8 +720,7 @@ class _ProjectFooter extends StatelessWidget {
                         child: CircleAvatar(
                           radius: 14,
                           backgroundColor:
-                              UserColorService.getColorForUser(
-                                  assignee['id']),
+                              UserColorService.getColorForUser(assignee['id']),
                           backgroundImage: assignee['avatarUrl'] != null
                               ? NetworkImage(assignee['avatarUrl']! as String)
                               : null,
@@ -761,7 +776,8 @@ class _ProjectFooter extends StatelessWidget {
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: (assignee['id'].toString() ==
-                                              project.projectLeadId.toString() &&
+                                              project.projectLeadId
+                                                  .toString() &&
                                           project.projectLeadId != null ||
                                       assignee['role'] == 'TEAMLEAD')
                                   ? FontWeight.bold
@@ -801,10 +817,12 @@ class _ProjectFooter extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF05263E).withValues(alpha: 0.1),
+                              color: const Color(0xFF05263E)
+                                  .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: const Color(0xFF05263E).withValues(alpha: 0.3),
+                                  color: const Color(0xFF05263E)
+                                      .withValues(alpha: 0.3),
                                   width: 0.5),
                             ),
                             child: const Text(
@@ -847,9 +865,8 @@ class _ProjectFooter extends StatelessWidget {
                         ),
                         child: CircleAvatar(
                           radius: 12,
-                          backgroundColor:
-                              UserColorService.getColorForUser(
-                                  assigneesList[i]['id']),
+                          backgroundColor: UserColorService.getColorForUser(
+                              assigneesList[i]['id']),
                           backgroundImage: assigneesList[i]['avatarUrl'] != null
                               ? NetworkImage(
                                   assigneesList[i]['avatarUrl']! as String)
@@ -1033,10 +1050,14 @@ class _RejectionBanner extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF450A0A).withValues(alpha: 0.6) : Colors.red.shade50,
+        color: isDark
+            ? const Color(0xFF450A0A).withValues(alpha: 0.6)
+            : Colors.red.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.red.shade900.withValues(alpha: 0.5) : Colors.red.shade200,
+          color: isDark
+              ? Colors.red.shade900.withValues(alpha: 0.5)
+              : Colors.red.shade200,
         ),
       ),
       child: Column(
@@ -1071,10 +1092,10 @@ class _RejectionBanner extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          ],
-        ),
-      );
-    }
+        ],
+      ),
+    );
+  }
 }
 
 class _ApprovalAction extends ConsumerStatefulWidget {
@@ -1117,14 +1138,14 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
                     await ref
                         .read(projectRepositoryProvider)
                         .adminCompleteProject(project.project.id);
-                    
+
                     // --- GLOBAL REACTIVITY ---
                     ref.invalidate(apiProjectsProvider);
                     ref.invalidate(projectsWithTasksProvider);
                     ref.invalidate(paginatedDashboardProjectsProvider);
                     ref.invalidate(projectsPageProjectsProvider);
                     ref.invalidate(currentProjectProvider);
-                    
+
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -1161,44 +1182,44 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
                   await ref
                       .read(projectRepositoryProvider)
                       .requestProjectCompletion(project.project.id);
-                    
-                    // --- GLOBAL REACTIVITY ---
-                    ref.invalidate(apiTasksProvider);
-                    ref.invalidate(projectsWithTasksProvider);
-                    ref.invalidate(pendingProjectClosuresProvider);
-                    ref.invalidate(paginatedDashboardProjectsProvider);
-                    ref.invalidate(projectsPageProjectsProvider);
-                    ref.invalidate(currentProjectProvider);
-                    
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content:
-                              Text('Project closure request sent for approval'),
-                          duration: Duration(seconds: 2),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    String errorMsg =
-                        e.toString().replaceAll("Exception:", "").trim();
-                    if (errorMsg.contains('400')) {
-                      errorMsg = 'Please complete all tasks first.';
-                    }
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed: $errorMsg'),
-                          duration: const Duration(seconds: 3),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  } finally {
-                    if (mounted) setState(() => _isLoading = false);
+
+                  // --- GLOBAL REACTIVITY ---
+                  ref.invalidate(apiTasksProvider);
+                  ref.invalidate(projectsWithTasksProvider);
+                  ref.invalidate(pendingProjectClosuresProvider);
+                  ref.invalidate(paginatedDashboardProjectsProvider);
+                  ref.invalidate(projectsPageProjectsProvider);
+                  ref.invalidate(currentProjectProvider);
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('Project closure request sent for approval'),
+                        duration: Duration(seconds: 2),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
                   }
-                },
+                } catch (e) {
+                  String errorMsg =
+                      e.toString().replaceAll("Exception:", "").trim();
+                  if (errorMsg.contains('400')) {
+                    errorMsg = 'Please complete all tasks first.';
+                  }
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed: $errorMsg'),
+                        duration: const Duration(seconds: 3),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _isLoading = false);
+                }
+              },
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(6),
@@ -1226,7 +1247,9 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
               : Icon(
                   isRejected ? Icons.history_rounded : Icons.check,
                   size: 16,
-                  color: isRejected ? const Color(0xFF6366F1) : Colors.green.shade700,
+                  color: isRejected
+                      ? const Color(0xFF6366F1)
+                      : Colors.green.shade700,
                 ),
         ),
       );
@@ -1234,8 +1257,9 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color:
-              isDark ? Colors.orange.withValues(alpha: 0.2) : Colors.orange.shade50,
+          color: isDark
+              ? Colors.orange.withValues(alpha: 0.2)
+              : Colors.orange.shade50,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: isDark
@@ -1267,7 +1291,9 @@ class _ApprovalActionState extends ConsumerState<_ApprovalAction> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isDark ? Colors.green.withValues(alpha: 0.2) : Colors.green.shade50,
+          color: isDark
+              ? Colors.green.withValues(alpha: 0.2)
+              : Colors.green.shade50,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: isDark
@@ -1311,18 +1337,18 @@ class _AdminReopenActionState extends ConsumerState<_AdminReopenAction> {
 
   void _showReopenDialog() {
     final reasonController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Reopen Project', 
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Text('Reopen Project',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Why are you reopening this project?', 
-              style: GoogleFonts.inter(fontSize: 14)),
+            Text('Why are you reopening this project?',
+                style: GoogleFonts.inter(fontSize: 14)),
             const SizedBox(height: 12),
             TextField(
               controller: reasonController,
@@ -1330,7 +1356,8 @@ class _AdminReopenActionState extends ConsumerState<_AdminReopenAction> {
               maxLines: 3,
               decoration: InputDecoration(
                 hintText: 'Enter reason for reopening...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 filled: true,
               ),
             ),
@@ -1345,34 +1372,39 @@ class _AdminReopenActionState extends ConsumerState<_AdminReopenAction> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF05263E),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () async {
               if (reasonController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Reason is mandatory'), backgroundColor: Colors.red),
+                  const SnackBar(
+                      content: Text('Reason is mandatory'),
+                      backgroundColor: Colors.red),
                 );
                 return;
               }
-              
+
               Navigator.pop(context);
               setState(() => _isLoading = true);
-              
+
               try {
                 await ref.read(projectRepositoryProvider).reopenProject(
-                  widget.project.project.id, 
-                  reasonController.text.trim()
-                );
-                
+                    widget.project.project.id, reasonController.text.trim());
+
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Project Reopened'), backgroundColor: Colors.green),
+                    const SnackBar(
+                        content: Text('Project Reopened'),
+                        backgroundColor: Colors.green),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                    SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red),
                   );
                 }
               } finally {
@@ -1394,10 +1426,16 @@ class _AdminReopenActionState extends ConsumerState<_AdminReopenAction> {
 
     return IconButton(
       onPressed: _isLoading ? null : _showReopenDialog,
-      icon: _isLoading 
-        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-        : Icon(Icons.history_rounded, size: 22, 
-            color: widget.isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5)),
+      icon: _isLoading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2))
+          : Icon(Icons.history_rounded,
+              size: 22,
+              color: widget.isDark
+                  ? const Color(0xFF818CF8)
+                  : const Color(0xFF4F46E5)),
       tooltip: 'Reopen Project',
       splashRadius: 20,
       padding: EdgeInsets.zero,
@@ -1418,19 +1456,22 @@ class _ReopenedBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark 
-          ? Colors.blue.withValues(alpha: 0.15) 
-          : const Color(0xFFEFF6FF), // Light blue background
+        color: isDark
+            ? Colors.blue.withValues(alpha: 0.15)
+            : const Color(0xFFEFF6FF), // Light blue background
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.blue.withValues(alpha: 0.3) : const Color(0xFFDBEAFE),
+          color: isDark
+              ? Colors.blue.withValues(alpha: 0.3)
+              : const Color(0xFFDBEAFE),
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, size: 14, 
-            color: isDark ? Colors.blue.shade300 : Colors.blue.shade700),
+          Icon(Icons.info_outline,
+              size: 14,
+              color: isDark ? Colors.blue.shade300 : Colors.blue.shade700),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
