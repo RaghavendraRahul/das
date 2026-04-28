@@ -15,6 +15,7 @@ class CatalogModel {
   final int? user;
   final int? project;
   final int? task;
+  final String? clientName;
 
   CatalogModel({
     required this.id,
@@ -33,6 +34,7 @@ class CatalogModel {
     this.user,
     this.project,
     this.task,
+    this.clientName,
   });
 
   factory CatalogModel.fromJson(Map<String, dynamic> json) {
@@ -53,6 +55,7 @@ class CatalogModel {
       user: json['user'] as int?,
       project: json['project'] as int?,
       task: json['task'] as int?,
+      clientName: json['client_name'] as String?,
     );
   }
 
@@ -74,6 +77,7 @@ class CatalogModel {
       'user': user,
       'project': project,
       'task': task,
+      'client_name': clientName,
     };
   }
 }

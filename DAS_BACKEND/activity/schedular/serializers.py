@@ -445,13 +445,25 @@ class CatalogSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source='project.name', read_only=True, allow_null=True)
     task_title = serializers.CharField(source='task.title', read_only=True, allow_null=True)
     instructor_email = serializers.EmailField(source='instructor.email', read_only=True, allow_null=True)
+    client_name = serializers.SerializerMethodField()
     created_at = LocalDateTimeField(read_only=True)
     updated_at = LocalDateTimeField(read_only=True)
+
+    def get_client_name(self, obj):
+        """Return client name: direct FK first, then from linked task or project"""
+        if obj.client:
+            return obj.client.client_name
+        if obj.task and obj.task.client:
+            return obj.task.client.client_name
+        if obj.project and obj.project.client:
+            return obj.project.client.client_name
+        return None
     
     class Meta:
         model = Catalog
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at')
+
 
 
 class TodayPlanSerializer(serializers.ModelSerializer):

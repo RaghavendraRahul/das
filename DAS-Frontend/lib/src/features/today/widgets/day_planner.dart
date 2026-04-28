@@ -122,14 +122,40 @@ class DayPlanner extends HookConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    dateHeader,
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                      letterSpacing: 0.3,
-                      color: isDark ? Colors.white : sidebarBlue,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        dateHeader,
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                          letterSpacing: 0.3,
+                          color: isDark ? Colors.white : sidebarBlue,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      apiTodayPlanAsync.when(
+                        data: (apiItems) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.blue.withValues(alpha: 0.2)
+                                : Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${apiItems.length} ${apiItems.length == 1 ? 'Task' : 'Tasks'}',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                            ),
+                          ),
+                        ),
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   apiTodayPlanAsync.when(
@@ -535,14 +561,24 @@ class DayPlanner extends HookConsumerWidget {
         const double spacing = 16.0;
         final bool isWide = constraints.maxWidth > 600;
 
+        const validQuadrants = {'Q1', 'Q2', 'Q3', 'Q4'};
+
         Widget buildBox(String q, String title, Color color) {
           return _QuadrantBox(
             quadrant: q,
             title: title,
             color: color,
-            apiItems: apiItems
-                .where((i) => i['quadrant']?.toString().toUpperCase() == q)
-                .toList(),
+            apiItems: apiItems.where((i) {
+              final itemQ = i['quadrant']?.toString().toUpperCase();
+              if (q == 'Q1') {
+                // Q1 captures its own items + any inbox/null/unknown (fallback)
+                return itemQ == 'Q1' ||
+                    itemQ == null ||
+                    itemQ == 'INBOX' ||
+                    !validQuadrants.contains(itemQ);
+              }
+              return itemQ == q;
+            }).toList(),
             isFinalized: isFinalized,
             pulse: pulse,
           );

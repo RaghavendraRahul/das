@@ -692,6 +692,10 @@ class Catalog(models.Model):
     project = models.ForeignKey(Projects, on_delete=models.CASCADE, null=True, blank=True, related_name='catalog_items')
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='catalog_items')
     
+    # Direct client link (for ROUTINE catalog items)
+    client = models.ForeignKey('Client', on_delete=models.SET_NULL, null=True, blank=True, related_name='catalog_items', help_text='Client for routine work items')
+
+    
     # For courses and routines
     estimated_hours = models.DecimalField(max_digits=7, decimal_places=2, default=1.0)
     progress_percentage = models.IntegerField(default=0, help_text="Progress percentage (0-100)")

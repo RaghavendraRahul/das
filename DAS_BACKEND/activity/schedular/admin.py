@@ -86,10 +86,11 @@ class StickyNoteAdmin(admin.ModelAdmin):
 
 @admin.register(Catalog)
 class CatalogAdmin(admin.ModelAdmin):
-    list_display = ('name', 'catalog_type', 'user', 'is_active', 'created_at')
+    list_display = ('name', 'catalog_type', 'user', 'client', 'is_active', 'created_at')
     list_filter = ('catalog_type', 'is_active', 'created_at')
     search_fields = ('name', 'description', 'user__email')
     readonly_fields = ('created_at', 'updated_at')
+    raw_id_fields = ('client',)
 
 @admin.register(Pending)
 class PendingAdmin(admin.ModelAdmin):

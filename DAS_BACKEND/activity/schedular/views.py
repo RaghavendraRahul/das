@@ -2452,7 +2452,7 @@ class CatalogViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # Temporarily allow unauthenticated access for testing
     serializer_class = CatalogSerializer
     pagination_class = None
-    queryset = Catalog.objects.select_related('user', 'project', 'task').all()
+    queryset = Catalog.objects.select_related('user', 'project', 'project__client', 'task', 'task__client', 'client').all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['catalog_type', 'user', 'is_active']
     search_fields = ['name', 'description']
@@ -2461,7 +2461,9 @@ class CatalogViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Show all active catalog items - visible to all users"""
         # All users see all active catalog items
-        return Catalog.objects.filter(is_active=True).distinct()
+        return Catalog.objects.select_related(
+            'user', 'project', 'project__client', 'task', 'task__client', 'client'
+        ).filter(is_active=True).distinct()
     
     def perform_create(self, serializer):
         """Set the user field to current user when creating"""
