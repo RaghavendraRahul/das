@@ -103,7 +103,7 @@ class ProjectOverviewStats extends ConsumerWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: _StatCard(
-                  title: "Timeline Health",
+                  title: "Project Timeline",
                   count: activeProjects,
                   sub1: onTrackCount,
                   sub1Label: "On-Track",
@@ -243,7 +243,7 @@ class _StatsModal extends ConsumerWidget {
         break;
 
       case StatCategory.timeline:
-        title = "Timeline Health (Active Projects)";
+        title = "Project Timeline (Active Projects)";
         items = projects.where((p) => p.isActive).map((p) {
           final hasOverdue =
               p.tasks.any((t) => t.progress < 100 && t.endDate.isBefore(now));

@@ -425,10 +425,15 @@ class _BottomArea extends StatelessWidget {
                       : null,
                   child: currentUser.avatarUrl.isEmpty
                       ? Text(
-                          (currentUser.name.isNotEmpty
-                                  ? currentUser.name[0]
-                                  : '?')
-                              .toUpperCase(),
+                          (() {
+                            final name = currentUser.name.trim();
+                            if (name.isEmpty) return '?';
+                            final parts = name.split(RegExp(r'\s+'));
+                            if (parts.length > 1 && parts[1].isNotEmpty) {
+                              return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+                            }
+                            return parts[0][0].toUpperCase();
+                          })(),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,

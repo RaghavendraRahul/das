@@ -3426,6 +3426,44 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         user = self.request.user
         serializer.save(user=user, extra_minutes=0)
 
+    @action(detail=True, methods=['patch'], url_path='add_remark')
+    def add_remark(self, request, pk=None):
+        """
+        Admin/TeamLead adds or updates a remark on an activity log entry.
+        PATCH /api/activity-log/{id}/add_remark/
+        Body: { "admin_remark": "Great work on this!" }
+        """
+        user = request.user
+        if getattr(user, 'role', None) not in ['ADMIN', 'TEAMLEAD', 'MANAGER']:
+            return Response(
+                {"error": "Only Admins and Team Leads can add remarks."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        remark_text = request.data.get('admin_remark', '').strip()
+        if not remark_text:
+            return Response(
+                {"error": "admin_remark field is required and cannot be empty."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            log = ActivityLog.objects.get(pk=pk)
+        except ActivityLog.DoesNotExist:
+            return Response({"error": "Activity log not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        log.admin_remark = remark_text
+        log.admin_remark_by = user
+        log.admin_remark_at = timezone.now()
+        log.save(update_fields=['admin_remark', 'admin_remark_by', 'admin_remark_at'])
+
+        return Response({
+            "id": log.id,
+            "admin_remark": log.admin_remark,
+            "admin_remark_by": user.employee_name or user.email.split('@')[0].replace('.', ' ').title(),
+            "admin_remark_at": log.admin_remark_at,
+        }, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['get'])
     def active(self, request):
         """Get currently active activity log"""
@@ -4955,16 +4993,29 @@ class TeamOverviewViewSet(viewsets.GenericViewSet):
         activity_summary = []
         total_hours_logged = 0
         for log in activity_logs:
+            task_name = 'Unknown Task'
+            try:
+                task_name = log.today_plan.catalog_item.name if log.today_plan.catalog_item else (log.today_plan.custom_title or 'Custom Task')
+            except Exception:
+                pass
+            admin_remark_by_name = None
+            if log.admin_remark_by:
+                admin_remark_by_name = log.admin_remark_by.employee_name or log.admin_remark_by.email.split('@')[0].replace('.', ' ').title()
             activity_summary.append({
                 'id': log.id,
-                'task_name': log.today_plan.catalog_item.name,
+                'task_name': task_name,
                 'start_time': log.actual_start_time,
                 'end_time': log.actual_end_time,
                 'hours_worked': float(log.hours_worked),
                 'status': log.status,
-                'is_completed': log.is_task_completed
+                'is_completed': log.is_task_completed,
+                'work_notes': log.work_notes,
+                'admin_remark': log.admin_remark,
+                'admin_remark_by_name': admin_remark_by_name,
+                'admin_remark_at': log.admin_remark_at,
             })
             total_hours_logged += float(log.hours_worked)
+
         
         # Calculate metrics
         workload_intensity = min(100, int((total_planned_minutes / 480) * 100))
@@ -5003,6 +5054,68 @@ class TeamOverviewViewSet(viewsets.GenericViewSet):
             'activity_logs': activity_summary,
             'pending_tasks': pending_items
         })
+
+    @action(detail=False, methods=['get'], url_path='member_date_plans')
+    def member_date_plans(self, request):
+        """
+        Return TodayPlan items for a member across a date range.
+        GET /api/team-overview/member_date_plans/
+            ?member_id=<id>&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
+        Role-restricted: ADMIN / MANAGER / TEAMLEAD only.
+        """
+        user = request.user
+        if user.role not in ['ADMIN', 'MANAGER', 'TEAMLEAD']:
+            return Response(
+                {"error": "Permission denied"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        member_id  = request.query_params.get('member_id')
+        date_from  = request.query_params.get('date_from')
+        date_to    = request.query_params.get('date_to')
+
+        if not (member_id and date_from and date_to):
+            return Response(
+                {"error": "member_id, date_from, and date_to are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            member = User.objects.get(id=member_id)
+        except User.DoesNotExist:
+            return Response({"error": "Member not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        from datetime import datetime as _dt
+        try:
+            d_from = _dt.strptime(date_from, '%Y-%m-%d').date()
+            d_to   = _dt.strptime(date_to,   '%Y-%m-%d').date()
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
+
+        plans = TodayPlan.objects.filter(
+            user=member,
+            plan_date__range=(d_from, d_to)
+        ).select_related('catalog_item').order_by('plan_date', 'order_index')
+
+        result = []
+        for plan in plans:
+            result.append({
+                'id':           plan.id,
+                'plan_date':    str(plan.plan_date),
+                'name':         plan.catalog_item.name if plan.catalog_item else (plan.custom_title or 'Custom Task'),
+                'type':         plan.catalog_item.catalog_type if plan.catalog_item else 'TASK',
+                'quadrant':     plan.quadrant,
+                'scheduled_start': plan.scheduled_start_time,
+                'scheduled_end':   plan.scheduled_end_time,
+                'duration_minutes': plan.planned_duration_minutes,
+                'status':       plan.status,
+                'notes':        plan.notes or '',
+            })
+
+        return Response({'plans': result, 'member_id': member_id,
+                         'date_from': date_from, 'date_to': date_to})
+
+
     
     @action(detail=False, methods=['get'])
     def department_stats(self, request):

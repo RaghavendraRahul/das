@@ -632,142 +632,174 @@ void showReviewTaskDialog(
             ),
             Padding(
               padding: const EdgeInsets.only(right: 8, bottom: 8),
-              child: ElevatedButton(
-                onPressed: () async {
-                  try {
-                    final apiService = ref.read(taskApiServiceProvider);
-                    final isCompleted = selectedOption == 'completed';
-                    
-                    // Parse manual overrides if any
-                    final minutesLeft = int.tryParse(remainingController.text) ?? 0;
-                    final extraMinutes = int.tryParse(extraTimeController.text) ?? 0;
+              child: Builder(builder: (context) {
+                final timesReady =
+                    startTimeController.text.isNotEmpty &&
+                    endTimeController.text.isNotEmpty;
+                return ElevatedButton(
+                  onPressed: timesReady
+                      ? () async {
+                          try {
+                            final apiService = ref.read(taskApiServiceProvider);
+                            final isCompleted = selectedOption == 'completed';
 
-                    final today = DateTime.now();
-                    final todayStr = DateFormat('yyyy-MM-dd').format(today);
-                    
-                    // Robust ID extraction
-                    final todayPlanId = int.tryParse(todayPlan?['id']?.toString() ?? '') ?? 0;
-                    
-                    debugPrint('💾 [ReviewTaskDialog] Saving task progress:');
-                    debugPrint('   - todayPlanId: $todayPlanId');
-                    debugPrint('   - activityLogId: $activityLogId');
-                    debugPrint('   - isCompleted: $isCompleted');
-                    debugPrint('   - selectedOption: $selectedOption');
-                    
-                    bool apiCalled = false;
-                    
-                    // Prioritize singular stopActivityLog in edit mode to target specific session
-                    if (isEditMode && activityLogId > 0) {
-                      debugPrint('   - [Edit Mode] Calling stopActivityLog for ID: $activityLogId');
-                      await apiService.stopActivityLog(
-                        activityLogId: activityLogId,
-                        isCompleted: isCompleted,
-                        isPendingSelected: selectedOption == 'pending',
-                        reason: isCompleted ? 'Task completed' : 'Task updated',
-                        workNotes: remarkController.text,
-                        minutesLeft: minutesLeft,
-                        extraMinutes: extraMinutes > 0 ? extraMinutes : null,
-                        startTime: startTimeController.text,
-                        endTime: endTimeController.text,
-                        plannedRemark: plannedRemarkController.text,
-                      );
-                      apiCalled = true;
-                    } 
-                    // Use bulkStopActivityLogs when stopping active task (Sync logic)
-                    else if (todayPlanId > 0) {
-                      debugPrint('   - Calling bulkStopActivityLogs...');
-                      await apiService.bulkStopActivityLogs(
-                        todayPlanId: todayPlanId,
-                        date: todayStr,
-                        isCompleted: isCompleted,
-                        isPendingSelected: selectedOption == 'pending',
-                        workNotes: remarkController.text,
-                        minutesLeft: minutesLeft,
-                        extraMinutes: extraMinutes > 0 ? extraMinutes : null,
-                        startTime: startTimeController.text,
-                        endTime: endTimeController.text,
-                        plannedRemark: plannedRemarkController.text,
-                      );
-                      apiCalled = true;
-                    } 
-                    // Fallback to singular stop for non-standard cases
-                    else if (activityLogId > 0) {
-                      debugPrint('   - Calling stopActivityLog...');
-                      await apiService.stopActivityLog(
-                        activityLogId: activityLogId,
-                        isCompleted: isCompleted,
-                        reason: isCompleted ? 'Task completed' : 'Task paused',
-                        workNotes: remarkController.text,
-                        minutesLeft: minutesLeft,
-                        extraMinutes: extraMinutes > 0 ? extraMinutes : null,
-                        startTime: startTimeController.text,
-                        endTime: endTimeController.text,
-                        plannedRemark: plannedRemarkController.text,
-                      );
-                      apiCalled = true;
-                    }
+                            final minutesLeft =
+                                int.tryParse(remainingController.text) ?? 0;
+                            final extraMinutes =
+                                int.tryParse(extraTimeController.text) ?? 0;
 
-                    if (apiCalled) {
-                      ref.invalidate(apiActivityLogsProvider(todayStr));
-                      ref.invalidate(apiActiveTaskProvider);
-                      ref.invalidate(apiTodayPlanProvider);
-                      ref.invalidate(apiPendingItemsProvider(todayStr));
-                      ref.invalidate(apiAllPendingItemsProvider); // Refresh Catalog Pending section
+                            final today = DateTime.now();
+                            final todayStr =
+                                DateFormat('yyyy-MM-dd').format(today);
 
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(isCompleted ? 'Task completed!' : 'Updated!'),
-                            backgroundColor: isCompleted ? Colors.green : Colors.blue,
-                          ),
-                        );
-                      }
-                    } else {
-                      debugPrint('⚠️ [ReviewTaskDialog] No valid ID found to stop. todayPlanId=$todayPlanId, activityLogId=$activityLogId');
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Warning: No task ID found to update.'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e, stack) {
-                    debugPrint('❌ [ReviewTaskDialog] Error saving: $e');
-                    debugPrint(stack.toString());
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedOption == 'completed'
-                      ? Colors.green.shade600
-                      : (selectedOption == 'pending'
-                          ? Colors.orange.shade700
-                          : Colors.blue.shade700),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                            final todayPlanId = int.tryParse(
+                                    todayPlan?['id']?.toString() ?? '') ??
+                                0;
+
+                            debugPrint(
+                                '💾 [ReviewTaskDialog] Saving task progress:');
+                            debugPrint('   - todayPlanId: $todayPlanId');
+                            debugPrint(
+                                '   - activityLogId: $activityLogId');
+                            debugPrint('   - isCompleted: $isCompleted');
+                            debugPrint(
+                                '   - selectedOption: $selectedOption');
+
+                            bool apiCalled = false;
+
+                            if (isEditMode && activityLogId > 0) {
+                              debugPrint(
+                                  '   - [Edit Mode] Calling stopActivityLog for ID: $activityLogId');
+                              await apiService.stopActivityLog(
+                                activityLogId: activityLogId,
+                                isCompleted: isCompleted,
+                                isPendingSelected: selectedOption == 'pending',
+                                reason: isCompleted
+                                    ? 'Task completed'
+                                    : 'Task updated',
+                                workNotes: remarkController.text,
+                                minutesLeft: minutesLeft,
+                                extraMinutes:
+                                    extraMinutes > 0 ? extraMinutes : null,
+                                startTime: startTimeController.text,
+                                endTime: endTimeController.text,
+                                plannedRemark: plannedRemarkController.text,
+                              );
+                              apiCalled = true;
+                            } else if (todayPlanId > 0) {
+                              debugPrint(
+                                  '   - Calling bulkStopActivityLogs...');
+                              await apiService.bulkStopActivityLogs(
+                                todayPlanId: todayPlanId,
+                                date: todayStr,
+                                isCompleted: isCompleted,
+                                isPendingSelected: selectedOption == 'pending',
+                                workNotes: remarkController.text,
+                                minutesLeft: minutesLeft,
+                                extraMinutes:
+                                    extraMinutes > 0 ? extraMinutes : null,
+                                startTime: startTimeController.text,
+                                endTime: endTimeController.text,
+                                plannedRemark: plannedRemarkController.text,
+                              );
+                              apiCalled = true;
+                            } else if (activityLogId > 0) {
+                              debugPrint(
+                                  '   - Calling stopActivityLog...');
+                              await apiService.stopActivityLog(
+                                activityLogId: activityLogId,
+                                isCompleted: isCompleted,
+                                reason: isCompleted
+                                    ? 'Task completed'
+                                    : 'Task paused',
+                                workNotes: remarkController.text,
+                                minutesLeft: minutesLeft,
+                                extraMinutes:
+                                    extraMinutes > 0 ? extraMinutes : null,
+                                startTime: startTimeController.text,
+                                endTime: endTimeController.text,
+                                plannedRemark: plannedRemarkController.text,
+                              );
+                              apiCalled = true;
+                            }
+
+                            if (apiCalled) {
+                              ref.invalidate(
+                                  apiActivityLogsProvider(todayStr));
+                              ref.invalidate(apiActiveTaskProvider);
+                              ref.invalidate(apiTodayPlanProvider);
+                              ref.invalidate(
+                                  apiPendingItemsProvider(todayStr));
+                              ref.invalidate(apiAllPendingItemsProvider);
+
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(isCompleted
+                                        ? 'Task completed!'
+                                        : 'Updated!'),
+                                    backgroundColor: isCompleted
+                                        ? Colors.green
+                                        : Colors.blue,
+                                  ),
+                                );
+                              }
+                            } else {
+                              debugPrint(
+                                  '⚠️ [ReviewTaskDialog] No valid ID found.');
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Warning: No task ID found to update.'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                              }
+                            }
+                          } catch (e, stack) {
+                            debugPrint(
+                                '❌ [ReviewTaskDialog] Error saving: $e');
+                            debugPrint(stack.toString());
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                          }
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: timesReady
+                        ? (selectedOption == 'completed'
+                            ? Colors.green.shade600
+                            : (selectedOption == 'pending'
+                                ? Colors.orange.shade700
+                                : Colors.blue.shade700))
+                        : Colors.grey.shade400,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                ),
-                child: Text(
-                  selectedOption == 'completed'
-                      ? 'Confirm & Complete'
-                      : 'Save Progress',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                  child: Text(
+                    timesReady
+                        ? (selectedOption == 'completed'
+                            ? 'Confirm & Complete'
+                            : 'Save Progress')
+                        : 'Select Start & End Time',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-              ),
+                );
+              }),
             ),
           ],
         );

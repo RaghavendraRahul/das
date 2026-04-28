@@ -1019,7 +1019,7 @@ class _MilestonesSectionState extends State<_MilestonesSection> {
                                               ? NetworkImage(avatar)
                                               : null,
                                           child: avatar == null
-                                              ? Text(name[0].toUpperCase(),
+                                              ? Text(UserColorService.getInitials(name),
                                                   style: const TextStyle(
                                                       fontSize: 7,
                                                       fontWeight: FontWeight.bold,
@@ -1213,7 +1213,7 @@ class _BoardTaskCard extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Text(
                       displayAssignees[i].name.isNotEmpty
-                          ? displayAssignees[i].name[0].toUpperCase()
+                          ? UserColorService.getInitials(displayAssignees[i].name)
                           : '?',
                       style: GoogleFonts.inter(
                           fontSize: 11,

@@ -873,7 +873,7 @@ class _AssigneeRow extends StatelessWidget {
                 backgroundImage:
                     u.avatarUrl.isNotEmpty ? NetworkImage(u.avatarUrl) : null,
                 child: u.avatarUrl.isEmpty
-                    ? Text(u.name[0].toUpperCase(),
+                    ? Text(UserColorService.getInitials(u.name),
                         style: const TextStyle(
                             color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))
                     : null,
@@ -1092,7 +1092,7 @@ class _AssigneePicker extends StatelessWidget {
                                 ? NetworkImage(user.avatarUrl)
                                 : null,
                             child: user.avatarUrl.isEmpty
-                                ? Text(user.name[0].toUpperCase(),
+                                ? Text(UserColorService.getInitials(user.name),
                                     style:
                                         const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))
                                 : null,

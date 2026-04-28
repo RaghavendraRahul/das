@@ -728,7 +728,7 @@ class _ProjectFooter extends StatelessWidget {
                               : null,
                           child: assignee['avatarUrl'] == null
                               ? Text(
-                                  ((assignee['name'] as String?) ?? '?')[0]
+                                  UserColorService.getInitials((assignee['name'] as String?) ?? '')
                                       .toUpperCase(),
                                   style: const TextStyle(
                                       fontSize: 12,

@@ -69,21 +69,7 @@ class WorkStatisticsChart extends HookConsumerWidget {
 
     // Auto-selection removed as per new "Selection-First" policy. 
     // The dropdown will now default to "Select User" and no metrics will show until picked.
-    // ── Cascading Resets ──────────────────────────────────────────────────────
-    // When client changes, reset project and user
-    ref.listen<int?>(selectedStatsClientIdProvider, (prev, next) {
-      if (prev != next) {
-        ref.read(selectedStatsProjectIdProvider.notifier).state = null;
-        ref.read(selectedStatsUserIdProvider.notifier).state = null;
-      }
-    });
-
-    // When project changes, reset user (since employees are filtered by project)
-    ref.listen<int?>(selectedStatsProjectIdProvider, (prev, next) {
-      if (prev != next) {
-        ref.read(selectedStatsUserIdProvider.notifier).state = null;
-      }
-    });
+    // Cascading resets and logic are now managed internally by ProjectAnalyticsController
 
     // ── Loading / error shells ────────────────────────────────────────────────
     return usersAsync.when(
@@ -114,7 +100,7 @@ class _Body extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedProjectId = ref.watch(selectedStatsProjectIdProvider);
+    final selectedProjectId = ref.watch(projectAnalyticsControllerProvider.select((s) => s.selectedProjectId));
 
     final List<dynamic> projects = stats['projects'] ?? [];
     final Map<String, dynamic>? selProject = selectedProjectId != null
@@ -164,9 +150,11 @@ class _Header extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedUserId = ref.watch(selectedStatsUserIdProvider);
-    final selectedProjectId = ref.watch(selectedStatsProjectIdProvider);
-    final selectedClientId = ref.watch(selectedStatsClientIdProvider);
+    final analyticsState = ref.watch(projectAnalyticsControllerProvider);
+    final selectedUserId = analyticsState.selectedUserId;
+    final selectedProjectId = analyticsState.selectedProjectId;
+    final selectedClientId = analyticsState.selectedClientId;
+    final controller = ref.read(projectAnalyticsControllerProvider.notifier);
     
     // Use the proper API-driven providers
     final projectsAsync = ref.watch(statsProjectsProvider);
@@ -250,11 +238,11 @@ class _Header extends ConsumerWidget {
                     ),
                     ...allClients.map((c) => DropdownMenuItem<int?>(
                           value: c['id'] as int,
-                          child: Text(c['name'] as String),
+                          child: Text((c['client_name'] ?? c['name'] ?? 'Unknown') as String),
                         )),
                   ],
                   onChanged: (val) {
-                    ref.read(selectedStatsClientIdProvider.notifier).state = val;
+                    controller.setClient(val);
                   },
                 ),
               ),
@@ -265,7 +253,7 @@ class _Header extends ConsumerWidget {
               isDark: isDark,
               onTap: projectsAsync.isLoading
                   ? () {} 
-                  : () => _showProjectPicker(context, ref, allProjects),
+                  : () => _showProjectPicker(context, ref, allProjects, controller),
             ),
             Container(
               height: 32,
@@ -308,7 +296,7 @@ class _Header extends ConsumerWidget {
                         )),
                   ],
                   onChanged: (val) {
-                    ref.read(selectedStatsUserIdProvider.notifier).state = val;
+                    controller.setUser(val);
                   },
                 ),
               ),
@@ -328,7 +316,7 @@ class _Header extends ConsumerWidget {
   }
 
   void _showProjectPicker(
-      BuildContext context, WidgetRef ref, List<dynamic> projects) {
+      BuildContext context, WidgetRef ref, List<dynamic> projects, ProjectAnalyticsController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -336,7 +324,7 @@ class _Header extends ConsumerWidget {
       builder: (_) => _ProjectPickerSheet(
         projects: projects,
         onSelect: (id) {
-          ref.read(selectedStatsProjectIdProvider.notifier).state = id;
+          controller.setProject(id);
           Navigator.pop(context);
         },
       ),
@@ -1181,33 +1169,6 @@ class _SelectorPill extends StatelessWidget {
   }
 }
 
-class _RefreshButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final bool isDark;
-
-  const _RefreshButton({required this.onPressed, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 32, // Matched with dropdown heights
-      height: 32,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.shade200,
-        ),
-        boxShadow: isDark ? [] : _softShadow,
-      ),
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        icon: Icon(Icons.refresh_rounded, size: 18, color: isDark ? Colors.blue.shade300 : Colors.blue.shade600),
-        onPressed: onPressed,
-      ),
-    );
-  }
-}
 
 class _ShellBox extends StatelessWidget {
   final Widget child;

@@ -37,7 +37,7 @@ class ProjectWorkingReport extends HookConsumerWidget {
     final isEmployee = currentUserAsync.value?.role == 'EMPLOYEE';
 
     // Link global selected user stats to charts (Proper State Management)
-    final selectedUserId = ref.watch(selectedStatsUserIdProvider);
+    final selectedUserId = ref.watch(projectAnalyticsControllerProvider.select((s) => s.selectedUserId));
 
     // Effective filter for API calls
     final effectiveFilter = isEmployee

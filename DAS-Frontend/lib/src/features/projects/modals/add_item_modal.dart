@@ -797,7 +797,7 @@ class _AssigneeChip extends StatelessWidget {
                   ? NetworkImage(user.avatarUrl)
                   : null,
               child: user.avatarUrl.isEmpty
-                  ? Text(user.name[0].toUpperCase(),
+                  ? Text(UserColorService.getInitials(user.name),
                       style: const TextStyle(
                           fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white))
                   : null),
@@ -896,7 +896,7 @@ class _AssigneeSelector extends StatelessWidget {
                             ? NetworkImage(u.avatarUrl)
                             : null,
                         child: u.avatarUrl.isEmpty
-                            ? Text(u.name[0].toUpperCase(),
+                            ? Text(UserColorService.getInitials(u.name),
                                 style: const TextStyle(
                                     fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white))
                             : null),

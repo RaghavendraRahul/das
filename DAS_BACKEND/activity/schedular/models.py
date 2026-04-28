@@ -812,7 +812,15 @@ class ActivityLog(models.Model):
     # Progress tracking
     work_notes = models.TextField(blank=True, null=True, help_text="Notes about the work done")
     is_task_completed = models.BooleanField(default=False)
-    
+
+    # Admin remark — set by ADMIN/TEAMLEAD; visible to the employee
+    admin_remark = models.TextField(blank=True, null=True, help_text="Remark added by admin/teamlead for this activity log")
+    admin_remark_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='activity_remarks', help_text="User who added the remark"
+    )
+    admin_remark_at = models.DateTimeField(null=True, blank=True, help_text="When the remark was added")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

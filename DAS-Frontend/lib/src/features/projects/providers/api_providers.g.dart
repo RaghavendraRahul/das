@@ -251,7 +251,7 @@ class _ApiPaginatedProjectsProviderElement
 }
 
 String _$paginatedDashboardProjectsHash() =>
-    r'897bc75a6dca0f813af0d3ecfe6cc19fcd34436a';
+    r'1c26fc99d13b9de736018bd86f534d75149be244';
 
 /// Fetch projects with tasks pre-mapped (for simple listing cases)
 ///
@@ -433,7 +433,7 @@ class _PaginatedDashboardProjectsProviderElement
 }
 
 String _$projectsPageProjectsHash() =>
-    r'18eb8b53fc5ca43a763c811cdf89952aac150bbd';
+    r'328767ec2b80f807bb45546e51de84d5ecb133e9';
 
 /// Independent provider for the Projects Page (My Projects / Team Projects).
 /// Completely separate from [paginatedDashboardProjectsProvider] so that
@@ -2007,7 +2007,7 @@ class _AdminEmployeeStickyNotesProviderElement
 }
 
 String _$adminEmployeeProjectsHash() =>
-    r'03b10e46c4ebd0afae2f10a0e902788ae51897f8';
+    r'20ea4f482b907f798903417f42555d92128e88d8';
 
 /// [Admin only] Fetch a specific employee's projects via the paginated endpoint.
 /// Re-uses paginatedDashboardProjectsProvider but scoped to a specific user_id.

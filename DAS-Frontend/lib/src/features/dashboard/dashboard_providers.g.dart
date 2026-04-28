@@ -215,11 +215,9 @@ class _FilteredDashboardStatsProviderElement
 }
 
 String _$dashboardOverviewStatsHash() =>
-    r'466f9cf8219bc38bc13528391ba4aad1f52f3a1c';
+    r'd8111b9852f2b5b13d661fae2655bc8e44f3ba51';
 
-/// Provider to fetch backend-calculated summary statistics
-///
-/// Copied from [dashboardOverviewStats].
+/// See also [dashboardOverviewStats].
 @ProviderFor(dashboardOverviewStats)
 final dashboardOverviewStatsProvider =
     AutoDisposeFutureProvider<Map<String, dynamic>>.internal(
@@ -234,11 +232,29 @@ final dashboardOverviewStatsProvider =
 
 typedef DashboardOverviewStatsRef
     = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
-String _$usersForStatsHash() => r'd095821330473d9f1dc133c588d75e247ce00fdf';
+String _$clientsForStatsHash() => r'316db05f3c16a62d7f49997ca7b8817cf1e86506';
 
 /// Selected user ID for project work statistics
 /// By default, NO user is selected to allow "Select User" dropdown hint.
 /// State providers for Project Working Report section
+/// Provider for fetching clients list for stats dropdown
+///
+/// Copied from [clientsForStats].
+@ProviderFor(clientsForStats)
+final clientsForStatsProvider =
+    AutoDisposeFutureProvider<List<dynamic>>.internal(
+  clientsForStats,
+  name: r'clientsForStatsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$clientsForStatsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef ClientsForStatsRef = AutoDisposeFutureProviderRef<List<dynamic>>;
+String _$usersForStatsHash() => r'c332d1c497d6b4cf14647e9427eb36bc6937c333';
+
 /// Provider for fetching users list for stats dropdown
 ///
 /// Copied from [usersForStats].
@@ -254,7 +270,7 @@ final usersForStatsProvider = AutoDisposeFutureProvider<List<dynamic>>.internal(
 );
 
 typedef UsersForStatsRef = AutoDisposeFutureProviderRef<List<dynamic>>;
-String _$projectWorkStatsHash() => r'2b5e103dfb1acfd84ac417c6c7cc253ebfa380ee';
+String _$projectWorkStatsHash() => r'0fbb332b3c20a96a6bf3cdbc1b31dba127bfcddd';
 
 /// Provider for fetching project work statistics
 ///
@@ -273,7 +289,7 @@ final projectWorkStatsProvider =
 
 typedef ProjectWorkStatsRef
     = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
-String _$statsProjectsHash() => r'cf589b301852f6d6dd684208b399cf6ae4063007';
+String _$statsProjectsHash() => r'6d46aa09b6f2831ad768299b4e6f061a9dc36673';
 
 /// Provider for fetching user-specific projects for the stats dropdown
 ///

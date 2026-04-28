@@ -447,8 +447,8 @@ class _TeamMemberCard extends StatelessWidget {
                         radius: 30,
                         backgroundColor: UserColorService.getColorForUser(member.id),
                         child: Text(
-                          member.name[0].toUpperCase(),
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          UserColorService.getInitials(member.name),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
                     ),

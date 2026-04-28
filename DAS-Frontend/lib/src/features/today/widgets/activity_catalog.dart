@@ -94,60 +94,7 @@ class ActivityCatalog extends HookConsumerWidget {
                         color: isDark ? Colors.white : sidebarBlue,
                       ),
                     ),
-                    // Add Template Button
-                    if (!isReadOnly)
-                      InkWell(
-                        onTap: () {
-                          // Extract unique categories from current catalog items
-                          final catalogItems = catalogAsync.valueOrNull ?? [];
-                          final backendCatalogTypes = {
-                            'COURSE',
-                            'ROUTINE',
-                            'WORK',
-                            ...catalogItems
-                                .map((item) => item.catalogType)
-                                .where((type) =>
-                                    type.isNotEmpty && type != 'PROJECT'),
-                          }.toList();
-                          backendCatalogTypes.sort();
-
-                          showDialog(
-                            context: context,
-                            builder: (context) => AddActivityTemplateModal(
-                              existingCategories: backendCatalogTypes,
-                            ),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF374151)
-                                : const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.add_rounded,
-                                size: 12,
-                                color: isDark ? Colors.white : const Color(0xFF05263E),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                "New Catalog",
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white : const Color(0xFF05263E),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    // + New Catalog button — hidden
                   ],
                 ),
                 const SizedBox(height: 12),

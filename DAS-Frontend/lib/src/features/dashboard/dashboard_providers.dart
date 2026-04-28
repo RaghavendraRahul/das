@@ -169,19 +169,17 @@ Future<List<ProjectWithTasks>> filteredDashboardStats(
   }
 }
 
-/// Provider to fetch backend-calculated summary statistics
 @riverpod
 Future<Map<String, dynamic>> dashboardOverviewStats(DashboardOverviewStatsRef ref) async {
   final filter = ref.watch(dashboardProjectTypeProvider);
   final search = ref.watch(dashboardSearchQueryProvider);
-  final selectedUserId = ref.watch(selectedStatsUserIdProvider);
   final apiService = ref.watch(taskApiServiceProvider);
   
   try {
     // Pass optional search as query param to the statistics endpoint
     return await apiService.getDashboardStatistics(
       filter: filter,
-      userId: selectedUserId?.toString(),
+      userId: null, // User filter only applies to Project Analytics charts
       search: search.isNotEmpty ? search : null,
     );
   } catch (e) {
@@ -189,17 +187,6 @@ Future<Map<String, dynamic>> dashboardOverviewStats(DashboardOverviewStatsRef re
     return {};
   }
 }
-
-/// Selected user ID for project work statistics
-/// By default, NO user is selected to allow "Select User" dropdown hint.
-// selectedStatsUserIdProvider moved to dashboard_state.dart
-
-// All UI state providers moved to dashboard_state.dart
-
-
-/// State providers for Project Working Report section
-// workingReportScopeProvider moved to dashboard_state.dart
-// Working Report state providers moved to dashboard_state.dart
 
 
 
@@ -220,11 +207,11 @@ Future<List<dynamic>> clientsForStats(ClientsForStatsRef ref) async {
 @riverpod
 Future<List<dynamic>> usersForStats(UsersForStatsRef ref) async {
   final apiService = ref.watch(taskApiServiceProvider);
-  final selectedProjectId = ref.watch(selectedStatsProjectIdProvider);
+  final selectedProjectId = ref.watch(projectAnalyticsControllerProvider.select((s) => s.selectedProjectId));
   try {
     return await apiService.getUsersForStats(projectId: selectedProjectId);
   } catch (e) {
-    print('Error fetching users for stats: $e');
+    debugPrint('Error fetching users for stats: $e');
     return [];
   }
 }
@@ -235,7 +222,7 @@ Future<Map<String, dynamic>> projectWorkStats(
   ProjectWorkStatsRef ref,
 ) async {
   final search = ref.watch(dashboardSearchQueryProvider);
-  final selectedUserId = ref.watch(selectedStatsUserIdProvider);
+  final selectedUserId = ref.watch(projectAnalyticsControllerProvider.select((s) => s.selectedUserId));
   
   // We fetch results even if no user is selected to show project totals.
   // The API service handles null userId by summing across all users.
@@ -251,7 +238,7 @@ Future<Map<String, dynamic>> projectWorkStats(
     endDate = globalDateRange.end.toIso8601String().split('T')[0];
   } else {
     // Fallback to the local period selector if no global filter is active
-    final period = ref.watch(selectedStatsPeriodProvider);
+    final period = ref.watch(projectAnalyticsControllerProvider.select((s) => s.period));
     final now = DateTime.now();
     
     if (period == 'today') {
@@ -266,10 +253,10 @@ Future<Map<String, dynamic>> projectWorkStats(
   }
 
   final apiService = ref.watch(taskApiServiceProvider);
-  final selectedProjectId = ref.watch(selectedStatsProjectIdProvider);
+  final selectedProjectId = ref.watch(projectAnalyticsControllerProvider.select((s) => s.selectedProjectId));
 
   try {
-    final selectedClientId = ref.watch(selectedStatsClientIdProvider);
+    final selectedClientId = ref.watch(projectAnalyticsControllerProvider.select((s) => s.selectedClientId));
 
     return await apiService.getProjectWorkStats(
       selectedUserId,
@@ -289,8 +276,8 @@ Future<Map<String, dynamic>> projectWorkStats(
 @riverpod
 Future<List<dynamic>> statsProjects(StatsProjectsRef ref) async {
   final search = ref.watch(dashboardSearchQueryProvider);
-  final selectedUserId = ref.watch(selectedStatsUserIdProvider);
-  final selectedClientId = ref.watch(selectedStatsClientIdProvider);
+  final selectedUserId = ref.watch(projectAnalyticsControllerProvider.select((s) => s.selectedUserId));
+  final selectedClientId = ref.watch(projectAnalyticsControllerProvider.select((s) => s.selectedClientId));
   final apiService = ref.watch(taskApiServiceProvider);
   try {
     // If no user is selected, return ALL projects for the dropdown.

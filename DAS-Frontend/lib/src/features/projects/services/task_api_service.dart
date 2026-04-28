@@ -1043,6 +1043,7 @@ class TaskApiService {
     String? endDate,
     int? projectId,
     int? employeeId,
+    int? clientId,
     String? search,
   }) async {
     try {
@@ -1052,6 +1053,7 @@ class TaskApiService {
       if (endDate != null) queryParams['end_date'] = endDate;
       if (projectId != null) queryParams['project_id'] = projectId;
       if (employeeId != null) queryParams['employee_id'] = employeeId;
+      if (clientId != null) queryParams['client_id'] = clientId;
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       print('');
@@ -1061,6 +1063,7 @@ class TaskApiService {
       print('📊║   user_id: $userId');
       print('📊║   project_id: $projectId');
       print('📊║   employee_id: $employeeId');
+      print('📊║   client_id: $clientId');
       print('📊║   start_date: $startDate');
       print('📊║   end_date: $endDate');
       print('📊║ Query params: $queryParams');

@@ -5,6 +5,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/utils/user_color_service.dart';
+import '../../core/providers/user_providers.dart';
+import 'team_api_service.dart';
 
 import 'package:project_pm/src/core/database/database.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
@@ -351,8 +353,16 @@ class _EmployeeDashboardTab extends HookConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Planner Tab — Employee Today Plan
+// Planner Tab — Day / Week / Month calendar (admin read-only)
 // ─────────────────────────────────────────────────────────────────────────────
+
+typedef _PlanRange = ({String memberId, DateTime from, DateTime to});
+
+final _employeeDatePlansProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, _PlanRange>((ref, p) async {
+  final api = ref.read(teamApiServiceProvider);
+  return api.getEmployeeDatePlans(memberId: p.memberId, dateFrom: p.from, dateTo: p.to);
+});
 
 class _EmployeePlannerTab extends HookConsumerWidget {
   final User employee;
@@ -362,211 +372,346 @@ class _EmployeePlannerTab extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboardAsync =
-        ref.watch(adminEmployeeDashboardProvider(employee.id));
+    final viewMode = useState(0); // 0=Day 1=Week 2=Month
+    final selDate = useState(DateTime.now());
 
-    Future<void> refreshData() {
-      return ref.refresh(adminEmployeeDashboardProvider(employee.id).future);
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+
+    DateTime shift(DateTime d, int dir) {
+      if (viewMode.value == 0) return d.add(Duration(days: dir));
+      if (viewMode.value == 1) return d.add(Duration(days: dir * 7));
+      return DateTime(d.year, d.month + dir, 1);
     }
 
-    Color quadrantColor(String? q) => switch (q) {
-          'Q1' => const Color(0xFFEF4444),
-          'Q2' => const Color(0xFF3B82F6),
-          'Q3' => const Color(0xFFF59E0B),
-          'Q4' => const Color(0xFF6B7280),
-          _ => const Color(0xFF8B5CF6),
-        };
+    String label(DateTime d) {
+      const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      if (viewMode.value == 0) return '${d.day} ${mo[d.month-1]} ${d.year}';
+      if (viewMode.value == 1) {
+        final e = d.add(const Duration(days: 6));
+        return '${d.day} ${mo[d.month-1]} – ${e.day} ${mo[e.month-1]}';
+      }
+      return '${mo[d.month-1]} ${d.year}';
+    }
 
-    String quadrantLabel(String? q) => switch (q) {
-          'Q1' => 'Start First',
-          'Q2' => 'Schedule',
-          'Q3' => 'Delegate',
-          'Q4' => 'Routine',
-          _ => 'Other',
-        };
-
-    return dashboardAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => RefreshIndicator(
-        onRefresh: refreshData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: 400,
-            child: _ErrorView(message: e.toString()),
-          ),
-        ),
-      ),
-      data: (data) {
-        final planItems =
-            (data['todays_plan'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-        final activityLogs =
-            (data['activity_logs'] as List?)?.cast<Map<String, dynamic>>() ??
-                [];
-        final pendingTasks =
-            (data['pending_tasks'] as List?)?.cast<Map<String, dynamic>>() ??
-                [];
-
-        return RefreshIndicator(
-          onRefresh: refreshData,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionHeader(
-                    title: "${employee.name.split(' ').first}'s Planner",
-                    subtitle: _dateStr(DateTime.now()),
-                    isDark: isDark),
-
-                // ── Todays Plan ──────────────────────────────
-                const SizedBox(height: 24),
-                _SubHeader(title: "Today's Plan", isDark: isDark),
-                const SizedBox(height: 12),
-                if (planItems.isEmpty)
-                  const _EmptyState(
-                    icon: FontAwesomeIcons.calendarXmark,
-                    title: 'No Plans Today',
-                    subtitle: 'No tasks planned for today.',
-                    compact: true,
-                  )
-                else ...[
-                  Text(
-                    'Total planned: ${_formatDuration(planItems)}  •  ${planItems.length} task(s)',
-                    style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600),
+    return Column(children: [
+      // ── toolbar ──────────────────────────────────────────────────────
+      Container(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(children: [
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF111827) : const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min,
+              children: List.generate(3, (i) {
+                final s = viewMode.value == i;
+                final labels = ['Day', 'Week', 'Month'];
+                return GestureDetector(
+                  onTap: () => viewMode.value = i,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: s ? const Color(0xFF3B82F6) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Text(labels[i],
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600,
+                            color: s ? Colors.white : (isDark ? Colors.grey.shade400 : Colors.grey.shade600))),
                   ),
-                  const SizedBox(height: 16),
-                  ..._groupItems(planItems).entries.map((entry) {
-                    final q = entry.key;
-                    final items = entry.value;
-                    final color = quadrantColor(q);
-                    final label = quadrantLabel(q);
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                  color: color, shape: BoxShape.circle),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '$q — $label',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                color: color,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        ...items.map((item) => _PlanItemCard(
-                              item: item,
-                              barColor: color,
-                              isDark: isDark,
-                            )),
-                        const SizedBox(height: 16),
-                      ],
-                    );
-                  }),
-                ],
-
-                // ── Activity Log ──────────────────────────────
-                const SizedBox(height: 24),
-                Divider(
-                    color:
-                        isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-                const SizedBox(height: 24),
-                _SubHeader(title: 'Activity Log', isDark: isDark),
-                const SizedBox(height: 12),
-                if (activityLogs.isEmpty)
-                  const _EmptyState(
-                      icon: FontAwesomeIcons.clock,
-                      title: 'No Activity Logged',
-                      subtitle: 'No activity recorded today.',
-                      compact: true)
-                else
-                  ...activityLogs
-                      .map((log) => _ActivityLogItem(log: log, isDark: isDark)),
-
-                // ── Pending Tasks ──────────────────────────────
-                const SizedBox(height: 24),
-                Divider(
-                    color:
-                        isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-                const SizedBox(height: 24),
-                _SubHeader(title: 'Pending / Rollover Tasks', isDark: isDark),
-                const SizedBox(height: 12),
-                if (pendingTasks.isEmpty)
-                  const _EmptyState(
-                      icon: FontAwesomeIcons.hourglassHalf,
-                      title: 'No Pending Tasks',
-                      subtitle: 'Everything seems on track.',
-                      compact: true)
-                else
-                  ...pendingTasks.map(
-                      (task) => _PendingTaskItem(task: task, isDark: isDark)),
-
-                const SizedBox(height: 40),
-              ],
+                );
+              }),
             ),
           ),
+          const Spacer(),
+          IconButton(icon: const Icon(Icons.chevron_left, size: 20), onPressed: () => selDate.value = shift(selDate.value, -1), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+          const SizedBox(width: 4),
+          Text(label(selDate.value), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF111827))),
+          const SizedBox(width: 4),
+          IconButton(icon: const Icon(Icons.chevron_right, size: 20), onPressed: () => selDate.value = shift(selDate.value, 1), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: () => selDate.value = DateTime.now(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: const Color(0xFF3B82F6).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+              child: Text('Today', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF3B82F6))),
+            ),
+          ),
+        ]),
+      ),
+      Divider(height: 1, color: isDark ? const Color(0xFF374151) : Colors.grey.shade200),
+
+      // ── content ──────────────────────────────────────────────────────
+      Expanded(child: Builder(builder: (_) {
+        if (viewMode.value == 0) {
+          // DAY — today uses dashboard provider (has activity log + pending)
+          final isToday = sameDay(selDate.value, DateTime.now());
+          if (isToday) {
+            final async = ref.watch(adminEmployeeDashboardProvider(employee.id));
+            return async.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => _ErrorView(message: e.toString()),
+              data: (data) => _dayScroll(ref,
+                plans: (data['todays_plan'] as List?)?.cast<Map<String,dynamic>>() ?? [],
+                activityLogs: (data['activity_logs'] as List?)?.cast<Map<String,dynamic>>() ?? [],
+                pending: (data['pending_tasks'] as List?)?.cast<Map<String,dynamic>>() ?? [],
+              ),
+            );
+          }
+          // other day
+          final d = selDate.value;
+          final async = ref.watch(_employeeDatePlansProvider((
+            memberId: employee.id.toString(),
+            from: d, to: d,
+          )));
+          return async.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => _ErrorView(message: e.toString()),
+            data: (plans) => _dayScroll(ref, plans: plans, activityLogs: [], pending: []),
+          );
+        }
+
+        // WEEK / MONTH
+        final d = selDate.value;
+        final from = viewMode.value == 1 ? d : DateTime(d.year, d.month, 1);
+        final to   = viewMode.value == 1 ? d.add(const Duration(days: 6)) : DateTime(d.year, d.month + 1, 0);
+        final async = ref.watch(_employeeDatePlansProvider((
+          memberId: employee.id.toString(),
+          from: from, to: to,
+        )));
+        return async.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => _ErrorView(message: e.toString()),
+          data: (plans) {
+            final byDate = <String, List<Map<String,dynamic>>>{};
+            for (final p in plans) {
+              byDate.putIfAbsent(p['plan_date'] as String, () => []).add(p);
+            }
+            return viewMode.value == 1
+                ? _weekView(byDate, from, sameDay)
+                : _monthView(byDate, from, sameDay);
+          },
         );
-      },
+      })),
+    ]);
+  }
+
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  Color _qColor(String? q) => switch (q) {
+    'Q1' => const Color(0xFFEF4444), 'Q2' => const Color(0xFF3B82F6),
+    'Q3' => const Color(0xFFF59E0B), 'Q4' => const Color(0xFF6B7280),
+    _ => const Color(0xFF8B5CF6),
+  };
+
+  String _qLabel(String? q) => switch (q) {
+    'Q1' => 'Start First', 'Q2' => 'Schedule',
+    'Q3' => 'Delegate', 'Q4' => 'Routine', _ => 'Other',
+  };
+
+  Widget _planChip(Map<String,dynamic> item) {
+    final q = item['quadrant'] as String?;
+    final c = _qColor(q);
+    final done = item['status'] == 'COMPLETED';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: c.withOpacity(0.3)),
+      ),
+      child: Row(children: [
+        Container(width: 3, height: 28, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(item['name'] as String? ?? 'Task',
+              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : const Color(0xFF111827),
+                  decoration: done ? TextDecoration.lineThrough : null)),
+          if ((item['duration_minutes'] as int? ?? 0) > 0)
+            Text('${item['duration_minutes']} min',
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade500)),
+        ])),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(color: (done ? Colors.green : c).withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+          child: Text(done ? 'Done' : (item['status'] as String? ?? 'Planned'),
+              style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: done ? Colors.green : c)),
+        ),
+      ]),
     );
   }
 
-  String _dateStr(DateTime d) =>
-      '${_weekday(d.weekday)}, ${d.day} ${_month(d.month)} ${d.year}';
-
-  String _formatDuration(List<Map<String, dynamic>> items) {
-    final totalMinutes = items.fold<int>(
-        0, (s, i) => s + ((i['planned_duration_minutes'] as int?) ?? 0));
-    final hrs = totalMinutes ~/ 60;
-    final mins = totalMinutes % 60;
-    return '${hrs}h ${mins}m';
-  }
-
-  Map<String, List<Map<String, dynamic>>> _groupItems(
-      List<Map<String, dynamic>> items) {
-    final grouped = <String, List<Map<String, dynamic>>>{};
-    for (final item in items) {
-      final q = item['quadrant'] as String? ?? 'OTHER';
-      grouped.putIfAbsent(q, () => []).add(item);
+  Widget _dayScroll(WidgetRef ref, {
+    required List<Map<String,dynamic>> plans,
+    required List<Map<String,dynamic>> activityLogs,
+    required List<Map<String,dynamic>> pending,
+  }) {
+    final grouped = <String, List<Map<String,dynamic>>>{};
+    for (final p in plans) {
+      grouped.putIfAbsent(p['quadrant'] as String? ?? 'OTHER', () => []).add(p);
     }
-    return grouped;
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _SubHeader(title: 'Planned Tasks', isDark: isDark),
+        const SizedBox(height: 12),
+        if (plans.isEmpty)
+          const _EmptyState(icon: FontAwesomeIcons.calendarXmark,
+              title: 'No Plans', subtitle: 'No tasks planned for this day.', compact: true)
+        else
+          ...grouped.entries.map((e) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(width: 8, height: 8, decoration: BoxDecoration(color: _qColor(e.key), shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                Text('${e.key} — ${_qLabel(e.key)}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: _qColor(e.key))),
+              ]),
+              const SizedBox(height: 8),
+              ...e.value.map((item) => _PlanItemCard(item: item, barColor: _qColor(item['quadrant'] as String?), isDark: isDark)),
+              const SizedBox(height: 12),
+            ],
+          )),
+
+        if (activityLogs.isNotEmpty) ...[
+          Divider(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+          const SizedBox(height: 12),
+          _SubHeader(title: 'Activity Log', isDark: isDark),
+          const SizedBox(height: 12),
+          ...activityLogs.map((log) => _ActivityLogItem(log: log, isDark: isDark, employeeId: employee.id)),
+        ],
+        if (pending.isNotEmpty) ...[
+          Divider(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+          const SizedBox(height: 12),
+          _SubHeader(title: 'Pending / Rollover', isDark: isDark),
+          const SizedBox(height: 12),
+          ...pending.map((t) => _PendingTaskItem(task: t, isDark: isDark)),
+        ],
+        const SizedBox(height: 40),
+      ]),
+    );
   }
 
-  String _weekday(int d) =>
-      const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
-  String _month(int m) => const [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec'
-      ][m - 1];
+  Widget _weekView(Map<String, List<Map<String,dynamic>>> byDate, DateTime weekStart,
+      bool Function(DateTime, DateTime) sameDay) {
+    const dn = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(children: List.generate(7, (i) {
+        final d = weekStart.add(Duration(days: i));
+        final key = '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+        final items = byDate[key] ?? [];
+        final today = sameDay(d, DateTime.now());
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1F2937) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: today ? const Color(0xFF3B82F6) : (isDark ? const Color(0xFF374151) : Colors.grey.shade200),
+                width: today ? 1.5 : 1),
+          ),
+          child: ExpansionTile(
+            initiallyExpanded: today,
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            title: Row(children: [
+              Text('${dn[i]}  ${d.day}',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700,
+                      color: today ? const Color(0xFF3B82F6) : (isDark ? Colors.white : const Color(0xFF111827)))),
+              const SizedBox(width: 8),
+              if (items.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFF3B82F6).withOpacity(0.12), borderRadius: BorderRadius.circular(5)),
+                  child: Text('${items.length}', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF3B82F6))),
+                ),
+            ]),
+            children: items.isEmpty
+                ? [Padding(padding: const EdgeInsets.fromLTRB(16,0,16,12),
+                    child: Text('No plans', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500)))]
+                : items.map(_planChip).toList(),
+          ),
+        );
+      })),
+    );
+  }
+
+  Widget _monthView(Map<String, List<Map<String,dynamic>>> byDate, DateTime ms,
+      bool Function(DateTime, DateTime) sameDay) {
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dn = ['M','T','W','T','F','S','S'];
+    final dim = DateTime(ms.year, ms.month + 1, 0).day;
+    final fw = ms.weekday;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: dn.map((d) => Expanded(
+          child: Center(child: Text(d, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700,
+              color: isDark ? Colors.grey.shade500 : Colors.grey.shade400))),
+        )).toList()),
+        const SizedBox(height: 6),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7, childAspectRatio: 1.1, crossAxisSpacing: 3, mainAxisSpacing: 3),
+          itemCount: (fw - 1) + dim,
+          itemBuilder: (_, idx) {
+            if (idx < fw - 1) return const SizedBox();
+            final day = idx - (fw - 1) + 1;
+            final d = DateTime(ms.year, ms.month, day);
+            final key = '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+            final count = byDate[key]?.length ?? 0;
+            final today = sameDay(d, DateTime.now());
+            return Container(
+              decoration: BoxDecoration(
+                color: today ? const Color(0xFF3B82F6)
+                    : (count > 0 ? const Color(0xFF3B82F6).withOpacity(0.08)
+                        : (isDark ? const Color(0xFF1F2937) : const Color(0xFFF9FAFB))),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: today ? const Color(0xFF3B82F6)
+                    : (isDark ? const Color(0xFF374151) : Colors.grey.shade200)),
+              ),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text('$day', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700,
+                    color: today ? Colors.white : (isDark ? Colors.white : const Color(0xFF111827)))),
+                if (count > 0)
+                  Text('$count', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w600,
+                      color: today ? Colors.white70 : const Color(0xFF3B82F6))),
+              ]),
+            );
+          },
+        ),
+        const SizedBox(height: 20),
+        ...byDate.entries.map((e) {
+          final d = DateTime.parse(e.key);
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text('${const ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d.weekday-1]}, ${d.day} ${mo[d.month-1]}',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12,
+                      color: isDark ? Colors.grey.shade300 : const Color(0xFF374151)))),
+            ...e.value.map(_planChip),
+          ]);
+        }),
+        const SizedBox(height: 40),
+      ]),
+    );
+  }
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Quick Notes Tab — Employee Sticky Notes
 // ─────────────────────────────────────────────────────────────────────────────
+
 
 class _EmployeeNotesTab extends HookConsumerWidget {
   final User employee;
@@ -1170,46 +1315,131 @@ class _SubHeader extends StatelessWidget {
   }
 }
 
-class _ActivityLogItem extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// Activity Log Item — Supports Admin Remark Feature
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ActivityLogItem extends ConsumerStatefulWidget {
   final Map<String, dynamic> log;
   final bool isDark;
+  /// The employee whose planner is being viewed (used to refresh parent data)
+  final String employeeId;
 
-  const _ActivityLogItem({required this.log, required this.isDark});
+  const _ActivityLogItem({
+    required this.log,
+    required this.isDark,
+    required this.employeeId,
+  });
+
+  @override
+  ConsumerState<_ActivityLogItem> createState() => _ActivityLogItemState();
+}
+
+class _ActivityLogItemState extends ConsumerState<_ActivityLogItem> {
+  // Optimistic local state for the remark so UI updates instantly on save
+  late String? _remarkText;
+  late String? _remarkByName;
+  bool _showInput = false;
+  bool _isSaving = false;
+  final _remarkController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _remarkText = widget.log['admin_remark'] as String?;
+    _remarkByName = widget.log['admin_remark_by_name'] as String?;
+  }
+
+  @override
+  void dispose() {
+    _remarkController.dispose();
+    super.dispose();
+  }
+
+  String _formatTime(dynamic timeStr) {
+    if (timeStr == null) return '--:--';
+    try {
+      if (timeStr is String) {
+        final timeStart = timeStr.indexOf('T') + 1;
+        if (timeStart > 0 && timeStart + 5 <= timeStr.length) {
+          final timeStr24 = timeStr.substring(timeStart, timeStart + 5);
+          final parts = timeStr24.split(':');
+          if (parts.length == 2) {
+            final hour = int.parse(parts[0]);
+            final minute = parts[1];
+            final h = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+            final ampm = hour >= 12 ? 'PM' : 'AM';
+            return '$h:$minute $ampm';
+          }
+        }
+      }
+    } catch (_) {}
+    return '--:--';
+  }
+
+  Future<void> _saveRemark() async {
+    final remark = _remarkController.text.trim();
+    if (remark.isEmpty) return;
+    setState(() => _isSaving = true);
+    try {
+      final logId = widget.log['id'] as int;
+      final teamApi = ref.read(teamApiServiceProvider);
+      final result = await teamApi.addAdminRemark(
+        activityLogId: logId,
+        remark: remark,
+      );
+      // Optimistic update — no full refresh needed
+      setState(() {
+        _remarkText = result['admin_remark'] as String?;
+        _remarkByName = result['admin_remark_by'] as String?;
+        _showInput = false;
+        _remarkController.clear();
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Remark saved.', style: GoogleFonts.inter()),
+            backgroundColor: const Color(0xFF10B981),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save remark: $e',
+                style: GoogleFonts.inter()),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final log = widget.log;
+    final isDark = widget.isDark;
     final taskName = log['task_name'] as String? ?? 'Unknown Task';
     final duration = log['hours_worked'] as num? ?? 0.0;
-
-    // Helper to safely parse time
-    String formatTime(dynamic timeStr) {
-      if (timeStr == null) return '--:--';
-      try {
-        if (timeStr is String) {
-          // Backend sends ISO string in Asia/Kolkata timezone
-          // Extract time directly without timezone conversion
-          // Format: 2026-02-26T12:11:40+05:30
-          final timeStart = timeStr.indexOf('T') + 1;
-          if (timeStart > 0 && timeStart + 5 <= timeStr.length) {
-            final timeStr24 =
-                timeStr.substring(timeStart, timeStart + 5); // HH:mm
-            final parts = timeStr24.split(':');
-            if (parts.length == 2) {
-              final hour = int.parse(parts[0]);
-              final minute = parts[1];
-              final h = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-              final ampm = hour >= 12 ? 'PM' : 'AM';
-              return '$h:$minute $ampm';
-            }
-          }
-        }
-      } catch (_) {}
-      return '--:--';
-    }
-
-    final startTime = formatTime(log['start_time']);
-    final endTime = formatTime(log['end_time']);
+    final startTime = _formatTime(log['start_time']);
+    final endTime = _formatTime(log['end_time']);
     final isCompleted = log['is_completed'] == true;
+    final workNotes = log['work_notes'] as String?;
+    final hasAdminRemark = _remarkText != null && _remarkText!.isNotEmpty;
+
+    // Role check — only ADMIN, MANAGER, TEAM_LEAD can write remarks
+    final currentUserAsync = ref.watch(currentUserProvider);
+    final canAddRemark = currentUserAsync.maybeWhen(
+      data: (u) {
+        final role = u?.role.toUpperCase() ?? '';
+        return role == 'ADMIN' || role == 'MANAGER' || role == 'TEAM_LEAD';
+      },
+      orElse: () => false,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1218,114 +1448,274 @@ class _ActivityLogItem extends StatelessWidget {
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? const Color(0xFF374151) : Colors.grey.shade200,
+          color: hasAdminRemark
+              ? Colors.amber.withOpacity(0.4)
+              : (isDark ? const Color(0xFF374151) : Colors.grey.shade200),
         ),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: (isCompleted
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (isCompleted
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFF3B82F6))
+                      .withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isCompleted ? FontAwesomeIcons.check : FontAwesomeIcons.play,
+                  size: 14,
+                  color: isCompleted
                       ? const Color(0xFF10B981)
-                      : const Color(0xFF3B82F6))
-                  .withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isCompleted ? FontAwesomeIcons.check : FontAwesomeIcons.play,
-              size: 14,
-              color: isCompleted
-                  ? const Color(0xFF10B981)
-                  : const Color(0xFF3B82F6),
-            ),
+                      : const Color(0xFF3B82F6),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      taskName,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: isDark ? Colors.white : const Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$startTime - $endTime  •  ${duration.toStringAsFixed(1)} hrs',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color:
+                            isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                    ),
+                    // Employee work notes
+                    if (workNotes != null && workNotes.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Work Notes: ',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade400,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                workNotes,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // Add remark button — only for privileged roles
+              if (canAddRemark)
+                Tooltip(
+                  message:
+                      hasAdminRemark ? 'Edit Remark' : 'Add Admin Remark',
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showInput = !_showInput;
+                        if (_showInput && hasAdminRemark) {
+                          _remarkController.text = _remarkText!;
+                        }
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: Colors.amber.withOpacity(0.4), width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            hasAdminRemark
+                                ? Icons.edit_note_rounded
+                                : Icons.add_comment_rounded,
+                            size: 14,
+                            color: Colors.amber.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            hasAdminRemark ? 'Edit' : 'Remark',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.amber.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  taskName,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: isDark ? Colors.white : const Color(0xFF111827),
-                  ),
+
+          // ── Existing Admin Remark Display (read by everyone) ──────────
+          if (hasAdminRemark && !_showInput)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      Border.all(color: Colors.amber.withOpacity(0.3), width: 1),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$startTime - $endTime  •  ${duration.toStringAsFixed(1)} hrs',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
-                ),
-                // Planned Remark
-                if (log['today_plan'] != null &&
-                    log['today_plan']['notes'] != null &&
-                    log['today_plan']['notes'].toString().isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
+                        const Icon(Icons.admin_panel_settings_rounded,
+                            size: 13, color: Colors.amber),
+                        const SizedBox(width: 5),
                         Text(
-                          'Planned Remark: ',
+                          _remarkByName != null
+                              ? 'Admin Remark by $_remarkByName'
+                              : 'Admin Remark',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade300,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            log['today_plan']['notes'],
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: isDark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
+                            color: Colors.amber.shade700,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                // Achieved Remark
-                if (log['work_notes'] != null &&
-                    log['work_notes'].toString().isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Achieved Remark: ',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade300,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            log['work_notes'],
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: isDark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(
+                      _remarkText!,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        height: 1.5,
+                        color:
+                            isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ── Remark Input (admin/teamlead only) ────────────────────────
+          if (_showInput && canAddRemark)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _remarkController,
+                    maxLines: 3,
+                    style: GoogleFonts.inter(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Write your remark for this activity...',
+                      hintStyle: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: isDark
+                              ? Colors.grey.shade500
+                              : Colors.grey.shade400),
+                      filled: true,
+                      fillColor: isDark
+                          ? const Color(0xFF111827)
+                          : const Color(0xFFFFFBEB),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                            color: Colors.amber.withOpacity(0.4), width: 1),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                            color: Colors.amber, width: 1.5),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                            color: Colors.amber.withOpacity(0.3), width: 1),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _showInput = false;
+                            _remarkController.clear();
+                          });
+                        },
+                        child: Text('Cancel',
+                            style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.grey.shade500)),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _isSaving ? null : _saveRemark,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber.shade600,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white))
+                            : Text('Save Remark',
+                                style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

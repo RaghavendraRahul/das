@@ -236,7 +236,7 @@ class _ProjectGridView extends StatelessWidget {
                                                               .avatarUrl.isEmpty
                                                           ? Text(
                                                               t.assignees[i]
-                                                                  .name[0]
+                                                                  .name.split(' ').map((p) => p.isEmpty ? '' : p[0]).take(2).join().toUpperCase()
                                                                   .toUpperCase(),
                                                               style: GoogleFonts
                                                                   .inter(

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/core/database/database.dart';
+import 'package:project_pm/src/core/utils/user_color_service.dart';
 
 // ── Design tokens (matching sidebar theme) ──────────────────────────────────
 const _kSidebarBg = Color(0xFF05263E);
@@ -721,87 +722,224 @@ class ProjectOverviewPage extends HookConsumerWidget {
         taskCountById.values.fold<int>(0, (a, b) => b > a ? b : a);
 
     return Container(
-      padding: const EdgeInsets.all(22),
       decoration: _cardDeco(cardColor, borderColor),
+      clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          _sectionHead('Team Members', Icons.people_alt_outlined, isDark, _kPrimaryBlue),
-          const Spacer(),
-          if (assignees.isNotEmpty) ...[
-            _stackedPreviews(assignees, pwt.projectLeadId, isDark, cardColor),
-            const SizedBox(width: 8),
-            _badge('${assignees.length}', Colors.indigo, isDark),
-          ],
-        ]),
-        const SizedBox(height: 6),
-        Divider(
-            color: isDark ? Colors.grey.shade800 : Colors.grey.shade100),
-        const SizedBox(height: 14),
-        ...assignees.map((a) {
-          final name =
-              (a['name'] ?? a['username'] ?? 'User').toString();
-          final avatar = a['avatar'] ?? a['avatar_url'];
-          final isLead = a['id'] == pwt.projectLeadId;
-          final count = taskCountById[a['id']] ?? 0;
-          final pct = maxCount > 0 ? count / maxCount : 0.0;
-          final role = (a['role'] ?? '').toString();
+        // ── Gradient Header ────────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                  : [const Color(0xFFF0F7FF), const Color(0xFFF8FAFC)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Row(children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _kPrimaryBlue.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.people_alt_rounded,
+                  size: 16, color: _kPrimaryBlue),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Team Members',
+                      style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : _kSidebarBg,
+                          letterSpacing: -0.3)),
+                  Text(
+                    '${assignees.length} member${assignees.length == 1 ? '' : 's'} assigned',
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade500,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+            if (assignees.isNotEmpty)
+              _stackedPreviews(assignees, pwt.projectLeadId, isDark, cardColor),
+          ]),
+        ),
+        // ── Thin accent line ───────────────────────────────────────────────
+        Container(
+          height: 2,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [
+              _kPrimaryBlue.withOpacity(0.6),
+              Colors.transparent,
+            ]),
+          ),
+        ),
+        // ── Member rows ────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          child: Column(
+            children: assignees.map((a) {
+              final name = (a['name'] ?? a['username'] ?? 'User').toString();
+              final email = (a['email'] ?? '').toString();
+              final avatar = a['avatar'] ?? a['avatar_url'];
+              final isLead = a['id'] == pwt.projectLeadId;
+              final count = taskCountById[a['id']] ?? 0;
+              final pct = maxCount > 0 ? count / maxCount : 0.0;
+              final role = (a['role'] ?? '').toString();
+              final accent = isLead ? Colors.amber.shade600 : _memberColor(name);
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Row(children: [
-              _avatarWidget(name, avatar, isLead, isDark, cardColor),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Flexible(
+              // Initials (up to 2 letters)
+              final initials = name.trim().split(' ').take(2)
+                  .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+                  .join();
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.03)
+                      : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isLead
+                        ? Colors.amber.withOpacity(0.45)
+                        : (isDark
+                            ? Colors.white.withOpacity(0.07)
+                            : Colors.grey.shade200),
+                    width: isLead ? 1.5 : 1,
+                  ),
+                ),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                  // ── Avatar ──
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: accent.withOpacity(0.5), width: 2),
+                    ),
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: accent.withOpacity(0.15),
+                      backgroundImage:
+                          avatar != null && avatar.toString().isNotEmpty
+                              ? NetworkImage(avatar.toString())
+                              : null,
+                      child: avatar == null || avatar.toString().isEmpty
+                          ? Text(initials.isNotEmpty ? initials : '?',
+                              style: GoogleFonts.outfit(
+                                  color: accent,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                  letterSpacing: -0.5))
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  // ── Info ──
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name + badge
+                        Row(children: [
+                          Flexible(
                             child: Text(name,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.outfit(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
                                     color: isDark
                                         ? Colors.white
-                                        : _kSidebarBg,
-                                    letterSpacing: -0.2))),
-                        const SizedBox(width: 7),
-                        if (isLead)
-                          _roleBadge('Lead', Colors.amber, isDark)
-                        else if (role.isNotEmpty)
-                          _roleBadge(_friendlyRole(role), Colors.indigo, isDark),
-                      ]),
-                      const SizedBox(height: 5),
-                      Row(children: [
-                        Expanded(
+                                        : const Color(0xFF0F172A),
+                                    letterSpacing: -0.3)),
+                          ),
+                          const SizedBox(width: 6),
+                          if (isLead)
+                            _roleBadge('★ Lead', Colors.amber, isDark)
+                          else if (role.isNotEmpty)
+                            _roleBadge(_friendlyProjectRole(role),
+                                Colors.indigo, isDark),
+                        ]),
+                        // Email
+                        if (email.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(email,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? Colors.grey.shade500
+                                      : Colors.grey.shade500)),
+                        ],
+                        const SizedBox(height: 9),
+                        // Progress bar + task count
+                        Row(children: [
+                          Expanded(
                             child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                    value: pct,
-                                    minHeight: 5,
-                                    backgroundColor: isDark
-                                        ? Colors.grey.shade800
-                                        : Colors.grey.shade100,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(isLead
-                                            ? Colors.amber.shade600
-                                            : Colors.indigo.shade400)))),
-                        const SizedBox(width: 8),
-                        Text('$count task${count == 1 ? '' : 's'}',
-                            style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: isDark
-                                    ? Colors.grey.shade500
-                                    : Colors.grey.shade500)),
-                      ]),
-                    ]),
-              ),
-            ]),
-          );
-        }),
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                  value: pct,
+                                  minHeight: 4,
+                                  backgroundColor: isDark
+                                      ? Colors.white.withOpacity(0.07)
+                                      : Colors.grey.shade200,
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(accent)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: accent.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '$count task${count == 1 ? '' : 's'}',
+                              style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: accent),
+                            ),
+                          ),
+                        ]),
+                      ],
+                    ),
+                  ),
+                ]),
+              );
+            }).toList(),
+          ),
+        ),
       ]),
     );
+  }
+
+  /// Deterministic accent color per member (based on first char of name).
+  Color _memberColor(String name) {
+    const palette = [
+      Color(0xFF6366F1),
+      Color(0xFF0EA5E9),
+      Color(0xFF10B981),
+      Color(0xFF8B5CF6),
+      Color(0xFFEC4899),
+      Color(0xFF14B8A6),
+      Color(0xFFF97316),
+      Color(0xFF06B6D4),
+    ];
+    final idx = name.isEmpty ? 0 : name.codeUnitAt(0) % palette.length;
+    return palette[idx];
   }
 
   // ---------------------------------------------------------------------------
@@ -1027,7 +1165,7 @@ class ProjectOverviewPage extends HookConsumerWidget {
                     : null,
                 child: avatar == null || avatar.toString().isEmpty
                     ? Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        UserColorService.getInitials(name),
                         style: GoogleFonts.inter(
                             color: Colors.indigo.shade600,
                             fontWeight: FontWeight.bold,
@@ -1059,11 +1197,11 @@ class ProjectOverviewPage extends HookConsumerWidget {
             ? NetworkImage(avatar.toString())
             : null,
         child: avatar == null || avatar.toString().isEmpty
-            ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+            ? Text(UserColorService.getInitials(name),
                 style: GoogleFonts.inter(
                     color: Colors.indigo.shade600,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14))
+                    fontSize: 12))
             : null,
       ),
     );
@@ -1170,6 +1308,31 @@ class ProjectOverviewPage extends HookConsumerWidget {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  /// Friendly label for the project-level task assignee role.
+  /// Uses ONLY the task-assignee role (e.g. DEVELOPER, REVIEWER, MEMBER),
+  /// NOT the system user role (TEAMLEAD, ADMIN, EMPLOYEE).
+  String _friendlyProjectRole(String role) {
+    switch (role.toUpperCase()) {
+      case 'DEVELOPER':
+        return 'Dev';
+      case 'DESIGNER':
+        return 'Design';
+      case 'REVIEWER':
+        return 'Reviewer';
+      case 'QA':
+      case 'TESTER':
+        return 'QA';
+      case 'MEMBER':
+        return 'Member';
+      case 'CONTRIBUTOR':
+        return 'Contributor';
+      default:
+        // Show the raw role, trimmed — no system-role guessing
+        return role.length > 8 ? '${role.substring(0, 7)}…' : role;
+    }
+  }
+
+  /// Legacy friendly role — kept for backward compat but no longer used in team card.
   String _friendlyRole(String role) {
     final lower = role.toLowerCase();
     if (lower.contains('admin')) return 'Admin';

@@ -509,11 +509,23 @@ class ActivityLogSerializer(serializers.ModelSerializer):
     actual_end_time = LocalDateTimeField(read_only=True)
     created_at = LocalDateTimeField(read_only=True)
     updated_at = LocalDateTimeField(read_only=True)
-    
+    # Admin remark fields — readable by all, writable only via add_remark action
+    admin_remark_by_name = serializers.SerializerMethodField(read_only=True)
+    admin_remark_at = LocalDateTimeField(read_only=True)
+
     class Meta:
         model = ActivityLog
         fields = '__all__'
-        read_only_fields = ('created_at', 'updated_at', 'hours_worked', 'minutes_worked')
+        read_only_fields = (
+            'created_at', 'updated_at', 'hours_worked', 'minutes_worked',
+            'admin_remark', 'admin_remark_by', 'admin_remark_at',
+        )
+
+    def get_admin_remark_by_name(self, obj):
+        if obj.admin_remark_by:
+            return obj.admin_remark_by.employee_name or obj.admin_remark_by.email.split('@')[0].replace('.', ' ').title()
+        return None
+
 
 
 class PendingSerializer(serializers.ModelSerializer):

@@ -17,11 +17,67 @@ final workingReportYearProvider = StateProvider<int>((ref) => DateTime.now().yea
 final workingReportDetailMonthProvider = StateProvider<String?>((ref) => null);
 final workingReportDrillDownTypeProvider = StateProvider<String>((ref) => 'Projects');
 
-// User & Project Selection for Statistics
-final selectedStatsUserIdProvider = StateProvider<int?>((ref) => null);
-final selectedStatsProjectIdProvider = StateProvider<int?>((ref) => null);
-final selectedStatsClientIdProvider = StateProvider<int?>((ref) => null);
-final selectedStatsPeriodProvider = StateProvider<String>((ref) => 'month');
+class ProjectAnalyticsState {
+  final int? selectedUserId;
+  final int? selectedProjectId;
+  final int? selectedClientId;
+  final String period;
+
+  ProjectAnalyticsState({
+    this.selectedUserId,
+    this.selectedProjectId,
+    this.selectedClientId,
+    this.period = 'month',
+  });
+
+  ProjectAnalyticsState copyWith({
+    int? Function()? selectedUserId,
+    int? Function()? selectedProjectId,
+    int? Function()? selectedClientId,
+    String? period,
+  }) {
+    return ProjectAnalyticsState(
+      selectedUserId: selectedUserId != null ? selectedUserId() : this.selectedUserId,
+      selectedProjectId: selectedProjectId != null ? selectedProjectId() : this.selectedProjectId,
+      selectedClientId: selectedClientId != null ? selectedClientId() : this.selectedClientId,
+      period: period ?? this.period,
+    );
+  }
+}
+
+class ProjectAnalyticsController extends StateNotifier<ProjectAnalyticsState> {
+  ProjectAnalyticsController() : super(ProjectAnalyticsState());
+
+  void setClient(int? clientId) {
+    if (state.selectedClientId == clientId) return;
+    state = state.copyWith(
+      selectedClientId: () => clientId,
+      selectedProjectId: () => null,
+      selectedUserId: () => null,
+    );
+  }
+
+  void setProject(int? projectId) {
+    if (state.selectedProjectId == projectId) return;
+    state = state.copyWith(
+      selectedProjectId: () => projectId,
+      selectedUserId: () => null,
+    );
+  }
+
+  void setUser(int? userId) {
+    state = state.copyWith(selectedUserId: () => userId);
+  }
+
+  void setPeriod(String period) {
+    state = state.copyWith(period: period);
+  }
+}
+
+final projectAnalyticsControllerProvider =
+    StateNotifierProvider<ProjectAnalyticsController, ProjectAnalyticsState>((ref) {
+  return ProjectAnalyticsController();
+});
 
 // Header UI injection
 final headerActionsProvider = StateProvider<Widget?>((ref) => null);

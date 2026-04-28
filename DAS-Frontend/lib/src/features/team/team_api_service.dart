@@ -96,4 +96,67 @@ class TeamApiService {
       }
     }
   }
+
+  /// Admin/TeamLead adds a remark to an employee's activity log entry.
+  /// PATCH /api/activity-log/{id}/add_remark/
+  /// Returns the updated remark data on success.
+  Future<Map<String, dynamic>> addAdminRemark({
+    required int activityLogId,
+    required String remark,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/activity-log/$activityLogId/add_remark/',
+        data: {'admin_remark': remark},
+      );
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to save remark: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+            'Server error: ${e.response?.statusCode} - ${e.response?.data}');
+      } else {
+        throw Exception('Network error: ${e.message}');
+      }
+    }
+  }
+
+  /// Fetch employee planned tasks for a date range (for admin calendar view).
+  /// GET /api/team-overview/member_date_plans/
+  ///    ?member_id=<id>&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
+  Future<List<Map<String, dynamic>>> getEmployeeDatePlans({
+    required String memberId,
+    required DateTime dateFrom,
+    required DateTime dateTo,
+  }) async {
+    final fmt = (DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    try {
+      final response = await _dio.get(
+        '/team-overview/member_date_plans/',
+        queryParameters: {
+          'member_id': memberId,
+          'date_from': fmt(dateFrom),
+          'date_to': fmt(dateTo),
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        return (data['plans'] as List).cast<Map<String, dynamic>>();
+      } else {
+        throw Exception('Failed to load plans: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+            'Server error: ${e.response?.statusCode} - ${e.response?.data}');
+      } else {
+        throw Exception('Network error: ${e.message}');
+      }
+    }
+  }
 }
+

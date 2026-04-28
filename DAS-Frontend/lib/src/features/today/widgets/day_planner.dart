@@ -185,7 +185,7 @@ class DayPlanner extends HookConsumerWidget {
                             showDialog(
                               context: context,
                               builder: (context) => TaskConfigModal(
-                                showQuadrantSelector: isQuadrantView,
+                                showQuadrantSelector: true,
                                 onConfirm: ({
                                   required String name,
                                   required int duration,
@@ -321,7 +321,7 @@ class DayPlanner extends HookConsumerWidget {
                                   debugPrint('Error moving to pending: $e');
                                 }
                               }
-                              // Case 2: Catalog Item or Project Task (add to inbox)
+                              // Case 2: Catalog Item or Project Task (add with quadrant)
                               else if (data.containsKey('type')) {
                                 showDialog(
                                   context: context,
@@ -332,6 +332,7 @@ class DayPlanner extends HookConsumerWidget {
                                         ((data['duration'] as num?)?.toInt() ??
                                                 60)
                                             .clamp(15, 120),
+                                    showQuadrantSelector: true,
                                     onConfirm: ({
                                       required String name,
                                       required int duration,
@@ -355,7 +356,7 @@ class DayPlanner extends HookConsumerWidget {
                                             planDate: planDate,
                                             plannedDurationMinutes: duration,
                                             description: description,
-                                            quadrant: 'inbox',
+                                            quadrant: quadrant ?? 'Q1',
                                             userId: userId,
                                           );
                                         } else {
@@ -365,7 +366,7 @@ class DayPlanner extends HookConsumerWidget {
                                             planDate: planDate,
                                             description: description,
                                             plannedDurationMinutes: duration,
-                                            quadrant: 'inbox',
+                                            quadrant: quadrant ?? 'Q1',
                                             relatedTaskId: data['task_id'] !=
                                                     null
                                                 ? parseTaskId(data['task_id'])
@@ -386,7 +387,7 @@ class DayPlanner extends HookConsumerWidget {
                                         ref.invalidate(apiPendingItemsProvider(
                                             selectedDateStr));
                                       } catch (e) {
-                                        debugPrint('Error adding to inbox: $e');
+                                        debugPrint('Error adding to plan: $e');
                                       }
                                     },
                                   ),
@@ -592,7 +593,6 @@ class DayPlanner extends HookConsumerWidget {
         );
       },
     );
-
   }
 }
 
@@ -613,9 +613,17 @@ class _ApiListView extends HookConsumerWidget {
     // Optimistic local state for reordering
     final localItems = useState<List<Map<String, dynamic>>>(apiItems);
 
-    // Sync local state when apiItems from provider changes
+    // Sync local state only when the SET of IDs changes (not order).
+    // This prevents mid-drag rebuilds that cause the assertion:
+    // "_elements.contains(element) is not true".
     useEffect(() {
-      localItems.value = apiItems;
+      final localIds = localItems.value.map((e) => e['id'].toString()).toSet();
+      final serverIds = apiItems.map((e) => e['id'].toString()).toSet();
+      final bool idSetChanged = localIds.length != serverIds.length ||
+                               !localIds.containsAll(serverIds);
+      if (idSetChanged) {
+        localItems.value = apiItems;
+      }
       return null;
     }, [apiItems]);
 
@@ -643,6 +651,97 @@ class _ApiListView extends HookConsumerWidget {
 
 
         if (data.containsKey('type')) {
+          // ── Special case: pending_item dragged to Today's Plan list ──
+          if (data['type'] == 'pending_item') {
+            if (data['is_today_inbox'] == true) {
+              // Already a TodayPlan record (today's inbox) — ask quadrant then promote
+              showDialog(
+                context: context,
+                builder: (ctx) => TaskConfigModal(
+                  initialTitle: data['name'] ?? 'Task',
+                  initialDescription: data['description'],
+                  initialDuration: ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                  showQuadrantSelector: true,
+                  onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
+                    try {
+                      final apiService = ref.read(taskApiServiceProvider);
+                      await apiService.updateTodayPlanItem(data['id'], {
+                        'quadrant': quadrant ?? 'Q1',
+                        'status': 'PLANNED',
+                      });
+                      ref.invalidate(apiTodayPlanProvider);
+                      ref.invalidate(apiPendingItemsProvider(
+                          '${ref.read(selectedDateProvider).year}-${ref.read(selectedDateProvider).month.toString().padLeft(2, '0')}-${ref.read(selectedDateProvider).day.toString().padLeft(2, '0')}'));
+                    } catch (e) {
+                      debugPrint('Error updating pending item: $e');
+                    }
+                  },
+                ),
+              );
+              return;
+            }
+            // Past-pending item: show dialog then add to plan + delete pending record
+            showDialog(
+              context: context,
+              builder: (ctx) => TaskConfigModal(
+                initialTitle: data['name'] ?? 'New Task',
+                initialDescription: data['description'],
+                initialDuration:
+                    ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                showQuadrantSelector: true,
+                onConfirm: ({
+                  required String name,
+                  required int duration,
+                  String? description,
+                  List<String>? selectedMilestoneIds,
+                  String? quadrant,
+                }) async {
+                  try {
+                    final apiService = ref.read(taskApiServiceProvider);
+                    final userId = ref.read(currentUserIdProvider);
+                    final selectedDate = ref.read(selectedDateProvider);
+                    final planDate =
+                        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+
+                    final catalogId = data['catalog_id'];
+                    if (catalogId != null) {
+                      await apiService.addItemToTodayPlan(
+                        itemType: 'catalog',
+                        catalogId: parseTaskId(catalogId),
+                        planDate: planDate,
+                        plannedDurationMinutes: duration,
+                        description: description,
+                        quadrant: quadrant ?? 'Q1',
+                        userId: userId,
+                      );
+                    } else {
+                      await apiService.addItemToTodayPlan(
+                        itemType: 'custom',
+                        title: name,
+                        planDate: planDate,
+                        description: description,
+                        plannedDurationMinutes: duration,
+                        quadrant: quadrant ?? 'Q1',
+                        userId: userId,
+                      );
+                    }
+                    // ✅ Delete the past-pending record so it doesn't stay in Pending Tasks
+                    if (data['is_pending'] == true && data['pending_id'] != null) {
+                      await apiService.deletePendingTask(data['pending_id']);
+                      ref.invalidate(apiAllPendingItemsProvider);
+                    }
+                    ref.invalidate(apiTodayPlanProvider);
+                    ref.invalidate(apiPendingItemsProvider(planDate));
+                  } catch (e) {
+                    debugPrint('Error adding pending task in list view: $e');
+                  }
+                },
+              ),
+            );
+            return;
+          }
+
+          // ── Normal catalog / template / custom item ──
           showDialog(
             context: context,
             builder: (ctx) => TaskConfigModal(
@@ -650,9 +749,8 @@ class _ApiListView extends HookConsumerWidget {
               initialDescription: data['description'],
               initialDuration:
                   ((data['duration'] as num?)?.toInt() ?? 60).clamp(15, 120),
-              showQuadrantSelector: true, // Enable quadrant selection from List View
+              showQuadrantSelector: true,
               onConfirm: ({
-
                 required String name,
                 required int duration,
                 String? description,
@@ -666,7 +764,6 @@ class _ApiListView extends HookConsumerWidget {
                   final planDate =
                       '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
 
-                  // Removed unused plannedItemId
                   if (data['type'] == 'catalog_item' ||
                       data['type'] == 'catalog_task' ||
                       data['type'] == 'template' ||
@@ -677,10 +774,9 @@ class _ApiListView extends HookConsumerWidget {
                       planDate: planDate,
                       plannedDurationMinutes: duration,
                       description: description,
-                      quadrant: 'inbox',
+                      quadrant: quadrant ?? 'Q1',
                       userId: userId,
                     );
-                    // plannedItemId = planItem['id'] as int?;
                   } else {
                     await apiService.addItemToTodayPlan(
                       itemType: 'custom',
@@ -688,21 +784,18 @@ class _ApiListView extends HookConsumerWidget {
                       planDate: planDate,
                       description: description,
                       plannedDurationMinutes: duration,
-                      quadrant: 'inbox',
+                      quadrant: quadrant ?? 'Q1',
                       relatedTaskId: data['task_id'] != null
                           ? parseTaskId(data['task_id'])
                           : null,
                       userId: userId,
                     );
-                    // plannedItemId = planItem['id'] as int?;
                   }
-                  
                   ref.invalidate(apiTodayPlanProvider);
                 } catch (e) {
                   debugPrint('Error adding task in list view: $e');
                 }
               },
-
             ),
           );
         }
@@ -1603,56 +1696,82 @@ class _ApiPlannedItem extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(children: [
                 Expanded(
-                    child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(itemName,
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
-                            letterSpacing: 0.2,
-                            color:
-                                Theme.of(context).textTheme.bodyLarge?.color)),
-                    if (status == 'IN_ACTIVITY' || status == 'STARTED')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                                color: Colors.green.withValues(alpha: 0.3)),
+                    child: InkWell(
+                      onTap: isFinalized ? null : () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => TaskConfigModal(
+                            initialTitle: itemName,
+                            initialDescription: apiItem['notes'],
+                            initialDuration: ((apiItem['planned_duration_minutes'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                            showQuadrantSelector: false,
+                            onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
+                              try {
+                                final apiService = ref.read(taskApiServiceProvider);
+                                await apiService.updateTodayPlanItem(itemId, {
+                                  'custom_title': name,
+                                  'planned_duration_minutes': duration,
+                                  'notes': description ?? '',
+                                });
+                                ref.invalidate(apiTodayPlanProvider);
+                              } catch (e) {
+                                debugPrint('Error editing plan item: $e');
+                              }
+                            },
                           ),
-                          child: Text(
-                            'EXECUTING',
-                            style: GoogleFonts.inter(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                              letterSpacing: 1,
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(itemName,
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                  letterSpacing: 0.2,
+                                  color:
+                                      Theme.of(context).textTheme.bodyLarge?.color)),
+                          if (status == 'IN_ACTIVITY' || status == 'STARTED')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                      color: Colors.green.withValues(alpha: 0.3)),
+                                ),
+                                child: Text(
+                                  'EXECUTING',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                          if (apiItem['notes'] != null &&
+                              apiItem['notes'].toString().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                apiItem['notes'],
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade500,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
                       ),
-                    if (apiItem['notes'] != null &&
-                        apiItem['notes'].toString().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          apiItem['notes'],
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: Colors.grey.shade500,
-                            fontStyle: FontStyle.italic,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                )),
+                    )),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1679,52 +1798,11 @@ class _ApiPlannedItem extends ConsumerWidget {
                       icon: Icon(
                         Icons.arrow_forward_rounded,
                         size: 20,
-                        color: isReadOnly ? Colors.grey.withValues(alpha: 0.3) : (isDark ? Colors.blue.shade300 : Colors.blue.shade600),
+                        color: isDark
+                            ? Colors.blue.shade300.withValues(alpha: 0.4)
+                            : Colors.blue.shade600.withValues(alpha: 0.4),
                       ),
-                      onPressed: isReadOnly ? null : () {
-                        // Allow unplanned tasks even if day isn't locked
-                        final bool itemIsUnplanned = apiItem['is_unplanned'] == true;
-                        
-                        if (!isFinalized && !itemIsUnplanned) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please Lock/Start the day plan to begin recording activities.'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          return;
-                        }
-                        
-                        // Restore logic: Trigger the manual review flow
-
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => TaskConfigModal(
-                            initialTitle: itemName,
-                            initialDescription: apiItem['notes'],
-                            initialDuration: ((apiItem['planned_duration_minutes'] as num?)?.toInt() ?? 60).clamp(15, 120),
-                            showQuadrantSelector: false,
-                            onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
-                              // Direct shell item construction
-                              final shellItem = {
-                                'id': 0,
-                                'today_plan': {
-                                  'id': itemId,
-                                  'catalog_name': itemName,
-                                  'planned_duration_minutes': duration,
-                                  'notes': description ?? apiItem['notes'] ?? '',
-                                },
-                                'actual_start_time': null,
-                                'actual_end_time': null,
-                                'minutes_worked': 0,
-                              };
-                              if (context.mounted) {
-                                showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
-                              }
-                            },
-                          ),
-                        );
-                      },
+                      onPressed: null, // Tapping a plan item does nothing
                     );
                   }
                 ),
@@ -1752,7 +1830,31 @@ class _ApiPlannedItem extends ConsumerWidget {
                                   ? Colors.grey.shade500
                                   : Colors.grey.shade400),
                           onSelected: (value) async {
-                            if (value == 'delete' && itemId != null) {
+                            if (value == 'edit' && itemId != null) {
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => TaskConfigModal(
+                                  initialTitle: itemName,
+                                  initialDescription: apiItem['notes'],
+                                  initialDuration: ((apiItem['planned_duration_minutes'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                                  showQuadrantSelector: false,
+                                  onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
+                                    try {
+                                      // ✅ Update existing item — do NOT create new
+                                      final apiService = ref.read(taskApiServiceProvider);
+                                      await apiService.updateTodayPlanItem(itemId, {
+                                        'custom_title': name,
+                                        'planned_duration_minutes': duration,
+                                        'notes': description ?? '',
+                                      });
+                                      ref.invalidate(apiTodayPlanProvider);
+                                    } catch (e) {
+                                      debugPrint('Error editing plan item: $e');
+                                    }
+                                  },
+                                ),
+                              );
+                            } else if (value == 'delete' && itemId != null) {
                               try {
                                 final apiService =
                                     ref.read(taskApiServiceProvider);
@@ -1769,6 +1871,8 @@ class _ApiPlannedItem extends ConsumerWidget {
                             }
                           },
                           itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                    value: 'edit', child: Text("Edit")),
                                 const PopupMenuItem(
                                     value: 'delete', child: Text("Delete"))
                               ]))
@@ -1826,36 +1930,62 @@ class _QuadrantPlannedItem extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
-            // Task Name and Planned Remark
+            // Task Name and Planned Remark — tappable to edit
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    itemName,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: titleColor,
-                      letterSpacing: 0.2,
+              child: InkWell(
+                onTap: isReadOnly ? null : () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => TaskConfigModal(
+                      initialTitle: itemName,
+                      initialDescription: apiItem['notes'],
+                      initialDuration: ((apiItem['planned_duration_minutes'] as num?)?.toInt() ?? 60).clamp(15, 120),
+                      showQuadrantSelector: false,
+                      onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
+                        try {
+                          final apiService = ref.read(taskApiServiceProvider);
+                          await apiService.updateTodayPlanItem(itemId, {
+                            'custom_title': name,
+                            'planned_duration_minutes': duration,
+                            'notes': description ?? '',
+                          });
+                          ref.invalidate(apiTodayPlanProvider);
+                        } catch (e) {
+                          debugPrint('Error editing plan item: $e');
+                        }
+                      },
                     ),
-                  ),
-                  if (apiItem['notes'] != null && apiItem['notes'].toString().isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        apiItem['notes'].toString(),
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: Colors.grey.shade500,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  );
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      itemName,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: titleColor,
+                        letterSpacing: 0.2,
                       ),
                     ),
-                ],
+                    if (apiItem['notes'] != null && apiItem['notes'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          apiItem['notes'].toString(),
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.grey.shade500,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             
@@ -1913,6 +2043,17 @@ class _QuadrantPlannedItem extends ConsumerWidget {
                         initialDuration: ((apiItem['planned_duration_minutes'] as num?)?.toInt() ?? 60).clamp(15, 120),
                         showQuadrantSelector: false,
                         onConfirm: ({required String name, required int duration, String? description, List<String>? selectedMilestoneIds, String? quadrant}) async {
+                          try {
+                            // ✅ Update existing plan item — do NOT create a new one
+                            final apiService = ref.read(taskApiServiceProvider);
+                            await apiService.updateTodayPlanItem(itemId, {
+                              'planned_duration_minutes': duration,
+                              'notes': description ?? '',
+                            });
+                            ref.invalidate(apiTodayPlanProvider);
+                          } catch (e) {
+                            debugPrint('Error updating plan item: $e');
+                          }
                           final shellItem = {
                             'id': 0,
                             'today_plan': {
@@ -1925,8 +2066,8 @@ class _QuadrantPlannedItem extends ConsumerWidget {
                             'actual_end_time': null,
                             'minutes_worked': 0,
                           };
-                          if (context.mounted) {
-                            showReviewTaskDialog(context, ref, shellItem, isEditMode: false);
+                          if (ctx.mounted) {
+                            showReviewTaskDialog(ctx, ref, shellItem, isEditMode: false);
                           }
                         },
                       ),
