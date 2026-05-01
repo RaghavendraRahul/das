@@ -169,7 +169,7 @@ ThemeData _buildTheme(Brightness brightness) {
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       centerTitle: false,
-      titleTextStyle: GoogleFonts.outfit(
+      titleTextStyle: GoogleFonts.inter(
         color: Colors.white,
         fontSize: 18,
         fontWeight: FontWeight.w600,
@@ -178,37 +178,37 @@ ThemeData _buildTheme(Brightness brightness) {
     iconTheme: IconThemeData(
         color: isDark ? DarkColors.textMuted : LightColors.textMuted),
     textTheme: baseTextTheme.copyWith(
-      displayLarge: GoogleFonts.outfit(
+      displayLarge: GoogleFonts.inter(
         textStyle: baseTextTheme.displayLarge,
         fontWeight: FontWeight.bold,
         color: isDark ? DarkColors.text : LightColors.text,
       ),
-      displayMedium: GoogleFonts.outfit(
+      displayMedium: GoogleFonts.inter(
         textStyle: baseTextTheme.displayMedium,
         fontWeight: FontWeight.bold,
         color: isDark ? DarkColors.text : LightColors.text,
       ),
-      displaySmall: GoogleFonts.outfit(
+      displaySmall: GoogleFonts.inter(
         textStyle: baseTextTheme.displaySmall,
         fontWeight: FontWeight.bold,
         color: isDark ? DarkColors.text : LightColors.text,
       ),
-      headlineLarge: GoogleFonts.outfit(
+      headlineLarge: GoogleFonts.inter(
         textStyle: baseTextTheme.headlineLarge,
         fontWeight: FontWeight.w600,
         color: isDark ? DarkColors.text : LightColors.brandColor,
       ),
-      headlineMedium: GoogleFonts.outfit(
+      headlineMedium: GoogleFonts.inter(
         textStyle: baseTextTheme.headlineMedium,
         fontWeight: FontWeight.w600,
         color: isDark ? DarkColors.text : LightColors.brandColor,
       ),
-      headlineSmall: GoogleFonts.outfit(
+      headlineSmall: GoogleFonts.inter(
         textStyle: baseTextTheme.headlineSmall,
         fontWeight: FontWeight.w600,
         color: isDark ? DarkColors.text : LightColors.brandColor,
       ),
-      titleLarge: GoogleFonts.outfit(
+      titleLarge: GoogleFonts.inter(
         textStyle: baseTextTheme.titleLarge,
         fontWeight: FontWeight.w600,
         color: isDark ? DarkColors.text : LightColors.brandColor,
@@ -285,7 +285,7 @@ ThemeData _buildTheme(Brightness brightness) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: isDark ? DarkColors.surface : LightColors.surface,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: GoogleFonts.outfit(
+      titleTextStyle: GoogleFonts.inter(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: isDark ? DarkColors.text : LightColors.text,

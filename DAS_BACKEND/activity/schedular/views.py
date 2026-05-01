@@ -152,6 +152,7 @@ class UserPreferencesViewSet(viewsets.GenericViewSet):
             return Response({'detail': 'Not authenticated'}, status=401)
         return Response({
             'id': user.id,
+            'name': user.employee_name or user.email.split('@')[0].replace('.', ' ').title(),
             'email': user.email,
             'role': user.role,
             'department': user.department.name if user.department else None,
@@ -258,55 +259,32 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
           if self.request.query_params.get('search'):
               return queryset
 
-          # Handle 'my projects' filter (where user is creator or assignee)
-          if self.request.query_params.get('filter') == 'my':
-              user = self.request.user
-              
-              # Allow Admin to filter by specific user_id
-              if user.role == 'ADMIN' and self.request.query_params.get('user_id'):
-                  try:
-                      user_id = self.request.query_params.get('user_id')
-                      user = User.objects.get(id=user_id)
-                  except User.DoesNotExist:
-                      pass # Fallback to request.user if not found
+          # The Mixin already handles 'filter=my' and date filtering strictly.
+          # We only need to handle the specific "Team Projects" tab isolation for Admin here
+          # when NO filter is specified (default Team view).
+          
+          if not self.request.query_params.get('filter') and not self.request.query_params.get('search'):
+              if self.request.user.role == 'ADMIN':
+                  # "Team Projects" tab for admin:
+                  # Show only projects that have at least ONE other user involved
+                  # (project-level or task-level assignee who is NOT the admin).
+                  # This hides solo/personal admin projects from the team view.
+                  from django.db.models import Exists, OuterRef
+                  from .models import TaskAssignee as _TaskAssignee
 
-              if user.role == 'ADMIN':
+                  admin_user = self.request.user
+
+                  # Subquery: project has a task assigned to someone other than the admin
+                  other_task_assignee = _TaskAssignee.objects.filter(
+                      task__project=OuterRef('pk')
+                  ).exclude(user=admin_user)
+
+                  # Keep projects where at least one project-level assignee is not the admin
+                  # OR at least one task-level assignee is not the admin
                   queryset = queryset.filter(
-                      models.Q(assignees=user) |
-                      models.Q(project_lead=user) | 
-                      models.Q(tasks__assignees__user=user)
+                      models.Q(assignees__isnull=False) & ~models.Q(assignees__in=[admin_user]) |
+                      Exists(other_task_assignee)
                   ).distinct()
-              else:
-                  # Filter projects where user is creator, lead, handled_by, or assigned to any task
-                  queryset = queryset.filter(
-                      models.Q(created_by=user) | 
-                      models.Q(assignees=user) |
-                      models.Q(project_lead=user) | 
-                      models.Q(handled_by=user) |
-                      models.Q(tasks__assignees__user=user)
-                  ).distinct()
-
-          elif self.request.user.role == 'ADMIN':
-              # "Team Projects" tab (no filter param) for admin:
-              # Show only projects that have at least ONE other user involved
-              # (project-level or task-level assignee who is NOT the admin).
-              # This hides solo/personal admin projects from the team view.
-              from django.db.models import Exists, OuterRef
-              from .models import TaskAssignee as _TaskAssignee
-
-              admin_user = self.request.user
-
-              # Subquery: project has a task assigned to someone other than the admin
-              other_task_assignee = _TaskAssignee.objects.filter(
-                  task__project=OuterRef('pk')
-              ).exclude(user=admin_user)
-
-              # Keep projects where at least one project-level assignee is not the admin
-              # OR at least one task-level assignee is not the admin
-              queryset = queryset.filter(
-                  models.Q(assignees__isnull=False) & ~models.Q(assignees__in=[admin_user]) |
-                  Exists(other_task_assignee)
-              ).distinct()
 
           start_date = self.request.query_params.get('start_date')
           end_date = self.request.query_params.get('end_date')
@@ -738,6 +716,66 @@ class ProjectViewSet(ProjectQuerySetMixin, viewsets.ModelViewSet):
               return Response(response_serializer.data, status=status.HTTP_201_CREATED)
           
           return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+      @action(detail=True, methods=['post'])
+      def reopen(self, request, pk=None):
+          """Admin action to reopen a completed project"""
+          project = self.get_object()
+          user = request.user
+          
+          if user.role != 'ADMIN':
+              return Response(
+                  {"error": "Only admins can reopen projects"},
+                  status=status.HTTP_403_FORBIDDEN
+              )
+              
+          reason = request.data.get('reason', 'No reason provided')
+          
+          with transaction.atomic():
+              project.status = 'ACTIVE'
+              project.approval_status = 'REOPENED'
+              project.rejection_reason = reason
+              project.save()
+              
+              # Reset all project tasks and milestones to PENDING (Task Bucket)
+              tasks = project.tasks.all()
+              tasks.update(status='PENDING', approval_status='REJECTED', completed_at=None, rejection_reason=reason)
+              
+              from .models import SubTask, Notification
+              SubTask.objects.filter(task__in=tasks, status='DONE').update(
+                  status='PENDING', 
+                  completed_at=None
+              )
+              
+              # Notify all assignees
+              assignees = project.assignees.all()
+              for assignee in assignees:
+                  notif = Notification.objects.create(
+                      user=assignee,
+                      notification_type='PROJECT_REOPENED',
+                      title='Project Reopened',
+                      message=f'Admin has reopened the project "{project.name}". Reason: {reason}. All tasks have been reset.',
+                      reference_type='project',
+                      reference_id=project.id
+                  )
+                  try:
+                      from .signals import send_websocket_notification
+                      send_websocket_notification(assignee.id, {
+                          'id': notif.id,
+                          'title': notif.title,
+                          'message': notif.message,
+                          'type': notif.notification_type,
+                          'reference_type': notif.reference_type,
+                          'reference_id': notif.reference_id,
+                          'created_at': str(notif.created_at),
+                      })
+                  except Exception as e:
+                      print(f"WebSocket notification error (reopen): {e}")
+
+          return Response({
+              "message": "Project reopened successfully",
+              "project": ProjectSerializer(project).data
+          })
 
       @action(detail=True, methods=['post'])
       def request_completion(self, request, pk=None):
@@ -6168,7 +6206,7 @@ class SyncHRMEmployeesViewSet(viewsets.GenericViewSet):
                         email=email,
                         defaults={
                             'hrm_employee_id': emp_data.get('employee_Id'),
-                            'employee_name': emp_data.get('full_name'),
+                            'employee_name': f"{emp_data.get('full_name') or ''} {emp_data.get('last_name') or ''}".strip(),
                             'employee_type': emp_data.get('Employeement_Type'),
                             'designation': hrm_designation,
                             'hrm_department': emp_data.get('department'),

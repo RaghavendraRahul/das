@@ -102,6 +102,25 @@ class ProjectQuerySetMixin(RoleBasedQuerySetMixin):
         
         # Normal behavior: Admin sees all for dashboard/management
         if user.role == 'ADMIN':
+            if self.request.query_params.get('filter') == 'my':
+                target_user = user
+                user_id_param = self.request.query_params.get('user_id')
+                if user_id_param:
+                    try:
+                        from django.contrib.auth import get_user_model
+                        User = get_user_model()
+                        target_user = User.objects.get(id=user_id_param)
+                    except (User.DoesNotExist, ValueError):
+                        pass
+                
+                # Debug: Print the count of filtered projects for the target user
+                res_qs = queryset.filter(
+                    Q(project_lead=target_user) | 
+                    Q(assignees=target_user) |
+                    Q(tasks__assignees__user=target_user)
+                ).distinct()
+                print(f"DEBUG: Admin 'My' filter for user {target_user.id}: count={res_qs.count()}")
+                return res_qs
             return queryset
             
         if user.role == 'MANAGER':
@@ -187,6 +206,20 @@ class TaskQuerySetMixin(RoleBasedQuerySetMixin):
         
         # Normal behavior: Admin sees all for dashboard/management
         if user.role == 'ADMIN':
+            if self.request.query_params.get('filter') == 'my':
+                target_user = user
+                user_id_param = self.request.query_params.get('user_id')
+                if user_id_param:
+                    try:
+                        from django.contrib.auth import get_user_model
+                        User = get_user_model()
+                        target_user = User.objects.get(id=user_id_param)
+                    except (User.DoesNotExist, ValueError):
+                        pass
+                
+                return queryset.filter(
+                    assignees__user=target_user
+                ).distinct()
             return queryset
             
         if user.role == 'MANAGER':

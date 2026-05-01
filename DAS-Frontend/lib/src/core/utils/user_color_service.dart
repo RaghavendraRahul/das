@@ -37,7 +37,7 @@ class UserColorService {
 
   /// Get a lighter version of the user color (good for backgrounds)
   static Color getLightColorForUser(dynamic userId, {double opacity = 0.1}) {
-    return getColorForUser(userId).withOpacity(opacity);
+    return getColorForUser(userId).withValues(alpha: opacity);
   }
 
   /// Get the hex code (without #) for the user's color.
@@ -46,11 +46,14 @@ class UserColorService {
     return color.value.toRadixString(16).substring(2).toUpperCase();
   }
 
-  /// Extracts initials from a user's name (e.g., "John Doe" -> "JD").
+  /// Extracts initials from a user's name (strictly first letter of first name and last name).
   static String getInitials(String? name) {
     if (name == null || name.trim().isEmpty) return '?';
-    final parts = name.trim().split(RegExp(r'\s+'));
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0][0].toUpperCase();
+    
+    // First letter of first name + first letter of LAST word (last name)
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 }

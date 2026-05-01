@@ -62,14 +62,14 @@ class _ViewToggleButtonState extends State<ViewToggleButton> {
                     ? selectedBg
                     : (_isHovered
                         ? (isDark
-                            ? Colors.white.withOpacity(0.1)
+                            ? Colors.white.withValues(alpha: 0.1)
                             : Colors.grey.shade200)
                         : Colors.transparent),
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: widget.isSelected
                     ? [
                         BoxShadow(
-                          color: selectedBg.withOpacity(0.3),
+                          color: selectedBg.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         )
@@ -122,7 +122,7 @@ class _ViewToggleButtonState extends State<ViewToggleButton> {
               child: Container(
                 width: 2,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

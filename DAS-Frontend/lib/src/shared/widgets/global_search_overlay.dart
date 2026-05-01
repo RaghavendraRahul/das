@@ -129,7 +129,7 @@ class GlobalSearchOverlay extends HookConsumerWidget {
           const SizedBox(width: 8),
           Text(
             title.toUpperCase(),
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,

@@ -89,14 +89,14 @@ class _NotificationPopupOverlayState extends State<NotificationPopupOverlay>
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                       blurRadius: 15,
                       offset: const Offset(0, 6),
                     ),
                   ],
                   border: Border.all(
                     color:
-                        const Color(0xFF64FFDA).withOpacity(0.5), // Subtle neon
+                        const Color(0xFF64FFDA).withValues(alpha: 0.5), // Subtle neon
                     width: 1.5,
                   ),
                 ),
@@ -106,7 +106,7 @@ class _NotificationPopupOverlayState extends State<NotificationPopupOverlay>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF64FFDA).withOpacity(0.1),
+                        color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.notifications_active_outlined,
@@ -131,7 +131,7 @@ class _NotificationPopupOverlayState extends State<NotificationPopupOverlay>
                           Text(
                             widget.notification.message,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 13,
                               height: 1.4,
                             ),

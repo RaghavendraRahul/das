@@ -234,9 +234,6 @@ typedef DashboardOverviewStatsRef
     = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
 String _$clientsForStatsHash() => r'316db05f3c16a62d7f49997ca7b8817cf1e86506';
 
-/// Selected user ID for project work statistics
-/// By default, NO user is selected to allow "Select User" dropdown hint.
-/// State providers for Project Working Report section
 /// Provider for fetching clients list for stats dropdown
 ///
 /// Copied from [clientsForStats].
@@ -253,7 +250,7 @@ final clientsForStatsProvider =
 );
 
 typedef ClientsForStatsRef = AutoDisposeFutureProviderRef<List<dynamic>>;
-String _$usersForStatsHash() => r'c332d1c497d6b4cf14647e9427eb36bc6937c333';
+String _$usersForStatsHash() => r'2f1d5475dbe3226ceaf2b3152fee56b723a18aa8';
 
 /// Provider for fetching users list for stats dropdown
 ///
@@ -270,7 +267,7 @@ final usersForStatsProvider = AutoDisposeFutureProvider<List<dynamic>>.internal(
 );
 
 typedef UsersForStatsRef = AutoDisposeFutureProviderRef<List<dynamic>>;
-String _$projectWorkStatsHash() => r'0fbb332b3c20a96a6bf3cdbc1b31dba127bfcddd';
+String _$projectWorkStatsHash() => r'ea4ae9a95755f344ce3f2d9d1c1fc95cbc7084d5';
 
 /// Provider for fetching project work statistics
 ///
@@ -289,7 +286,7 @@ final projectWorkStatsProvider =
 
 typedef ProjectWorkStatsRef
     = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
-String _$statsProjectsHash() => r'6d46aa09b6f2831ad768299b4e6f061a9dc36673';
+String _$statsProjectsHash() => r'21b2093744a9359469fd9d1e51fe44c49c59480e';
 
 /// Provider for fetching user-specific projects for the stats dropdown
 ///

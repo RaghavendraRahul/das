@@ -341,7 +341,7 @@ class AddProjectTaskModal extends HookConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -369,7 +369,7 @@ class AddProjectTaskModal extends HookConsumerWidget {
                             ? 'Update details for this task' 
                             : 'Fill in details below to create a task',
                           style: GoogleFonts.inter(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -403,7 +403,7 @@ class AddProjectTaskModal extends HookConsumerWidget {
                     icon: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.close, color: Colors.white, size: 20),
@@ -429,10 +429,10 @@ class AddProjectTaskModal extends HookConsumerWidget {
                         margin: const EdgeInsets.only(bottom: 24),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: Colors.red.withOpacity(0.2)),
+                              color: Colors.red.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -470,7 +470,7 @@ class AddProjectTaskModal extends HookConsumerWidget {
                                     'Please modify the task details and resubmit for approval.',
                                     style: GoogleFonts.inter(
                                       color: isDark
-                                          ? Colors.red.shade300.withOpacity(0.7)
+                                          ? Colors.red.shade300.withValues(alpha: 0.7)
                                           : Colors.red.shade700,
                                       fontSize: 11,
                                       fontStyle: FontStyle.italic,
@@ -540,7 +540,7 @@ class AddProjectTaskModal extends HookConsumerWidget {
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? color.withOpacity(0.12)
+                                    ? color.withValues(alpha: 0.12)
                                     : surfaceColor,
                                 border: Border.all(
                                   color: isSelected ? color : borderColor,
@@ -645,7 +645,7 @@ class AddProjectTaskModal extends HookConsumerWidget {
                 color: isDark ? const Color(0xFF111827) : Colors.white,
                 border: Border(
                   top: BorderSide(
-                    color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100,
+                    color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100,
                   ),
                 ),
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
@@ -917,7 +917,7 @@ class _AssigneeRow extends StatelessWidget {
               selectedAssignees.value = [...selectedAssignees.value, result];
             }
           },
-          backgroundColor: Colors.blue.withOpacity(0.08),
+          backgroundColor: Colors.blue.withValues(alpha: 0.08),
           side: BorderSide(color: Colors.blue.shade200),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -1101,7 +1101,7 @@ class _AssigneePicker extends StatelessWidget {
                           onTap: () => Navigator.pop(context, user),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
-                          hoverColor: Colors.blue.withOpacity(0.05),
+                          hoverColor: Colors.blue.withValues(alpha: 0.05),
                         );
                       },
                     ),
@@ -1132,14 +1132,14 @@ class _HeaderBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: highlight
-            ? Colors.white.withOpacity(0.25)
-            : Colors.white.withOpacity(0.15),
+            ? Colors.white.withValues(alpha: 0.25)
+            : Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.white.withOpacity(0.9)),
+          Icon(icon, size: 14, color: Colors.white.withValues(alpha: 0.9)),
           const SizedBox(width: 6),
           Text(
             label,

@@ -159,9 +159,9 @@ class TeamOverviewPage extends ConsumerWidget {
                           const SizedBox(width: 12),
                           Text(
                             'TEAM MEMBERS',
-                            style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                            style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
                               color: isDark ? Colors.white70 : _kNavy.withAlpha(180),
                               letterSpacing: 1.2,
                             ),
@@ -169,7 +169,7 @@ class TeamOverviewPage extends ConsumerWidget {
                           const Spacer(),
                           Text(
                             '${data['total_count'] ?? 0} total',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: isDark ? Colors.white70 : Colors.grey,
@@ -226,7 +226,7 @@ class TeamOverviewPage extends ConsumerWidget {
                             const SizedBox(width: 16),
                             Text(
                               'Page ${data['page']} of ${data['total_pages']}',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: isDark ? Colors.white70 : _kNavy,
@@ -352,20 +352,20 @@ class _StatCard extends StatelessWidget {
                 children: [
                   Text(
                     stat.label,
-                    style: GoogleFonts.outfit(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white70 : _kNavy.withAlpha(200),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF42474F),
                       letterSpacing: 0.6,
                     ),
                   ),
                   const Spacer(),
                   Text(
                     stat.value,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
+                    style: GoogleFonts.manrope(
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : _kNavy.withAlpha(240),
+                      color: const Color(0xFF114A75),
                       height: 1.2,
                     ),
                   ),
@@ -455,10 +455,10 @@ class _TeamMemberCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       member.name,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: isDark ? Colors.white : _kNavy,
+                        fontSize: 16,
+                        color: const Color(0xFF114A75),
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -472,7 +472,7 @@ class _TeamMemberCard extends StatelessWidget {
                       ),
                       child: Text(
                         member.role.toUpperCase(),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                           color: isDark ? Colors.white.withAlpha(220) : _kNavy.withAlpha(200),
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
@@ -510,8 +510,8 @@ class _StatCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800, color: color)),
-        Text(label, style: GoogleFonts.outfit(fontSize: 8, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.grey)),
+        Text(value, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: color)),
+        Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w400, color: const Color(0xFF64748B))),
       ],
     );
   }

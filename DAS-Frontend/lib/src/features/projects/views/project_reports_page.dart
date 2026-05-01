@@ -241,7 +241,7 @@ class _ReportsView extends StatelessWidget {
                         FlSpot(10, totalTasks.toDouble()),
                       ],
                       isCurved: false,
-                      color: Colors.grey.withOpacity(0.5),
+                      color: Colors.grey.withValues(alpha: 0.5),
                       barWidth: 2,
                       dotData: const FlDotData(show: false),
                       dashArray: [5, 5],
@@ -258,7 +258,7 @@ class _ReportsView extends StatelessWidget {
                       color: Colors.green,
                       barWidth: 3,
                       belowBarData: BarAreaData(
-                          show: true, color: Colors.green.withOpacity(0.1)),
+                          show: true, color: Colors.green.withValues(alpha: 0.1)),
                     ),
                   ],
                 ),
@@ -704,9 +704,9 @@ class _TotalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,

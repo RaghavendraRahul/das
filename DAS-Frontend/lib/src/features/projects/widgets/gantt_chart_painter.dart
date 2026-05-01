@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/core/models/milestone.dart';
 import '../../../core/utils/user_color_service.dart';
 
@@ -177,11 +178,11 @@ class GanttChartPainter extends CustomPainter {
     canvas.drawLine(
         Offset(0, headerHeight), Offset(taskNameWidth, headerHeight), paint);
 
-    textPainter.text = const TextSpan(
+    textPainter.text = TextSpan(
       text: "TASKS",
-      style: TextStyle(
-          color: Color(0xFF6B7280),
-          fontSize: 11,
+      style: GoogleFonts.inter(
+          color: const Color(0xFF002E6A),
+          fontSize: 18,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5),
     );
@@ -211,10 +212,10 @@ class GanttChartPainter extends CustomPainter {
       // Task Name
       textPainter.text = TextSpan(
         text: task.name,
-        style: const TextStyle(
-            color: Color(0xFF111827), // Gray-900
-            fontSize: 13,
-            fontWeight: FontWeight.w500),
+        style: GoogleFonts.inter(
+            color: const Color(0xFF002E6A),
+            fontSize: 15,
+            fontWeight: FontWeight.bold),
       );
       textPainter.layout(maxWidth: taskNameWidth - 40);
       textPainter.paint(
@@ -363,7 +364,7 @@ class GanttChartPainter extends CustomPainter {
 
       // --- Border for Main Bar ---
       paint.style = PaintingStyle.stroke;
-      paint.color = progressColor.withOpacity(0.3);
+      paint.color = progressColor.withValues(alpha: 0.3);
       paint.strokeWidth = 1;
       canvas.drawRRect(rrect, paint);
       paint.style = PaintingStyle.fill;
@@ -379,10 +380,10 @@ class GanttChartPainter extends CustomPainter {
       if (task.progress > 0 && task.progress < 100) {
         textPainter.text = TextSpan(
           text: "${task.progress}%",
-          style: TextStyle(
+          style: GoogleFonts.inter(
               color: textOnBar
-                  ? progressColor.withOpacity(0.8)
-                  : const Color(0xFF6B7280),
+                  ? progressColor.withValues(alpha: 0.8)
+                  : const Color(0xFF002E6A),
               fontSize: 10,
               fontWeight: FontWeight.w600),
         );

@@ -125,10 +125,10 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
                     children: [
                       Text(
                         'Timeline (Gantt)',
-                        style: GoogleFonts.inter(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87,
+                        style: GoogleFonts.manrope(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF002E6A),
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -145,6 +145,7 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
                   ),
                 ),
                 // Add Item Button
+                /*
                 ElevatedButton.icon(
                   onPressed: () =>
                       _showAddItemModal(context, widget.project.project.id),
@@ -164,6 +165,7 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
                     ),
                   ),
                 ),
+                */
               ],
             ),
           ),
@@ -290,7 +292,7 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
                                               boxShadow: [
                                                 BoxShadow(
                                                     color: Colors.black
-                                                        .withOpacity(0.1),
+                                                        .withValues(alpha: 0.1),
                                                     blurRadius: 4,
                                                     offset: const Offset(0, 2))
                                               ],

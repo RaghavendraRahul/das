@@ -299,11 +299,10 @@ class DayLog extends HookConsumerWidget {
                   children: [
                     Text(
                       "ACTIVITY LOG",
-                      style: GoogleFonts.inter(
-                        fontSize: 11, // Match catalog size
-                        fontWeight: FontWeight.w900, // Extra bold
-                        letterSpacing: 1.2,
-                        color: isDark ? Colors.white : const Color(0xFF05263E),
+                      style: GoogleFonts.manrope(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : const Color(0xFF114A75),
                       ),
                     ),
                     apiActivityLogsAsync.when(
@@ -700,11 +699,10 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                           Expanded(
                             child: Text(
                               taskName,
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                                letterSpacing: 0.3,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                fontSize: 14,
+                                color: isDark ? Colors.white : const Color(0xFF334155),
                               ),
                             ),
                           ),
@@ -721,7 +719,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                             startTimeDisplay.isNotEmpty
                                 ? '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}'
                                 : 'Session not started',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: isDark
@@ -740,7 +738,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                               ),
                               child: Text(
                                 '${workedHours}h ${workedMins}m',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.green.shade600,
@@ -791,7 +789,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                                           const SizedBox(width: 4),
                                           Text(
                                             'PLANNED',
-                                            style: GoogleFonts.outfit(
+                                            style: GoogleFonts.inter(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w800,
                                               letterSpacing: 0.5,
@@ -858,7 +856,7 @@ class _ApiLoggedItemCard extends HookConsumerWidget {
                                           const SizedBox(width: 4),
                                           Text(
                                             'ACHIEVED',
-                                            style: GoogleFonts.outfit(
+                                            style: GoogleFonts.inter(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w800,
                                               letterSpacing: 0.5,

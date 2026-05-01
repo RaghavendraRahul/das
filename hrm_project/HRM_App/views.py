@@ -4204,6 +4204,7 @@ class GetActiveEmployeesView(APIView):
                 employee_data = {
                     'employee_Id': emp.employee_Id,
                     'full_name': emp.full_name,
+                    'last_name': emp.last_name,
                     'email': emp.email,
                     'Employeement_Type': emp.Employeement_Type,
                     'work_location': emp.work_location,

@@ -186,10 +186,10 @@ class _Header extends ConsumerWidget {
           children: [
             Text(
               'Project Analytics',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF05263E),
+              style: GoogleFonts.manrope(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF002E6A),
                 letterSpacing: -0.5,
               ),
             ),
@@ -218,8 +218,8 @@ class _Header extends ConsumerWidget {
                   value: allClients.any((c) => c['id'] == selectedClientId) ? selectedClientId : null,
                   hint: Text(clientsAsync.isLoading ? 'Loading...' : 'Select Client',
                       style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: isDark ? const Color(0xFFE0F2FE) : const Color(0xFF4B6A8A))),
                   icon: Icon(Icons.keyboard_arrow_down_rounded,
                       size: 16, color: isDark ? const Color(0xFF7EC8F4) : Colors.grey.shade500),
@@ -227,8 +227,8 @@ class _Header extends ConsumerWidget {
                   isExpanded: true, // Added isExpanded
                   dropdownColor: isDark ? const Color(0xFF0B1A2E) : Colors.white,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                     color: isDark ? Colors.white : const Color(0xFF0D1B2A),
                   ),
                   items: [
@@ -272,8 +272,8 @@ class _Header extends ConsumerWidget {
                       : null,
                   hint: Text('Select User',
                       style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: isDark ? const Color(0xFFE0F2FE) : const Color(0xFF4B6A8A))),
                   icon: Icon(Icons.keyboard_arrow_down_rounded,
                       size: 16, color: isDark ? const Color(0xFF7EC8F4) : Colors.grey.shade500),
@@ -415,7 +415,7 @@ class _StatCard extends HookWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         width: width,
-        height: 74, // Refined height for no overflow but smaller size
+        height: 86, // Increased height for larger 20px titles
         padding: const EdgeInsets.symmetric(horizontal: 12),
         transform: Matrix4.diagonal3Values(
             isHovered.value ? 1.02 : 1.0, isHovered.value ? 1.02 : 1.0, 1.0),
@@ -467,9 +467,9 @@ class _StatCard extends HookWidget {
                       Text(
                         title,
                         style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.white70 : Colors.grey.shade600,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF002E6A),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -482,9 +482,9 @@ class _StatCard extends HookWidget {
                               fit: BoxFit.scaleDown,
                               child: Text(
                                 value,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: 22,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                   color: isDark ? (color == const Color(0xFF05263E) ? const Color(0xFFD1E9FF) : color) : color,
                                   letterSpacing: -0.5,
                                 ),
@@ -591,10 +591,10 @@ class _DonutSection extends StatelessWidget {
             children: [
               Text(
                 'Work Distribution & Progress',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF05263E),
+                style: GoogleFonts.manrope(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF002E6A),
                   letterSpacing: -0.2,
                 ),
               ),
@@ -727,10 +727,10 @@ class _DonutChart extends HookWidget {
                 const SizedBox(width: 8),
                 Text(
                   title.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? const Color(0xFFD1E9FF) : const Color(0xFF05263E),
+                  style: GoogleFonts.manrope(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFFD1E9FF) : const Color(0xFF002E6A),
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -812,7 +812,7 @@ class _DonutChart extends HookWidget {
                                   value: 100,
                                   title: '',
                                   color: isDark
-                                      ? Colors.white.withOpacity(0.05)
+                                      ? Colors.white.withValues(alpha: 0.05)
                                       : Colors.grey.shade100,
                                   radius: radius,
                                 ),
@@ -871,7 +871,7 @@ class _DonutChart extends HookWidget {
                             flex: 1,
                             child: Text(
                               '${slices[hoveredIndex.value].value.toStringAsFixed(1)}h',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.inter(
                                 fontSize: chartSize / 6,
                                 fontWeight: FontWeight.w900,
                                 color: _palette[hoveredIndex.value % _palette.length][0],
@@ -885,7 +885,7 @@ class _DonutChart extends HookWidget {
                             child: FittedBox(
                               child: Text(
                                 centerText,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: chartSize / 5,
                                   fontWeight: FontWeight.w900,
                                   color: isDark ? Colors.white : const Color(0xFF0D1B2A),
@@ -1154,7 +1154,7 @@ class _SelectorPill extends StatelessWidget {
           label.length > 20 ? '${label.substring(0, 18)}…' : label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             color: isDark ? Colors.white : const Color(0xFF1F2937),
           ),
         ),

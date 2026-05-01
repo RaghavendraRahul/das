@@ -440,12 +440,10 @@ class _StickyNotesSidebar extends HookWidget {
                     : Row(
                         children: [
                           Text("Sticky Notes",
-                              style: GoogleFonts.outfit(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.5,
-                                  color:
-                                      isDark ? Colors.white : Colors.black87)),
+                              style: GoogleFonts.manrope(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : const Color(0xFF191C1E))),
                           const Spacer(),
                           Container(
                             decoration: BoxDecoration(
@@ -683,10 +681,10 @@ class _SidebarNoteItem extends HookConsumerWidget {
                                   : note.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
-                                  fontSize: 12,
-                                  color: Colors.black.withValues(alpha: 0.8),
-                                  fontWeight: FontWeight.w700),
+                              style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: const Color(0xFF854D0E),
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         Expanded(
@@ -698,8 +696,8 @@ class _SidebarNoteItem extends HookConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                             style: _getSafeTextStyle(
                               selectedFont,
-                              fontSize: 13,
-                              color: Colors.black.withValues(alpha: 0.7),
+                              fontSize: 14,
+                              color: const Color(0xFF002E6A),
                               height: 1.25,
                               fontWeight: FontWeight.w500,
                             ),
@@ -1020,11 +1018,10 @@ class _EditableStickyNote extends HookConsumerWidget {
                                 isDense: true,
                                 contentPadding: EdgeInsets.symmetric(vertical: 8),
                               ),
-                              style: GoogleFonts.outfit(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.2,
-                                color: Colors.black.withValues(alpha: 0.8),
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF854D0E),
                               ),
                             ),
                           ),
@@ -1062,9 +1059,9 @@ class _EditableStickyNote extends HookConsumerWidget {
                         ),
                         style: _getSafeTextStyle(
                           selectedFont,
-                          fontSize: 18,
+                          fontSize: 14,
                           height: 1.6,
-                          color: Colors.black.withValues(alpha: 0.85),
+                          color: const Color(0xFF002E6A),
                           fontWeight: FontWeight.w500,
                         ),
                       ),

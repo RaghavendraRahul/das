@@ -613,7 +613,7 @@ class _StatCardState extends State<_StatCard> {
                   ),
                   
                   Padding(
-                    padding: const EdgeInsets.all(15),
+                    padding: const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -644,7 +644,7 @@ class _StatCardState extends State<_StatCard> {
                                 ),
                                 child: Text(
                                   widget.isCritical ? 'CRITICAL' : 'OPTIMAL',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.inter(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
                                     color: widget.isCritical ? Colors.red : widget.strokeColor,
@@ -654,17 +654,17 @@ class _StatCardState extends State<_StatCard> {
                           ],
                         ),
                         
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         
                         // TITLE
                         Text(
                           widget.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.manrope(
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : Colors.black,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : const Color(0xFF42474F),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -679,7 +679,7 @@ class _StatCardState extends State<_StatCard> {
                             children: [
                               Text(
                                 widget.count.toString(),
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: 26,
                                   fontWeight: FontWeight.bold,
                                   color: isDark ? Colors.white : Colors.grey.shade900,
@@ -699,7 +699,7 @@ class _StatCardState extends State<_StatCard> {
                         ),
                         
                         const Spacer(),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         
                         // SUB-STATS (Active, Done, etc.)
                         Row(
@@ -724,7 +724,7 @@ class _StatCardState extends State<_StatCard> {
                           ],
                         ),
                         
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         
                         // PROGRESS BAR
                         Builder(
@@ -748,7 +748,7 @@ class _StatCardState extends State<_StatCard> {
                                 const SizedBox(width: 8),
                                 Text(
                                   '${(prog * 100).round()}%',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.inter(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     color: subLabelColor,

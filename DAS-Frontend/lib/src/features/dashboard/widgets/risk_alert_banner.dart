@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_service.dart';
 
 class RiskAlertBanner extends StatefulWidget {
@@ -57,14 +58,14 @@ class _RiskAlertBannerState extends State<RiskAlertBanner> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text("Attention Required",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
+                            style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.w800,
                                 color: Colors.red.shade900,
                                 fontSize: 16)),
                         if (!isExpanded)
                           Text(
                               "$criticalCount critical, $warningCount warnings.",
-                              style: TextStyle(
+                              style: GoogleFonts.inter(
                                   color: Colors.red.shade700, fontSize: 13)),
                       ],
                     ),
@@ -110,7 +111,7 @@ class _RiskAlertBannerState extends State<RiskAlertBanner> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(risk.message,
-                              style: const TextStyle(
+                              style: GoogleFonts.inter(
                                   fontSize: 13, fontWeight: FontWeight.w500)),
                         ),
                       ],

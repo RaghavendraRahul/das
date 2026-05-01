@@ -121,12 +121,12 @@ class ApprovalsPage extends HookConsumerWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark
-                      ? const Color(0xFF1F2937).withOpacity(0.7)
-                      : Colors.white.withOpacity(0.7),
+                      ? const Color(0xFF1F2937).withValues(alpha: 0.7)
+                      : Colors.white.withValues(alpha: 0.7),
                   border: Border(
                     bottom: BorderSide(
                         color: isDark
-                            ? Colors.white.withOpacity(0.1)
+                            ? Colors.white.withValues(alpha: 0.1)
                             : Colors.grey.shade200),
                   ),
                 ),
@@ -152,12 +152,15 @@ class ApprovalsPage extends HookConsumerWidget {
                             ),
                             labelPadding:
                                 const EdgeInsets.symmetric(horizontal: 20),
-                            labelStyle: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13.5,
+                            labelStyle: GoogleFonts.inter(
+                                fontWeight: FontWeight.normal,
+                                fontSize: 14,
+                                color: const Color(0xFF30628E),
                                 letterSpacing: 0.3),
-                            unselectedLabelStyle: GoogleFonts.outfit(
-                                fontWeight: FontWeight.w600, fontSize: 13.5),
+                            unselectedLabelStyle: GoogleFonts.inter(
+                                fontWeight: FontWeight.normal,
+                                fontSize: 14,
+                                color: const Color(0xFF30628E)),
                             tabs: [
                               _buildApiTab(projects, 'New Projects', isDark,
                                   tabController.index == 0),
@@ -178,8 +181,8 @@ class ApprovalsPage extends HookConsumerWidget {
                       Container(
                         decoration: BoxDecoration(
                           color: isDark
-                              ? Colors.white.withOpacity(0.05)
-                              : Colors.black.withOpacity(0.05),
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.black.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -224,7 +227,7 @@ class ApprovalsPage extends HookConsumerWidget {
     final baseActiveColor = isDark ? brandAccent : brandNavy;
     final badgeBgColor = isSelected
         ? (isDark ? brandNavy : Colors.white)
-        : baseActiveColor.withOpacity(0.12);
+        : baseActiveColor.withValues(alpha: 0.12);
     final badgeTextColor = isSelected ? baseActiveColor : baseActiveColor;
     final count = asyncValue.when(
       data: (list) => list.length,
@@ -246,10 +249,10 @@ class ApprovalsPage extends HookConsumerWidget {
               ),
               child: Text(
                 '$count',
-                style: TextStyle(
-                    fontSize: 11,
+                style: GoogleFonts.inter(
+                    fontSize: 14,
                     color: badgeTextColor,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.normal,
                     letterSpacing: 0.5),
               ),
             ),
@@ -274,12 +277,12 @@ class ApprovalsPage extends HookConsumerWidget {
         ),
         child: Text(
           label,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontSize: 14,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontWeight: FontWeight.normal,
             color: isSelected
                 ? (isDark ? const Color(0xFF05263E) : Colors.white)
-                : (isDark ? Colors.white70 : Colors.black87),
+                : const Color(0xFF30628E),
           ),
         ),
       ),
@@ -338,7 +341,7 @@ class _ApiNewProjectsTab extends ConsumerWidget {
                   builder: (ctx) => AlertDialog(
                     title: Text(
                       'Reject Project',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                     ),
                     content: TextField(
                       controller: reasonController,
@@ -354,7 +357,10 @@ class _ApiNewProjectsTab extends ConsumerWidget {
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
                         child: Text('Cancel',
-                            style: GoogleFonts.outfit(color: Colors.grey)),
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF30628E))),
                       ),
                       ElevatedButton(
                         onPressed: () {
@@ -371,7 +377,10 @@ class _ApiNewProjectsTab extends ConsumerWidget {
                         style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFB7185)),
                         child: Text('Reject',
-                            style: GoogleFonts.outfit(color: Colors.white)),
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF30628E))),
                       ),
                     ],
                   ),
@@ -508,7 +517,7 @@ class _ApiNewTasksTab extends ConsumerWidget {
                   builder: (ctx) => AlertDialog(
                     title: Text(
                       'Reject Task Creation',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                     ),
                     content: TextField(
                       controller: reasonController,
@@ -524,7 +533,10 @@ class _ApiNewTasksTab extends ConsumerWidget {
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
                         child: Text('Cancel',
-                            style: GoogleFonts.outfit(color: Colors.grey)),
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF30628E))),
                       ),
                       ElevatedButton(
                         onPressed: () {
@@ -541,7 +553,10 @@ class _ApiNewTasksTab extends ConsumerWidget {
                         style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFB7185)),
                         child: Text('Reject',
-                            style: GoogleFonts.outfit(color: Colors.white)),
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF30628E))),
                       ),
                     ],
                   ),
@@ -612,7 +627,7 @@ class _ApiTaskCompletionsTab extends ConsumerWidget {
                   builder: (ctx) => AlertDialog(
                     title: Text(
                       'Reject Task Completion',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                     ),
                     content: TextField(
                       controller: reasonController,
@@ -628,7 +643,10 @@ class _ApiTaskCompletionsTab extends ConsumerWidget {
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
                         child: Text('Cancel',
-                            style: GoogleFonts.outfit(color: Colors.grey)),
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF30628E))),
                       ),
                       ElevatedButton(
                         onPressed: () {
@@ -645,7 +663,10 @@ class _ApiTaskCompletionsTab extends ConsumerWidget {
                         style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFB7185)),
                         child: Text('Reject',
-                            style: GoogleFonts.outfit(color: Colors.white)),
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF30628E))),
                       ),
                     ],
                   ),
@@ -726,8 +747,8 @@ class _ApiProjectCard extends HookWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.05),
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
@@ -750,7 +771,7 @@ class _ApiProjectCard extends HookWidget {
                 boxShadow: [
                   BoxShadow(
                     color:
-                        Colors.black.withOpacity(isHovered.value ? 0.2 : 0.1),
+                        Colors.black.withValues(alpha: isHovered.value ? 0.2 : 0.1),
                     blurRadius: isHovered.value ? 20 : 10,
                     offset: Offset(0, isHovered.value ? 10 : 4),
                   ),
@@ -767,7 +788,7 @@ class _ApiProjectCard extends HookWidget {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: iconColor.withOpacity(0.1),
+                            color: iconColor.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(icon, size: 24, color: iconColor),
@@ -779,12 +800,10 @@ class _ApiProjectCard extends HookWidget {
                             children: [
                               Text(
                                 name,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: isDark
-                                      ? Colors.white
-                                      : Colors.grey.shade900,
+                                  fontSize: 24,
+                                  color: const Color(0xFF191C1E),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -809,7 +828,7 @@ class _ApiProjectCard extends HookWidget {
                       const SizedBox(height: 16),
                       Text(
                         description.toString(),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                           color: isDark
                               ? Colors.grey.shade400
                               : Colors.grey.shade600,
@@ -922,7 +941,7 @@ class _ApiTaskCard extends HookWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isHovered.value ? 0.2 : 0.05),
+                color: Colors.black.withValues(alpha: isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 15 : 5,
                 offset: Offset(0, isHovered.value ? 8 : 2),
               ),
@@ -966,11 +985,10 @@ class _ApiTaskCard extends HookWidget {
                           const SizedBox(height: 12),
                           Text(
                             taskTitle,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color:
-                                  isDark ? Colors.white : Colors.grey.shade900,
+                              fontSize: 24,
+                              color: const Color(0xFF191C1E),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -1072,7 +1090,7 @@ class _ApiTaskCompletionCard extends HookWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isHovered.value ? 0.2 : 0.05),
+                color: Colors.black.withValues(alpha: isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 15 : 5,
                 offset: Offset(0, isHovered.value ? 8 : 2),
               ),
@@ -1107,11 +1125,10 @@ class _ApiTaskCompletionCard extends HookWidget {
                           const SizedBox(height: 12),
                           Text(
                             taskTitle,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color:
-                                  isDark ? Colors.white : Colors.grey.shade900,
+                              fontSize: 24,
+                              color: const Color(0xFF191C1E),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -1213,7 +1230,7 @@ class _ProjectClosureCard extends HookWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.purple.withOpacity(isHovered.value ? 0.2 : 0.05),
+                color: Colors.purple.withValues(alpha: isHovered.value ? 0.2 : 0.05),
                 blurRadius: isHovered.value ? 25 : 10,
                 offset: Offset(0, isHovered.value ? 12 : 4),
               ),
@@ -1235,7 +1252,7 @@ class _ProjectClosureCard extends HookWidget {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.purple.withOpacity(0.1),
+                                  color: Colors.purple.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(Icons.archive_outlined,
@@ -1245,12 +1262,10 @@ class _ProjectClosureCard extends HookWidget {
                               Expanded(
                                 child: Text(
                                   projectName,
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: isDark
-                                        ? Colors.white
-                                        : Colors.grey.shade900,
+                                    fontSize: 24,
+                                    color: const Color(0xFF191C1E),
                                   ),
                                 ),
                               ),
@@ -1273,7 +1288,7 @@ class _ProjectClosureCard extends HookWidget {
                             const SizedBox(height: 16),
                             Text(
                               description,
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.inter(
                                 color: isDark
                                     ? Colors.grey.shade400
                                     : Colors.grey.shade600,
@@ -1360,10 +1375,10 @@ class _ExecutiveStatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(isDark ? 0.15 : 0.1),
+        color: color.withValues(alpha: isDark ? 0.15 : 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -1376,7 +1391,7 @@ class _ExecutiveStatusChip extends StatelessWidget {
           ],
           Text(
             label.toUpperCase(),
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               color: color,
               fontSize: 10,
               fontWeight: FontWeight.bold,
@@ -1424,19 +1439,19 @@ class _ExecutiveActionButtonState extends State<_ExecutiveActionButton> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: widget.isPrimary
-                ? (_isHovered ? widget.color.withOpacity(0.8) : widget.color)
+                ? (_isHovered ? widget.color.withValues(alpha: 0.8) : widget.color)
                 : (_isHovered
-                    ? widget.color.withOpacity(0.1)
+                    ? widget.color.withValues(alpha: 0.1)
                     : Colors.transparent),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: widget.color.withOpacity(widget.isPrimary ? 1.0 : 0.5),
+              color: widget.color.withValues(alpha: widget.isPrimary ? 1.0 : 0.5),
               width: 1.5,
             ),
             boxShadow: (widget.isPrimary && _isHovered)
                 ? [
                     BoxShadow(
-                      color: widget.color.withOpacity(0.4),
+                      color: widget.color.withValues(alpha: 0.4),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     )
@@ -1454,10 +1469,10 @@ class _ExecutiveActionButtonState extends State<_ExecutiveActionButton> {
               const SizedBox(width: 8),
               Text(
                 widget.label,
-                style: GoogleFonts.outfit(
-                  color: widget.isPrimary ? Colors.white : widget.color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF30628E),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
             ],
@@ -1496,7 +1511,7 @@ Widget _buildRequesterInfo(String email, bool isDark) {
       const SizedBox(width: 6),
       Text(
         email,
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: isDark ? Colors.blue.shade200 : Colors.blue.shade700,
@@ -1523,14 +1538,14 @@ Widget _buildSmartFooterDate(DateTime? date, bool isDark) {
           children: [
             TextSpan(
               text: 'Raised on ',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
               ),
             ),
             TextSpan(
               text: _formatSmartDate(date),
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
@@ -1568,7 +1583,7 @@ class _NewClientsTab extends ConsumerWidget {
                 const SizedBox(height: 16),
                 Text(
                   'No pending client approvals',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontSize: 16,
                     color:
                         isDark ? Colors.grey.shade400 : Colors.grey.shade500,
@@ -1599,7 +1614,7 @@ class _NewClientsTab extends ConsumerWidget {
       error: (error, stackTrace) => Center(
         child: Text(
           'Error: ${error.toString()}',
-          style: GoogleFonts.outfit(color: Colors.red),
+          style: GoogleFonts.inter(color: Colors.red),
         ),
       ),
     );
@@ -1703,11 +1718,11 @@ class _ClientApprovalCard extends HookWidget {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: isDark
-              ? Colors.grey.shade900.withOpacity(isHovering.value ? 0.8 : 0.5)
-              : Colors.white.withOpacity(isHovering.value ? 1 : 0.9),
+              ? Colors.grey.shade900.withValues(alpha: isHovering.value ? 0.8 : 0.5)
+              : Colors.white.withValues(alpha: isHovering.value ? 1 : 0.9),
           border: Border.all(
             color: isDark
-                ? Colors.white.withOpacity(0.1)
+                ? Colors.white.withValues(alpha: 0.1)
                 : Colors.grey.shade200,
             width: 1,
           ),
@@ -1715,7 +1730,7 @@ class _ClientApprovalCard extends HookWidget {
           boxShadow: isHovering.value
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(
+                    color: Colors.black.withValues(alpha: 
                         isDark ? 0.3 : 0.08),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
@@ -1734,7 +1749,7 @@ class _ClientApprovalCard extends HookWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF7EC8F4).withOpacity(isDark ? 0.2 : 0.1),
+                      color: const Color(0xFF7EC8F4).withValues(alpha: isDark ? 0.2 : 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -1750,7 +1765,7 @@ class _ClientApprovalCard extends HookWidget {
                       children: [
                         Text(
                           clientName,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : Colors.black87,
@@ -1758,7 +1773,7 @@ class _ClientApprovalCard extends HookWidget {
                         ),
                         Text(
                           companyName,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             color: isDark
                                 ? Colors.grey.shade400
@@ -1824,7 +1839,7 @@ class _ClientApprovalCard extends HookWidget {
         const SizedBox(width: 8),
         Text(
           '$label: ',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontSize: 12,
             color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
           ),
@@ -1832,7 +1847,7 @@ class _ClientApprovalCard extends HookWidget {
         Expanded(
           child: Text(
             value,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: isDark ? Colors.white : Colors.black87,
@@ -1868,7 +1883,7 @@ class _RejectClientDialogState extends State<_RejectClientDialog> {
       backgroundColor: widget.isDark ? Colors.grey.shade900 : Colors.white,
       title: Text(
         'Reject Client',
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
           fontWeight: FontWeight.bold,
           color: widget.isDark ? Colors.white : Colors.black87,
         ),
@@ -1879,7 +1894,7 @@ class _RejectClientDialogState extends State<_RejectClientDialog> {
         children: [
           Text(
             'Provide a reason for rejecting this client (optional):',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 13,
               color: widget.isDark ? Colors.grey.shade300 : Colors.grey.shade700,
             ),
@@ -1888,12 +1903,12 @@ class _RejectClientDialogState extends State<_RejectClientDialog> {
           TextField(
             controller: reasonController,
             maxLines: 3,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               color: widget.isDark ? Colors.white : Colors.black87,
             ),
             decoration: InputDecoration(
               hintText: 'Enter rejection reason...',
-              hintStyle: GoogleFonts.outfit(
+              hintStyle: GoogleFonts.inter(
                 color: widget.isDark ? Colors.grey.shade500 : Colors.grey.shade400,
               ),
               filled: true,
@@ -1919,8 +1934,10 @@ class _RejectClientDialogState extends State<_RejectClientDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(
             'Cancel',
-            style: GoogleFonts.outfit(
-              color: widget.isDark ? Colors.grey.shade300 : Colors.grey.shade600,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF30628E),
             ),
           ),
         ),
@@ -1934,9 +1951,10 @@ class _RejectClientDialogState extends State<_RejectClientDialog> {
           },
           child: Text(
             'Reject',
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF30628E),
             ),
           ),
         ),

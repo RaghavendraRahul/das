@@ -6,6 +6,7 @@ import 'package:project_pm/src/core/networking/api_client.dart';
 import 'package:project_pm/src/features/team/team_api_service.dart';
 import 'package:project_pm/src/features/auth/auth_state_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:drift/drift.dart' as drift;
 import '../utils/user_color_service.dart';
 
 /// Current user ID - handles role-based authorization for user switching
@@ -181,22 +182,34 @@ final currentUserProvider = FutureProvider<User?>((ref) async {
       reportingManagerId: null,
     );
 
-    // If it's web, we still want to fetch the full profile in the background
-    // but we return the basic user immediately to unblock the UI.
-    if (kIsWeb) {
-      // Trigger background update without awaiting it for the initial return
-      _fetchFullProfile(ref, userId).then((fullUser) {
-        // Background fetch complete
-      }).catchError((e) {
-        debugPrint('Background profile fetch failed: $e');
-        return null;
-      });
+    // For local database, we still want the specific user record if possible
+    final db = ref.read(databaseProvider);
+    
+    // Trigger background update without awaiting it for the initial return
+    _fetchFullProfile(ref, userId).then((fullUser) async {
+      if (fullUser != null && !kIsWeb) {
+        // Update local database with the latest profile from server
+        await db.into(db.users).insertOnConflictUpdate(
+          UsersCompanion(
+            id: drift.Value(fullUser.id),
+            name: drift.Value(fullUser.name),
+            email: drift.Value(fullUser.email),
+            role: drift.Value(fullUser.role),
+            department: drift.Value(fullUser.department),
+            avatarUrl: drift.Value(fullUser.avatarUrl),
+          )
+        );
+        // Invalidate so the UI rebuilds with the new localUser
+        ref.invalidateSelf();
+      }
+    }).catchError((e) {
+      debugPrint('Background profile fetch failed: $e');
+    });
 
+    if (kIsWeb) {
       return basicUser;
     }
 
-    // For local database, we still want the specific user record if possible
-    final db = ref.read(databaseProvider);
     final localUser = await (db.select(db.users)
           ..where((t) => t.id.equals(userId)))
         .getSingleOrNull();
@@ -204,18 +217,30 @@ final currentUserProvider = FutureProvider<User?>((ref) async {
   }
 
   // 2. FALLBACK PATH: Only used if authState is missing (unlikely if authenticated)
-  if (kIsWeb) {
-    try {
-      return await _fetchFullProfile(ref, userId);
-    } catch (e) {
-      debugPrint('Error in fallback profile fetch: $e');
-      return null;
+  try {
+    final fullUser = await _fetchFullProfile(ref, userId);
+    if (fullUser != null && !kIsWeb) {
+      final db = ref.read(databaseProvider);
+      await db.into(db.users).insertOnConflictUpdate(
+        UsersCompanion(
+          id: drift.Value(fullUser.id),
+          name: drift.Value(fullUser.name),
+          email: drift.Value(fullUser.email),
+          role: drift.Value(fullUser.role),
+          department: drift.Value(fullUser.department),
+          avatarUrl: drift.Value(fullUser.avatarUrl),
+        )
+      );
     }
+    return fullUser;
+  } catch (e) {
+    debugPrint('Error in fallback profile fetch: $e');
+    if (!kIsWeb) {
+      final db = ref.read(databaseProvider);
+      return (db.select(db.users)..where((t) => t.id.equals(userId))).getSingleOrNull();
+    }
+    return null;
   }
-
-  final db = ref.read(databaseProvider);
-  return (db.select(db.users)..where((t) => t.id.equals(userId)))
-      .getSingleOrNull();
 });
 
 /// Helper to fetch full profile from API

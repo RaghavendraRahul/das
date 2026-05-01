@@ -32,15 +32,15 @@ Dio dio(DioRef ref) {
       ? dartDefineUrl
       : (envUrl != null && envUrl.isNotEmpty)
           ? envUrl
-          : 'http://127.0.0.1:8000/api/';
-          // : 'https://dasbackendapi.meridahr.com/api/';
+          // : 'http://127.0.0.1:8000/api/';
+          : 'https://dasbackendapi.meridahr.com/api/';
 
 
   if (defaultTargetPlatform == TargetPlatform.android &&
       !kIsWeb &&
       dartDefineUrl.isEmpty &&
       (envUrl == null || envUrl.isEmpty)) {
-    baseUrl = 'http://10.0.2.2:8000/api/';
+    baseUrl = 'https://dasbackendapi.meridahr.com/api/';
   }
 
   // Log the base URL being used (helpful for debugging)

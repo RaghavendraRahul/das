@@ -48,31 +48,34 @@ class ProjectWorkingReport extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (selectedMonth == null)
-              _MainTitleSection(isDark: isDark)
-            else
-              _DrillDownHeader(
-                title: selectedMonth,
-                onBack: () => ref.read(workingReportDetailMonthProvider.notifier).state = null,
-                isDark: isDark,
-              ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (selectedMonth == null)
+                _MainTitleSection(isDark: isDark)
+              else
+                _DrillDownHeader(
+                  title: selectedMonth,
+                  onBack: () => ref.read(workingReportDetailMonthProvider.notifier).state = null,
+                  isDark: isDark,
+                ),
 
-            if (selectedMonth == null)
-              _HeaderSection(
-                currentView: currentView,
-                selectedYear: selectedYear,
-                isEmployee: isEmployee,
-                currentScope: currentScope,
-                onScopeChanged: (val) => ref.read(workingReportScopeProvider.notifier).state = val,
-                onViewChanged: (val) => ref.read(workingReportViewProvider.notifier).state = val,
-                onYearChanged: (val) => ref.read(workingReportYearProvider.notifier).state = val,
-                isDark: isDark,
-              ),
-          ],
+              if (selectedMonth == null)
+                _HeaderSection(
+                  currentView: currentView,
+                  selectedYear: selectedYear,
+                  isEmployee: isEmployee,
+                  currentScope: currentScope,
+                  onScopeChanged: (val) => ref.read(workingReportScopeProvider.notifier).state = val,
+                  onViewChanged: (val) => ref.read(workingReportViewProvider.notifier).state = val,
+                  onYearChanged: (val) => ref.read(workingReportYearProvider.notifier).state = val,
+                  isDark: isDark,
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         _ReportCard(
@@ -178,10 +181,10 @@ class _MainTitleSection extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           "Project Working Status",
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF05263E),
+          style: GoogleFonts.manrope(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF002E6A),
             letterSpacing: -0.5,
           ),
         ),
@@ -346,7 +349,7 @@ class _SegmentedControl<T> extends StatelessWidget {
                   Text(
                     entry.value.label,
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600, // SemiBold
                       color: isSelected
                           ? (isDark ? Colors.white : Colors.black)
@@ -400,7 +403,7 @@ class _ModernYearPicker extends StatelessWidget {
                 Text(
                   selectedYear.toString(),
                   style: GoogleFonts.inter(
-                    fontSize: 10, 
+                    fontSize: 12, 
                     fontWeight: FontWeight.w600, // SemiBold
                     color: isDark ? Colors.white : Colors.black,
                   ),
@@ -1009,7 +1012,7 @@ Widget _buildLineChart({
                   children: [
                     TextSpan(
                       text: '${spot.y.toInt()} $labelSuffix\n',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         color: isDark ? Colors.white : Colors.black,
                         fontWeight: FontWeight.w900,
                         fontSize: 16,

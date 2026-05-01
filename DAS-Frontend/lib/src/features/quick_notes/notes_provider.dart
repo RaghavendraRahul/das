@@ -293,4 +293,4 @@ final availableQuickNoteFonts = [
   'Tinos',              // Similar to Times New Roman
 ];
 
-final quickNoteFontProvider = StateProvider<String>((ref) => 'Roboto');
+final quickNoteFontProvider = StateProvider<String>((ref) => 'Inter');

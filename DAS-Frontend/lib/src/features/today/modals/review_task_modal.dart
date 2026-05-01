@@ -362,8 +362,8 @@ class _OptionCard extends StatelessWidget {
           ),
           color: isSelected
               ? (isDark
-                  ? Colors.blue.withOpacity(0.1)
-                  : Colors.blue.withOpacity(0.05))
+                  ? Colors.blue.withValues(alpha: 0.1)
+                  : Colors.blue.withValues(alpha: 0.05))
               : Colors.transparent,
         ),
         child: Row(

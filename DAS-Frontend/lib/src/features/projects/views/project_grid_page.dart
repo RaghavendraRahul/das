@@ -78,7 +78,7 @@ class _ProjectGridView extends StatelessWidget {
                   boxShadow: [
                     if (!isDark)
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -98,7 +98,7 @@ class _ProjectGridView extends StatelessWidget {
                                   : Colors.grey.shade200),
                         ),
                         color: isDark
-                            ? Colors.grey.shade800.withOpacity(0.5)
+                            ? Colors.grey.shade800.withValues(alpha: 0.5)
                             : Colors.grey.shade50,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(24),
@@ -170,7 +170,7 @@ class _ProjectGridView extends StatelessWidget {
                                           decoration: BoxDecoration(
                                             color: isDark
                                                 ? Colors.yellow.shade900
-                                                    .withOpacity(0.3)
+                                                    .withValues(alpha: 0.3)
                                                 : Colors.yellow.shade100,
                                             borderRadius:
                                                 BorderRadius.circular(4),
@@ -376,39 +376,39 @@ class _ProjectGridView extends StatelessWidget {
 
     if (task.approvalStatus == 'pending_creation') {
       bg = isDark
-          ? Colors.yellow.shade900.withOpacity(0.3)
+          ? Colors.yellow.shade900.withValues(alpha: 0.3)
           : Colors.yellow.shade100;
       text = isDark ? Colors.yellow.shade300 : Colors.yellow.shade800;
       label = "New";
     } else if (task.approvalStatus == 'pending_completion') {
       bg = isDark
-          ? Colors.orange.shade900.withOpacity(0.3)
+          ? Colors.orange.shade900.withValues(alpha: 0.3)
           : Colors.orange.shade100;
       text = isDark ? Colors.orange.shade300 : Colors.orange.shade800;
       label = "Awaiting Approval";
     } else if (task.approvalStatus == 'approved' && task.progress >= 100) {
       bg = isDark
-          ? Colors.green.shade900.withOpacity(0.3)
+          ? Colors.green.shade900.withValues(alpha: 0.3)
           : Colors.green.shade100;
       text = isDark ? Colors.green.shade300 : Colors.green.shade800;
       label = "Verified";
     } else if (task.approvalStatus == 'rejected') {
-      bg = isDark ? Colors.red.shade900.withOpacity(0.3) : Colors.red.shade100;
+      bg = isDark ? Colors.red.shade900.withValues(alpha: 0.3) : Colors.red.shade100;
       text = isDark ? Colors.red.shade300 : Colors.red.shade800;
       label = "Rejected";
     } else if (task.progress < 100 && task.endDate.isBefore(today)) {
       final days = today.difference(task.endDate).inDays;
-      bg = isDark ? Colors.red.shade900.withOpacity(0.3) : Colors.red.shade50;
+      bg = isDark ? Colors.red.shade900.withValues(alpha: 0.3) : Colors.red.shade50;
       text = isDark ? Colors.red.shade300 : Colors.red;
       label = "Delayed (${days}d)";
     } else if (task.progress >= 100) {
       bg = isDark
-          ? Colors.green.shade900.withOpacity(0.3)
+          ? Colors.green.shade900.withValues(alpha: 0.3)
           : Colors.green.shade100;
       text = isDark ? Colors.green.shade300 : Colors.green.shade800;
       label = "Completed";
     } else {
-      bg = isDark ? Colors.blue.shade900.withOpacity(0.3) : Colors.blue.shade50;
+      bg = isDark ? Colors.blue.shade900.withValues(alpha: 0.3) : Colors.blue.shade50;
       text = isDark ? Colors.blue.shade300 : Colors.blue.shade700;
       label = "In Progress";
     }

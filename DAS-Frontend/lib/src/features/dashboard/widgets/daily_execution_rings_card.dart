@@ -53,10 +53,10 @@ class DailyExecutionRingsCard extends HookConsumerWidget {
                   const SizedBox(width: 12),
                   Text(
                     'Daily Execution Analytics',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF05263E),
+                    style: GoogleFonts.manrope(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? const Color(0xFFB0DFFF) : const Color(0xFF002E6A),
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -528,8 +528,8 @@ class _LegendRow extends StatelessWidget {
                         title,
                         style: GoogleFonts.inter(
                           fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF0D1B2A),
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.white : const Color(0xFF334155),
                         ),
                       ),
                       Text(

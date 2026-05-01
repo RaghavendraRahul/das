@@ -5,6 +5,7 @@ import 'package:project_pm/src/features/today/widgets/task_config_modal.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/database/database.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // ── Figma colour palette for month event chips ──────────────────────────────
 class _ChipPalette {
@@ -231,10 +232,10 @@ class MonthView extends HookConsumerWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: navy.withOpacity(0.08),
+                      color: navy.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(20),
                       border:
-                          Border.all(color: navy.withOpacity(0.2)),
+                          Border.all(color: navy.withValues(alpha: 0.2)),
                     ),
                     child: Text(
                       'Today',
@@ -444,7 +445,7 @@ class MonthView extends HookConsumerWidget {
                         final isDragHover = candidateData.isNotEmpty;
 
                         final dayColor = isDragHover
-                            ? todayBlue.withOpacity(isDark ? 0.15 : 0.05)
+                            ? todayBlue.withValues(alpha: isDark ? 0.15 : 0.05)
                             : null;
 
                         return InkWell(
@@ -551,9 +552,9 @@ class MonthView extends HookConsumerWidget {
                                               ),
                                               child: Text(
                                                 title,
-                                                style: TextStyle(
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.w600,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
                                                   color: chip.text,
                                                 ),
                                                 maxLines: 1,
@@ -651,7 +652,7 @@ class MonthView extends HookConsumerWidget {
                                               BorderRadius.circular(6),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: todayBlue.withOpacity(
+                                              color: todayBlue.withValues(alpha: 
                                                   0.3),
                                               blurRadius: 4,
                                               offset: const Offset(0, 1),
@@ -673,7 +674,7 @@ class MonthView extends HookConsumerWidget {
                                     child: Icon(
                                         Icons.add_circle_outline_rounded,
                                         color:
-                                            todayBlue.withOpacity(0.5),
+                                            todayBlue.withValues(alpha: 0.5),
                                         size: 28),
                                   ),
                               ],
@@ -736,7 +737,7 @@ class MonthView extends HookConsumerWidget {
                     children: [
                       Text(
                         title,
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: chip.text,

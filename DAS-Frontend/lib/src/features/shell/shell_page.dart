@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/core/constants/enums.dart';
 import 'package:project_pm/src/core/database/database.dart';
 
@@ -61,7 +62,6 @@ class ShellPage extends ConsumerWidget {
     final currentViewMode = _viewModeFromPath(currentPath);
 
     // Check if a project is selected AND we are currently on a project sub-page
-    final selectedProjectId = ref.watch(selectedProjectIdProvider);
     final onProjectSubPage = _isProjectSubPage(currentViewMode);
 
     // RESTORE logic is now handled by the persisted selectedProjectIdProvider itself
@@ -345,7 +345,7 @@ class ShellPage extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -614,12 +614,12 @@ class _AppBarProjectSelector extends ConsumerWidget {
     // Dark mode: dark container → white text
     // Light mode: light container → dark text
     final textColor = isDark ? Colors.white : const Color(0xFF05263E);
-    final labelColor = isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B);
+    final labelColor = isDark ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF64748B);
 
     if (allProjects.length <= 1) {
       return Text(
         "PROJECT: ${project.name.toUpperCase()}",
-        style: TextStyle(
+        style: GoogleFonts.manrope(
           fontWeight: FontWeight.w800,
           fontSize: isMobile ? 16 : 18,
           letterSpacing: -0.5,
@@ -635,7 +635,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
         color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
+            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       child: Row(
@@ -643,7 +643,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
         children: [
           Text(
             "PROJECT:",
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontWeight: FontWeight.bold,
               fontSize: isMobile ? 11 : 12,
               color: labelColor,
@@ -659,7 +659,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
                     size: 24,
                     color: textColor),
                 dropdownColor: isDark ? const Color(0xFF1F2937) : Colors.white,
-                style: TextStyle(
+                style: GoogleFonts.manrope(
                   fontWeight: FontWeight.w800,
                   fontSize: isMobile ? 16 : 18,
                   letterSpacing: -0.5,
@@ -673,7 +673,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
                         p.project.name.toUpperCase(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: GoogleFonts.manrope(
                           fontWeight: FontWeight.w800,
                           fontSize: isMobile ? 16 : 18,
                           letterSpacing: -0.5,
@@ -690,7 +690,7 @@ class _AppBarProjectSelector extends ConsumerWidget {
                             p.project.name.toUpperCase(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.w800,
                               fontSize: isMobile ? 16 : 18,
                               letterSpacing: -0.5,

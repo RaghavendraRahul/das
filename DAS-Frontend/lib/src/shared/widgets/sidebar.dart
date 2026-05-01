@@ -12,6 +12,7 @@ import 'package:project_pm/src/core/database/database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ignore: avoid_web_libraries_in_flutter
+// ignore: deprecated_member_use
 import 'dart:html' as html;
 
 // ── Design tokens ────────────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ class Sidebar extends HookConsumerWidget {
           _LogoArea(
             onTap: () {
               ref.read(selectedProjectIdProvider.notifier).state = null;
-              onViewModeChange(ViewMode.projects);
+              onViewModeChange(ViewMode.dashboard);
             },
           ),
 
@@ -223,33 +224,18 @@ class _LogoArea extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 80,
+        height: 90,
         alignment: Alignment.center,
         decoration: const BoxDecoration(
           border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 54,
-              height: 54,
-              child: Image.asset(
-                'assets/images/logo.jpeg',
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              'DAS',
-              style: GoogleFonts.orbitron(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2,
-                color: Colors.white,
-              ),
-            ),
-          ],
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Image.asset(
+            'assets/images/favicon.png',
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );
@@ -315,7 +301,7 @@ class _NavBoxState extends State<_NavBox> {
                     boxShadow: widget.isActive
                         ? [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             )
@@ -420,20 +406,14 @@ class _BottomArea extends StatelessWidget {
                   radius: 20,
                   backgroundColor:
                       UserColorService.getColorForUser(currentUser.id),
-                  backgroundImage: currentUser.avatarUrl.isNotEmpty
+                  backgroundImage: (currentUser.avatarUrl.isNotEmpty && 
+                                   !currentUser.avatarUrl.contains('ui-avatars.com'))
                       ? NetworkImage(currentUser.avatarUrl)
                       : null,
-                  child: currentUser.avatarUrl.isEmpty
+                  child: (currentUser.avatarUrl.isEmpty || 
+                          currentUser.avatarUrl.contains('ui-avatars.com'))
                       ? Text(
-                          (() {
-                            final name = currentUser.name.trim();
-                            if (name.isEmpty) return '?';
-                            final parts = name.split(RegExp(r'\s+'));
-                            if (parts.length > 1 && parts[1].isNotEmpty) {
-                              return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-                            }
-                            return parts[0][0].toUpperCase();
-                          })(),
+                          UserColorService.getInitials(currentUser.name),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -453,10 +433,10 @@ class _BottomArea extends StatelessWidget {
                     width: 52,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.12),
+                      color: Colors.red.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: Colors.red.withOpacity(0.15)),
+                          color: Colors.red.withValues(alpha: 0.15)),
                     ),
                     child: Icon(
                       FontAwesomeIcons.rightFromBracket,

@@ -820,24 +820,28 @@ Future<List<ProjectModel>> monthlyCompletedProjects(
     MonthlyCompletedProjectsRef ref, MonthlyReportParams params) async {
   final apiService = ref.watch(taskApiServiceProvider);
 
-  // Parse "March 2026"
+  // Robust Parsing for "March 2026" or just "March"
   final parts = params.monthYear.split(' ');
-  if (parts.length != 2) return [];
-
   final monthName = parts[0];
-  final year = int.tryParse(parts[1]) ?? DateTime.now().year;
+  final year = parts.length >= 2 ? (int.tryParse(parts[1]) ?? DateTime.now().year) : DateTime.now().year;
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  final month = monthNames.indexOf(monthName) + 1;
+  
+  // Find month index by comparing first 3 letters (case-insensitive)
+  final month = monthNames.indexWhere(
+    (m) => m.toLowerCase().startsWith(monthName.toLowerCase().substring(0, monthName.length.clamp(0, 3)))
+  ) + 1;
 
   if (month == 0) return [];
 
-  // Widen range to ensure we find projects completed in this month even if they have different start/end dates
-  final yearStartDate = '$year-01-01';
-  final yearEndDate = '$year-12-31';
+  final startDate = DateTime(year, month, 1);
+  final endDate = month == 12 ? DateTime(year + 1, 1, 0) : DateTime(year, month + 1, 0);
+
+  final startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
+  final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
   final queryParams = <String, dynamic>{
     if (params.scope != null) 'filter': params.scope!.toLowerCase(),
@@ -846,26 +850,40 @@ Future<List<ProjectModel>> monthlyCompletedProjects(
   };
 
   try {
+    // 1. Resolve target user ID once
+    final currentUserIdStr = ref.watch(currentUserIdProvider);
+    final currentUserId = int.tryParse(currentUserIdStr ?? '');
+    final targetUserId = params.userId ?? currentUserId;
+
+    debugPrint('DEBUG: DrillDown Project - monthYear: ${params.monthYear}, month: $month, year: $year, targetUserId: $targetUserId, scope: ${params.scope}');
+
+    // 2. Fetch projects from backend with strict scope filtering
     final projects = await apiService.getProjects(
       params: {
         ...queryParams,
-        'completion_start_date': yearStartDate,
-        'completion_end_date': yearEndDate,
-        if (params.userId != null) 'user_id': params.userId,
-        if (params.search != null && params.search!.isNotEmpty)
-          'search': params.search,
+        'completion_start_date': startDateStr,
+        'completion_end_date': endDateStr,
+        if (targetUserId != null) 'user_id': targetUserId,
       },
     );
 
-    // FRONTEND FILTER: Ensure we only show projects completed in the SPECIFIC month
-    // Note: The backend getProjects usually returns projects with a 'completed_at' field
-    // We check for various possible field names or just trust the backend filter if it's strict.
-    // However, to be safe and consistent with tasks:
+    // 3. FRONTEND FILTER: Ensure we only show projects completed in the SPECIFIC month
+    // We also keep a safety check for involvement if scope is 'my'
     return projects.where((p) {
-      // Assuming ProjectModel has a way to identify completion date
-      // If the backend strict filters by completion_start_date/end_date, we might not need local filtering,
-      // but let's keep it consistent if possible.
-      return true; // The backend getProjects with completion_date is usually strict enough.
+      if (p.completedDate == null) return false;
+      
+      final matchesDate = p.completedDate!.month == month && p.completedDate!.year == year;
+      if (!matchesDate) return false;
+
+      // If scope is 'my', apply parity check with chart logic
+      if (params.scope?.toLowerCase() == 'my') {
+        if (targetUserId == null) return true; // Show all if user ID not yet available
+        
+        return (p.assigneeIds?.contains(targetUserId) ?? false) ||
+               p.projectLeadId == targetUserId;
+      }
+      
+      return true;
     }).toList();
   } catch (e) {
     debugPrint('Error in monthlyCompletedProjectsProvider: $e');
@@ -878,28 +896,21 @@ Future<List<TaskModel>> monthlyCompletedTasks(
     MonthlyCompletedTasksRef ref, MonthlyReportParams params) async {
   final apiService = ref.watch(taskApiServiceProvider);
 
-  // Parse "March 2026"
+  // Robust Parsing for "March 2026" or just "March"
   final parts = params.monthYear.split(' ');
-  if (parts.length != 2) return [];
-
   final monthName = parts[0];
-  final year = int.tryParse(parts[1]) ?? DateTime.now().year;
+  final year = parts.length >= 2 ? (int.tryParse(parts[1]) ?? DateTime.now().year) : DateTime.now().year;
 
   const monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  final month = monthNames.indexOf(monthName) + 1;
+  
+  // Find month index by comparing first 3 letters (case-insensitive)
+  final month = monthNames.indexWhere(
+    (m) => m.toLowerCase().startsWith(monthName.toLowerCase().substring(0, monthName.length.clamp(0, 3)))
+  ) + 1;
+
   if (month == 0) return [];
 
   final startDate = DateTime(year, month, 1);
@@ -918,25 +929,40 @@ Future<List<TaskModel>> monthlyCompletedTasks(
   };
 
   try {
-    // Fetch tasks specifically completed in this month
+    // 1. Resolve target user ID once
+    final currentUserIdStr = ref.watch(currentUserIdProvider);
+    final currentUserId = int.tryParse(currentUserIdStr ?? '');
+    final targetUserId = params.userId ?? currentUserId;
+
+    debugPrint('DEBUG: DrillDown Task - monthYear: ${params.monthYear}, month: $month, year: $year, targetUserId: $targetUserId, scope: ${params.scope}');
+
+    // 2. Fetch tasks specifically completed in this month
     final tasks = await apiService.getTasks(
-      userId: params.userId?.toString(),
+      userId: targetUserId?.toString(),
       search:
           params.search != null && params.search!.isNotEmpty ? params.search : null,
       params: queryParams,
     );
 
-    // FRONTEND FILTER: Ensure we only show tasks completed in the SPECIFIC month
-    return tasks.where((t) => 
-      t.completedAt != null && 
-      t.completedAt!.month == month && 
-      t.completedAt!.year == year
-    ).toList();
+    // 3. FRONTEND FILTER: Ensure we only show tasks completed in the SPECIFIC month
+    return tasks.where((t) {
+      final matchesDate = t.completedAt != null && 
+          t.completedAt!.month == month && 
+          t.completedAt!.year == year;
+      if (!matchesDate) return false;
+      
+      // If scope is 'my', apply parity check with chart logic
+      if (params.scope?.toLowerCase() == 'my') {
+        if (targetUserId == null) return true;
+        return t.assigneesList?.any((a) => a.user == targetUserId) ?? false;
+      }
+      
+      return true;
+    }).toList();
   } catch (e) {
     debugPrint('Error in monthlyCompletedTasksProvider: $e');
     return [];
   }
 }
-
 
 

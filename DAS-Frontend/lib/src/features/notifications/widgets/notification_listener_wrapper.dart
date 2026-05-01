@@ -163,7 +163,7 @@ class NotificationListenerWrapper extends ConsumerWidget {
                 ),
               ],
             ),
-            backgroundColor: color.withOpacity(0.95),
+            backgroundColor: color.withValues(alpha: 0.95),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),

@@ -3,6 +3,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/features/dashboard/widgets/modern_project_card.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/routes/app_router.dart';
@@ -283,9 +284,9 @@ class ProjectsPage extends HookConsumerWidget {
                           status: selectedStatus.value));
                     },
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('New Project',
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.bold)),
+                    label: Text('New Project',
+                        style: GoogleFonts.inter(
+                            fontSize: 12, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
@@ -350,7 +351,7 @@ class ProjectsPage extends HookConsumerWidget {
                             maxCrossAxisExtent: 360,
                             mainAxisSpacing: 16,
                             crossAxisSpacing: 16,
-                            childAspectRatio: 1.05,
+                            childAspectRatio: 0.72,
                           ),
                           itemCount: projects.length,
                           itemBuilder: (context, index) {
@@ -441,9 +442,9 @@ class _ProjectTypeButton extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: textColor,
               ),
             ),
@@ -532,9 +533,9 @@ class _StatusButton extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: textColor,
               ),
             ),

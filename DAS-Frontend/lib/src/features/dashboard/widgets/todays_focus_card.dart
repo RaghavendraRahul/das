@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_service.dart';
 
 class TodaysFocusCard extends StatelessWidget {
@@ -37,7 +38,7 @@ class TodaysFocusCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   "Today's Focus",
-                  style: TextStyle(
+                  style: GoogleFonts.manrope(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: isDark ? Colors.white : const Color(0xFF05263E),
@@ -52,7 +53,7 @@ class TodaysFocusCard extends StatelessWidget {
                       child: Text(
                         "No specific focus items for today.\nCheck your project plans!",
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           color: isDark ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
@@ -86,7 +87,7 @@ class TodaysFocusCard extends StatelessWidget {
                                       Expanded(
                                         child: Text(
                                           item.title,
-                                          style: const TextStyle(
+                                          style: GoogleFonts.inter(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                           ),

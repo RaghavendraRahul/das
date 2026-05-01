@@ -228,7 +228,7 @@ class TaskConfigModal extends HookConsumerWidget {
                             hintStyle: GoogleFonts.inter(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: Colors.white.withOpacity(0.6),
+                              color: Colors.white.withValues(alpha: 0.6),
                             ),
                             filled: false,
                             border: InputBorder.none,
@@ -426,7 +426,7 @@ class TaskConfigModal extends HookConsumerWidget {
                                   : Colors.grey.shade200),
                           borderRadius: BorderRadius.circular(8),
                           color: isDark
-                              ? Colors.grey.shade900.withOpacity(0.5)
+                              ? Colors.grey.shade900.withValues(alpha: 0.5)
                               : Colors.grey.shade50,
                         ),
                         child: ListView.builder(
@@ -523,7 +523,7 @@ class TaskConfigModal extends HookConsumerWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: selectedQuadrant.value == q.$1
-                                      ? q.$3.withOpacity(0.3)
+                                      ? q.$3.withValues(alpha: 0.3)
                                       : Colors.transparent,
                                   border: Border.all(
                                     color: selectedQuadrant.value == q.$1
@@ -583,7 +583,7 @@ class TaskConfigModal extends HookConsumerWidget {
                             ? Colors.grey.shade800
                             : Colors.orange.shade100,
                         thumbColor: isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316),
-                        overlayColor: (isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316)).withOpacity(0.4),
+                        overlayColor: (isDark ? const Color(0xFFFBBF24) : const Color(0xFFF97316)).withValues(alpha: 0.4),
                       ),
                       child: Slider(
                         value: duration.value.toDouble().clamp(15.0, 120.0),
@@ -628,7 +628,7 @@ class TaskConfigModal extends HookConsumerWidget {
                         foregroundColor: Colors.red.shade600,
                       ),
                       child: Text('Cancel',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12)),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -682,7 +682,7 @@ class TaskConfigModal extends HookConsumerWidget {
                             borderRadius: BorderRadius.circular(8)),
                       ),
                       child: Text('Confirm Plan',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white)),
                     ),
                   ),
                 ],

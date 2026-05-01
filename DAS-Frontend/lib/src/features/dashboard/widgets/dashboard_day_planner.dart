@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:project_pm/src/core/database/database.dart';
@@ -33,11 +34,11 @@ class DashboardDayPlanner extends ConsumerWidget {
                 children: [
                   Text(
                     'Daily Planner',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color:
-                              isDark ? Colors.white : const Color(0xFF05263E),
-                        ),
+                    style: GoogleFonts.manrope(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF05263E),
+                    ),
                   ),
                   Icon(
                     Icons.arrow_forward_ios,
@@ -154,8 +155,8 @@ class _DashboardQuadrantBox extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
               color: color,
               fontSize: 14,
             ),
@@ -166,7 +167,7 @@ class _DashboardQuadrantBox extends StatelessWidget {
               child: Center(
                 child: Text(
                   "Empty",
-                  style: TextStyle(
+                  style: GoogleFonts.inter(
                     color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
@@ -196,7 +197,7 @@ class _DashboardQuadrantBox extends StatelessWidget {
                       Expanded(
                         child: Text(
                           item.name,
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             color:
                                 isDark ? Colors.grey.shade300 : Colors.black87,
@@ -218,7 +219,7 @@ class _DashboardQuadrantBox extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 "+ ${items.length - 3} more",
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 10,
                   color: color,
                   fontWeight: FontWeight.bold,

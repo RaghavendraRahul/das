@@ -6,7 +6,6 @@ import 'package:project_pm/src/features/today/widgets/task_config_modal.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:project_pm/src/core/database/database.dart';
 
-import 'package:project_pm/src/features/today/widgets/add_activity_template_modal.dart';
 import 'package:project_pm/src/features/today/today_providers.dart';
 
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
@@ -87,11 +86,10 @@ class ActivityCatalog extends HookConsumerWidget {
                   children: [
                     Text(
                       "ACTIVITY CATALOG",
-                      style: GoogleFonts.inter(
-                        fontSize: 11, // Slightly larger for clarity
-                        fontWeight: FontWeight.w900, // Extra bold
-                        letterSpacing: 1.2, // More premium letter spacing
-                        color: isDark ? Colors.white : sidebarBlue,
+                      style: GoogleFonts.manrope(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : const Color(0xFF114A75),
                       ),
                     ),
                     // + New Catalog button — hidden
@@ -117,7 +115,8 @@ class ActivityCatalog extends HookConsumerWidget {
                         hintText: 'Search templates...',
                         hintStyle: GoogleFonts.inter(
                           color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
-                          fontSize: 11,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                         prefixIcon: Icon(Icons.search_rounded,
                             size: 16,
@@ -470,7 +469,7 @@ class _ExpandableCategory extends StatelessWidget {
                 boxShadow: isExpanded && !isDark
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 15,
                           offset: const Offset(0, 4),
                         )
@@ -482,7 +481,7 @@ class _ExpandableCategory extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.12),
+                      color: iconColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, size: 18, color: iconColor),
@@ -492,10 +491,9 @@ class _ExpandableCategory extends StatelessWidget {
                     child: Text(
                       title,
                       style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: isDark ? Colors.white : const Color(0xFF1F2937),
-                        letterSpacing: -0.2,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        color: isDark ? Colors.white : const Color(0xFF334155),
                       ),
                     ),
                   ),
@@ -511,8 +509,8 @@ class _ExpandableCategory extends StatelessWidget {
                       child: Text(
                         '$count',
                         style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
                       ),
@@ -604,12 +602,12 @@ class _ProjectTaskCard extends ConsumerWidget {
             color: isDark ? const Color(0xFF1F2937) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.blue.shade500.withOpacity(0.5),
+              color: Colors.blue.shade500.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -637,10 +635,10 @@ class _ProjectTaskCard extends ConsumerWidget {
                   Text(
                     "30 min • Drag to planner",
                     style: GoogleFonts.inter(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: Colors.blue.shade400,
                       decoration: TextDecoration.none,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -731,7 +729,7 @@ class _ProjectTaskCard extends ConsumerWidget {
             ? null
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04), // Lighter shadow
+                  color: Colors.black.withValues(alpha: 0.04), // Lighter shadow
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -768,11 +766,11 @@ class _ProjectTaskCard extends ConsumerWidget {
                       child: Text(
                         project.project.name,
                         style: GoogleFonts.inter(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: isDark
                               ? Colors.grey.shade400
-                              : Colors.grey.shade600,
+                              : const Color(0xFF334155),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -791,8 +789,9 @@ class _ProjectTaskCard extends ConsumerWidget {
                 Text(
                   task.task.name,
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFF334155),
                     height: 1.3,
                   ),
                   maxLines: 2,
@@ -813,14 +812,15 @@ class _ProjectTaskCard extends ConsumerWidget {
                             Text(
                               'Task: ',
                               style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: Colors.grey.shade500,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.grey.shade500 : const Color(0xFF334155),
                               ),
                             ),
                             Text(
                               taskDateText,
                               style: GoogleFonts.inter(
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: taskDateColor,
                               ),
@@ -833,15 +833,17 @@ class _ProjectTaskCard extends ConsumerWidget {
                             Text(
                               'Prj: ',
                               style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: Colors.grey.shade500,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.grey.shade500 : const Color(0xFF334155),
                               ),
                             ),
                             Text(
                               _formatDate(projectEnd),
                               style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: Colors.grey.shade500,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.grey.shade500 : const Color(0xFF334155),
                               ),
                             ),
                           ],
@@ -986,7 +988,7 @@ class _SystemTemplateCard extends ConsumerWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -1139,9 +1141,9 @@ class _SystemTemplateCard extends ConsumerWidget {
             child: Text(
               name,
               style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : Colors.grey.shade800,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : const Color(0xFF334155),
               ),
             ),
           ),
@@ -1233,7 +1235,7 @@ class _CatalogItemCard extends ConsumerWidget {
             border: Border.all(color: color, width: 2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1352,9 +1354,9 @@ class _CatalogItemCard extends ConsumerWidget {
                 Text(
                   catalogItem.name,
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.grey.shade800,
+                    color: isDark ? Colors.white : const Color(0xFF334155),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1370,7 +1372,7 @@ class _CatalogItemCard extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Row(
@@ -1383,7 +1385,7 @@ class _CatalogItemCard extends ConsumerWidget {
                             Text(
                               catalogItem.clientName!,
                               style: GoogleFonts.inter(
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.blue.shade700,
                               ),
@@ -1395,8 +1397,9 @@ class _CatalogItemCard extends ConsumerWidget {
                       Text(
                         catalogItem.description,
                         style: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.grey.shade400 : const Color(0xFF334155),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1494,7 +1497,7 @@ class _PendingTaskCard extends ConsumerWidget {
             border: Border.all(color: Colors.orange, width: 2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1512,17 +1515,18 @@ class _PendingTaskCard extends ConsumerWidget {
                   children: [
                     Text(
                       taskName,
-                      style: TextStyle(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: isDark ? Colors.white : Colors.black87,
+                        fontSize: 12,
+                        color: isDark ? Colors.white : const Color(0xFF334155),
                         decoration: TextDecoration.none,
                       ),
                     ),
                     Text(
                       '${minutesLeft}m remaining',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         color: Colors.orange.shade700,
                         decoration: TextDecoration.none,
                       ),
@@ -1648,9 +1652,10 @@ class _PendingTaskCard extends ConsumerWidget {
               children: [
                 Text(
                   taskName,
-                  style: const TextStyle(
-                    fontSize: 13,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFF334155),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1667,8 +1672,8 @@ class _PendingTaskCard extends ConsumerWidget {
                       ),
                       child: Text(
                         '${minutesLeft}m left',
-                        style: TextStyle(
-                          fontSize: 10,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Colors.orange.shade800,
                         ),
@@ -1679,8 +1684,9 @@ class _PendingTaskCard extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           'from $originalDate',
-                          style: TextStyle(
-                            fontSize: 10,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                             color: Colors.grey.shade500,
                           ),
                           maxLines: 1,
@@ -1695,9 +1701,10 @@ class _PendingTaskCard extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       reason,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey.shade600,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.grey.shade600 : const Color(0xFF334155),
                         fontStyle: FontStyle.italic,
                       ),
                       maxLines: 1,
@@ -1799,7 +1806,7 @@ class _CustomTemplateCard extends HookConsumerWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -1914,9 +1921,9 @@ class _CustomTemplateCard extends HookConsumerWidget {
             child: Text(
               template.name,
               style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : Colors.grey.shade800,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : const Color(0xFF334155),
               ),
             ),
           ),
@@ -1980,7 +1987,7 @@ class _CatalogTaskCard extends ConsumerWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -2099,9 +2106,9 @@ class _CatalogTaskCard extends ConsumerWidget {
                 Text(
                   task.title,
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: isDark ? Colors.white : const Color(0xFF334155),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -2116,7 +2123,8 @@ class _CatalogTaskCard extends ConsumerWidget {
                             child: RichText(
                               text: TextSpan(
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
                                   color: isDark
                                       ? Colors.grey.shade400
                                       : Colors.grey.shade600,

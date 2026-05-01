@@ -372,8 +372,7 @@ Future<Map<String, dynamic>> projectCompletionChart(
 
       for (final p in projects) {
         final isAssigned = (p.assigneeIds?.contains(targetUserId) ?? false) ||
-            p.projectLeadId == targetUserId ||
-            p.handledById == targetUserId;
+            p.projectLeadId == targetUserId;
 
         if (isAssigned && p.completedDate != null && p.completedDate!.year == params.year) {
           monthlyCounts[p.completedDate!.month - 1]++;

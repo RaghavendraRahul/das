@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/core/database/database.dart';
 import 'package:project_pm/src/features/today/widgets/task_config_modal.dart';
 import 'package:project_pm/src/features/projects/providers/api_providers.dart';
@@ -109,10 +110,10 @@ class WeekView extends HookConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E3A6E).withOpacity(0.08),
+                    color: const Color(0xFF1E3A6E).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: const Color(0xFF1E3A6E).withOpacity(0.2),
+                      color: const Color(0xFF1E3A6E).withValues(alpha: 0.2),
                     ),
                   ),
                   child: Text(
@@ -523,7 +524,7 @@ class WeekView extends HookConsumerWidget {
                                               decoration: BoxDecoration(
                                                 color: candidateData.isNotEmpty
                                                     ? const Color(0xFF2563EB)
-                                                        .withOpacity(0.05)
+                                                        .withValues(alpha: 0.05)
                                                     : (isDark
                                                         ? const Color(
                                                             0xFF0F172A)
@@ -550,7 +551,7 @@ class WeekView extends HookConsumerWidget {
                                                             .add_circle_outline,
                                                         color: const Color(
                                                                 0xFF2563EB)
-                                                            .withOpacity(
+                                                            .withValues(alpha: 
                                                                 0.5),
                                                         size: 20,
                                                       ),
@@ -740,7 +741,7 @@ class _EventCard extends HookConsumerWidget {
                   boxShadow: isHovered.value
                       ? [
                           BoxShadow(
-                            color: theme.accent.withOpacity(0.12),
+                            color: theme.accent.withValues(alpha: 0.12),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           )
@@ -780,9 +781,9 @@ class _EventCard extends HookConsumerWidget {
                             // Title
                             Text(
                               title,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
                                 color: theme.text,
                                 height: 1.2,
                               ),

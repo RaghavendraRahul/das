@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
 
@@ -19,12 +20,12 @@ class DayActivityStatus extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Team Activity Status",
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text("Team Activity Status",
+                    style: GoogleFonts.manrope(
+                        fontWeight: FontWeight.w800, fontSize: 16)),
                 Text("Daily Capacity Target: 9 Hours",
-                    style:
-                        TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                    style: GoogleFonts.inter(
+                        color: Colors.grey.shade500, fontSize: 12)),
                 const SizedBox(height: 24),
                 Center(
                   child: Column(
@@ -35,7 +36,7 @@ class DayActivityStatus extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Text(
                         "No team data available",
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: Colors.grey.shade600,
@@ -44,7 +45,7 @@ class DayActivityStatus extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         "Add users and daily logs to see activity",
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
                           color: Colors.grey.shade500,
                         ),
@@ -67,10 +68,12 @@ class DayActivityStatus extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Team Activity Status",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text("Team Activity Status",
+                  style: GoogleFonts.manrope(
+                      fontWeight: FontWeight.w800, fontSize: 16)),
               Text("Daily Capacity Target: 9 Hours",
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                  style: GoogleFonts.inter(
+                      color: Colors.grey.shade500, fontSize: 12)),
               const SizedBox(height: 16),
               Expanded(
                 child: LayoutBuilder(
@@ -112,11 +115,11 @@ class DayActivityStatus extends ConsumerWidget {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text("$total",
-                                            style: const TextStyle(
+                                            style: GoogleFonts.inter(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 18)),
-                                        const Text("Users",
-                                            style: TextStyle(
+                                        Text("Users",
+                                            style: GoogleFonts.inter(
                                                 fontSize: 9,
                                                 color: Colors.grey)),
                                       ],
@@ -174,11 +177,11 @@ class DayActivityStatus extends ConsumerWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text("$total",
-                                        style: const TextStyle(
+                                        style: GoogleFonts.inter(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 20)),
-                                    const Text("Users",
-                                        style: TextStyle(
+                                    Text("Users",
+                                        style: GoogleFonts.inter(
                                             fontSize: 10, color: Colors.grey)),
                                   ],
                                 ),
@@ -250,17 +253,18 @@ class _LegendItem extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              style: GoogleFonts.inter(
+                  fontSize: 11, fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: 4),
           Text("$count",
-              style: TextStyle(
+              style: GoogleFonts.inter(
                   fontWeight: FontWeight.bold, fontSize: 12, color: color)),
           const SizedBox(width: 2),
           Text(percent,
-              style: const TextStyle(fontSize: 9, color: Colors.grey)),
+              style: GoogleFonts.inter(fontSize: 9, color: Colors.grey)),
         ],
       ),
     );

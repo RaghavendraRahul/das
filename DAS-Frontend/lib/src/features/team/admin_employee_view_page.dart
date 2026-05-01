@@ -147,7 +147,7 @@ class _AdminViewBanner extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -187,15 +187,15 @@ class _AdminViewBanner extends StatelessWidget {
               children: [
                 Text(
                   employee.name,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.manrope(
                       color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800),
                 ),
                 Text(
                   employee.email,
                   style: GoogleFonts.inter(
-                      color: Colors.white.withOpacity(0.8), fontSize: 12),
+                      color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
                 ),
               ],
             ),
@@ -205,9 +205,9 @@ class _AdminViewBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.2),
+              color: Colors.amber.withValues(alpha: 0.2),
               border:
-                  Border.all(color: Colors.amber.withOpacity(0.6), width: 1),
+                  Border.all(color: Colors.amber.withValues(alpha: 0.6), width: 1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -438,8 +438,8 @@ class _EmployeePlannerTab extends HookConsumerWidget {
             onTap: () => selDate.value = DateTime.now(),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: const Color(0xFF3B82F6).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-              child: Text('Today', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF3B82F6))),
+              decoration: BoxDecoration(color: const Color(0xFF3B82F6).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+              child: Text('Today', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF3B82F6))),
             ),
           ),
         ]),
@@ -524,7 +524,7 @@ class _EmployeePlannerTab extends HookConsumerWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF111827) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: c.withOpacity(0.3)),
+        border: Border.all(color: c.withValues(alpha: 0.3)),
       ),
       child: Row(children: [
         Container(width: 3, height: 28, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(2))),
@@ -540,7 +540,7 @@ class _EmployeePlannerTab extends HookConsumerWidget {
         ])),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(color: (done ? Colors.green : c).withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+          decoration: BoxDecoration(color: (done ? Colors.green : c).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
           child: Text(done ? 'Done' : (item['status'] as String? ?? 'Planned'),
               style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: done ? Colors.green : c)),
         ),
@@ -629,7 +629,7 @@ class _EmployeePlannerTab extends HookConsumerWidget {
               if (items.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFF3B82F6).withOpacity(0.12), borderRadius: BorderRadius.circular(5)),
+                  decoration: BoxDecoration(color: const Color(0xFF3B82F6).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(5)),
                   child: Text('${items.length}', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF3B82F6))),
                 ),
             ]),
@@ -674,7 +674,7 @@ class _EmployeePlannerTab extends HookConsumerWidget {
             return Container(
               decoration: BoxDecoration(
                 color: today ? const Color(0xFF3B82F6)
-                    : (count > 0 ? const Color(0xFF3B82F6).withOpacity(0.08)
+                    : (count > 0 ? const Color(0xFF3B82F6).withValues(alpha: 0.08)
                         : (isDark ? const Color(0xFF1F2937) : const Color(0xFFF9FAFB))),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: today ? const Color(0xFF3B82F6)
@@ -842,9 +842,9 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.manrope(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: isDark ? Colors.white : const Color(0xFF05263E),
           ),
         ),
@@ -947,7 +947,7 @@ class _ProjectRow extends StatelessWidget {
             ? []
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 )
@@ -963,7 +963,7 @@ class _ProjectRow extends StatelessWidget {
                   p.name,
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 13,
                     color: isDark ? Colors.white : const Color(0xFF111827),
                   ),
                 ),
@@ -971,7 +971,7 @@ class _ProjectRow extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -1070,7 +1070,7 @@ class _PlanItemCard extends StatelessWidget {
         ),
         boxShadow: isDark
             ? []
-            : [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4)],
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4)],
       ),
       child: Row(
         children: [
@@ -1125,7 +1125,7 @@ class _PlanItemCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: _statusColor(status).withOpacity(0.1),
+              color: _statusColor(status).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -1171,7 +1171,7 @@ class _StickyNoteCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1449,7 +1449,7 @@ class _ActivityLogItemState extends ConsumerState<_ActivityLogItem> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: hasAdminRemark
-              ? Colors.amber.withOpacity(0.4)
+              ? Colors.amber.withValues(alpha: 0.4)
               : (isDark ? const Color(0xFF374151) : Colors.grey.shade200),
         ),
       ),
@@ -1465,7 +1465,7 @@ class _ActivityLogItemState extends ConsumerState<_ActivityLogItem> {
                   color: (isCompleted
                           ? const Color(0xFF10B981)
                           : const Color(0xFF3B82F6))
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -1485,7 +1485,7 @@ class _ActivityLogItemState extends ConsumerState<_ActivityLogItem> {
                       taskName,
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 13,
                         color: isDark ? Colors.white : const Color(0xFF111827),
                       ),
                     ),
@@ -1549,10 +1549,10 @@ class _ActivityLogItemState extends ConsumerState<_ActivityLogItem> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.12),
+                        color: Colors.amber.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: Colors.amber.withOpacity(0.4), width: 1),
+                            color: Colors.amber.withValues(alpha: 0.4), width: 1),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1590,10 +1590,10 @@ class _ActivityLogItemState extends ConsumerState<_ActivityLogItem> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.08),
+                  color: Colors.amber.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                   border:
-                      Border.all(color: Colors.amber.withOpacity(0.3), width: 1),
+                      Border.all(color: Colors.amber.withValues(alpha: 0.3), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1655,7 +1655,7 @@ class _ActivityLogItemState extends ConsumerState<_ActivityLogItem> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
-                            color: Colors.amber.withOpacity(0.4), width: 1),
+                            color: Colors.amber.withValues(alpha: 0.4), width: 1),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1665,7 +1665,7 @@ class _ActivityLogItemState extends ConsumerState<_ActivityLogItem> {
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
-                            color: Colors.amber.withOpacity(0.3), width: 1),
+                            color: Colors.amber.withValues(alpha: 0.3), width: 1),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
@@ -1768,7 +1768,7 @@ class _PendingTaskItem extends StatelessWidget {
                   taskName,
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 13,
                     color: isDark ? Colors.white : const Color(0xFF111827),
                   ),
                 ),
@@ -1788,7 +1788,7 @@ class _PendingTaskItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFFF59E0B).withOpacity(0.1),
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(

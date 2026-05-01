@@ -196,12 +196,12 @@ const _chartColors = [
 
 final List<BoxShadow> _softShadow = [
   BoxShadow(
-    color: Colors.black.withOpacity(0.04),
+    color: Colors.black.withValues(alpha: 0.04),
     blurRadius: 10,
     offset: const Offset(0, 4),
   ),
   BoxShadow(
-    color: Colors.black.withOpacity(0.02),
+    color: Colors.black.withValues(alpha: 0.02),
     blurRadius: 4,
     offset: const Offset(0, 1),
   ),
@@ -214,8 +214,8 @@ class _ChartPalette {
     final baseColor = _chartColors[i % _chartColors.length];
     return LinearGradient(
       colors: [
-        baseColor.withOpacity(isDimmed ? 0.4 : 1.0),
-        baseColor.withOpacity(isDimmed ? 0.2 : 0.7),
+        baseColor.withValues(alpha: isDimmed ? 0.4 : 1.0),
+        baseColor.withValues(alpha: isDimmed ? 0.2 : 0.7),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -286,7 +286,7 @@ class _ProjectWorkingHoursCardState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           )
@@ -306,7 +306,7 @@ class _ProjectWorkingHoursCardState
                 children: [
                   Text(
                     'Working Hours Report',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                       fontSize: 20, // Slightly smaller than the main chart but still Heroic
                       fontWeight: FontWeight.w900,
                       color: isDark ? Colors.white : const Color(0xFF111827),
@@ -335,12 +335,12 @@ class _ProjectWorkingHoursCardState
                 data: (r) => Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.1),
+                    color: Colors.indigo.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     r.totalDisplay,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: Colors.indigo.shade600,
@@ -508,7 +508,7 @@ class _DonutWithLegendState extends ConsumerState<_DonutWithLegend> {
         radius: 12,
         showTitle: false,
         borderSide: BorderSide(
-          color: isDark ? const Color(0xFF1F2937).withOpacity(0.5) : Colors.white60,
+          color: isDark ? const Color(0xFF1F2937).withValues(alpha: 0.5) : Colors.white60,
           width: 4,
         ),
       ),
@@ -619,12 +619,12 @@ class _CentralInfo extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: _colorForIndex(touchedProject!.id).withOpacity(0.1),
+              color: _colorForIndex(touchedProject!.id).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               touchedProject!.display,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color: isDark ? Colors.white : const Color(0xFF111827),
@@ -655,7 +655,7 @@ class _CentralInfo extends StatelessWidget {
       children: [
         Text(
           totalDisplay,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontSize: 26,
             fontWeight: FontWeight.w900,
             color: isDark ? Colors.white : const Color(0xFF111827),
@@ -707,11 +707,11 @@ class _Legend extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: isSelected
-                  ? _colorForIndex(i).withOpacity(0.1)
+                  ? _colorForIndex(i).withValues(alpha: 0.1)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected ? _colorForIndex(i).withOpacity(0.3) : Colors.transparent,
+                color: isSelected ? _colorForIndex(i).withValues(alpha: 0.3) : Colors.transparent,
               ),
             ),
             child: Row(
@@ -725,7 +725,7 @@ class _Legend extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: _colorForIndex(i).withOpacity(0.4),
+                        color: _colorForIndex(i).withValues(alpha: 0.4),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       )
@@ -787,7 +787,7 @@ class ProjectDrillDownDialog extends ConsumerWidget {
                     children: [
                       Text(
                         project.projectName,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                         ),
@@ -831,13 +831,13 @@ class ProjectDrillDownDialog extends ConsumerWidget {
                                   task.title,
                                   style: GoogleFonts.inter(
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ),
                               Text(
                                 task.minutesDisplay,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontWeight: FontWeight.w700,
                                   color: Colors.blue.shade700,
                                 ),
@@ -936,7 +936,7 @@ class TeamActivityStatusCard extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           )
@@ -948,7 +948,7 @@ class TeamActivityStatusCard extends ConsumerWidget {
         children: [
           Text(
             'Team Activity Status',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: isDark ? Colors.white : const Color(0xFF111827),
@@ -1007,7 +1007,7 @@ class _ActivityStatusBody extends StatelessWidget {
                 children: [
                   Text(
                     '$total',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                       color: isDark ? Colors.white : const Color(0xFF111827),
@@ -1092,7 +1092,7 @@ class _StatusRow extends StatelessWidget {
           ),
           Text(
             '$count',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF111827),

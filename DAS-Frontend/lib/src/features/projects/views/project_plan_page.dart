@@ -162,8 +162,9 @@ class _ProjectPlanView extends HookConsumerWidget {
         project.project.approvalStatus?.toLowerCase() == 'pending_completion';
     final approvalStatus = project.project.approvalStatus?.toLowerCase();
     final isProjectRejected =
-        approvalStatus == 'rejected' || approvalStatus == 'rejected_closure';
-    final isClosureRejection = approvalStatus == 'rejected_closure';
+        approvalStatus == 'rejected' || approvalStatus == 'rejected_closure' || approvalStatus == 'reopened';
+    final isClosureRejection = approvalStatus == 'rejected_closure' || approvalStatus == 'reopened';
+    final isReopened = approvalStatus == 'reopened';
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
@@ -188,7 +189,7 @@ class _ProjectPlanView extends HookConsumerWidget {
           children: [
             // Header Row
             _buildProjectDetailsHeader(
-                context, ref, isDark, theme, isProjectRejected, isClosureRejection, isBannerDismissed, isBannerMinimized),
+                context, ref, isDark, theme, isProjectRejected, isClosureRejection, isReopened, isBannerDismissed, isBannerMinimized),
             const SizedBox(height: 24),
 
             // Kanban Board
@@ -274,12 +275,12 @@ class _ProjectPlanView extends HookConsumerWidget {
   }
 
   Widget _buildProjectDetailsHeader(BuildContext context, WidgetRef ref,
-      bool isDark, ThemeData theme, bool isProjectRejected, bool isClosureRejection, ValueNotifier<bool> isBannerDismissed, ValueNotifier<bool> isBannerMinimized) {
+      bool isDark, ThemeData theme, bool isProjectRejected, bool isClosureRejection, bool isReopened, ValueNotifier<bool> isBannerDismissed, ValueNotifier<bool> isBannerMinimized) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (isProjectRejected && !isBannerDismissed.value) ...[
-          _buildRejectionBanner(context, isDark, isClosureRejection, isBannerDismissed, isBannerMinimized),
+          _buildRejectionBanner(context, isDark, isClosureRejection, isReopened, isBannerDismissed, isBannerMinimized),
           const SizedBox(height: 16),
         ],
         Row(
@@ -289,7 +290,7 @@ class _ProjectPlanView extends HookConsumerWidget {
               children: [
                 Text(
                   "Tasks & Plan",
-                  style: GoogleFonts.outfit( // Outfit for section titles
+                  style: GoogleFonts.manrope( // Outfit for section titles
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -329,19 +330,19 @@ class _ProjectPlanView extends HookConsumerWidget {
     );
   }
 
-  Widget _buildRejectionBanner(BuildContext context, bool isDark, bool isClosureRejection, ValueNotifier<bool> isBannerDismissed, ValueNotifier<bool> isBannerMinimized) {
+  Widget _buildRejectionBanner(BuildContext context, bool isDark, bool isClosureRejection, bool isReopened, ValueNotifier<bool> isBannerDismissed, ValueNotifier<bool> isBannerMinimized) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isClosureRejection
-            ? Colors.blue.withOpacity(0.1)
-            : Colors.red.withOpacity(0.1),
+            ? Colors.blue.withValues(alpha: 0.1)
+            : Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: isClosureRejection
-                ? Colors.blue.withOpacity(0.3)
-                : Colors.red.withOpacity(0.3)),
+                ? Colors.blue.withValues(alpha: 0.3)
+                : Colors.red.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,9 +356,11 @@ class _ProjectPlanView extends HookConsumerWidget {
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  isClosureRejection
-                      ? "Project Closure Rejected"
-                      : "Project Resubmission Required",
+                  isReopened 
+                      ? "Project Reopened by Admin"
+                      : (isClosureRejection
+                          ? "Project Closure Rejected"
+                          : "Project Resubmission Required"),
                   style: GoogleFonts.inter(
                       color: isClosureRejection ? Colors.blue : Colors.red,
                       fontWeight: FontWeight.bold,
@@ -572,7 +575,7 @@ class _ProjectPlanView extends HookConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-          color: Colors.orange.withOpacity(0.3),
+          color: Colors.orange.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -611,7 +614,21 @@ class _ProjectPlanView extends HookConsumerWidget {
       List<TaskWithAssignees> approvalTasks) {
     return FloatingActionButton.extended(
       onPressed: () async {
-        // 1. ADMIN AUTO-BYPASS: Admins can always complete the project
+        // UNIVERSAL STRICT VALIDATION: Ensure ALL tasks are fully approved/completed
+        // This mirrors the main card and backend's `project.tasks.exclude(status='DONE').count() > 0` check.
+        final unfinishedTasks = project.tasks.where((t) {
+          final s = t.task.approvalStatus?.toLowerCase();
+          return s != 'approved';
+        }).toList();
+
+        if (unfinishedTasks.isNotEmpty) {
+          if (context.mounted) {
+            _showError(context, 'Please complete all tasks first.');
+          }
+          return;
+        }
+
+        // 1. ADMIN AUTO-BYPASS: Admins can directly complete the project IF all tasks are done
         if (isAdmin) {
           try {
             await ref
@@ -625,20 +642,6 @@ class _ProjectPlanView extends HookConsumerWidget {
                errorMsg = 'Cannot complete project. Some tasks are still pending.';
             }
             if (context.mounted) _showError(context, 'Failed: $errorMsg');
-          }
-          return;
-        }
-
-        // 2. EMPLOYEE STRICT VALIDATION: Ensure ALL tasks are fully approved/completed
-        // This mirrors the backend's `project.tasks.exclude(status='DONE').count() > 0` check.
-        final unfinishedTasks = project.tasks.where((t) {
-          final s = t.task.approvalStatus?.toLowerCase();
-          return s != 'approved';
-        }).toList();
-
-        if (unfinishedTasks.isNotEmpty) {
-          if (context.mounted) {
-            _showError(context, 'Please complete all tasks first.');
           }
           return;
         }
@@ -721,20 +724,20 @@ class _TaskBucket extends StatelessWidget {
     switch (bucketType) {
       case 'todo':
         baseColor = isDark
-            ? Colors.blue.shade900.withOpacity(0.15)
-            : Colors.blue.shade50.withOpacity(0.5);
+            ? Colors.blue.shade900.withValues(alpha: 0.15)
+            : Colors.blue.shade50.withValues(alpha: 0.5);
         accentColor = const Color(0xFF05263E);
         break;
       case 'approval':
         baseColor = isDark
-            ? Colors.orange.shade900.withOpacity(0.15)
-            : Colors.orange.shade50.withOpacity(0.5);
+            ? Colors.orange.shade900.withValues(alpha: 0.15)
+            : Colors.orange.shade50.withValues(alpha: 0.5);
         accentColor = Colors.orange.shade700;
         break;
       case 'completed':
         baseColor = isDark
-            ? Colors.green.shade900.withOpacity(0.15)
-            : Colors.green.shade50.withOpacity(0.5);
+            ? Colors.green.shade900.withValues(alpha: 0.15)
+            : Colors.green.shade50.withValues(alpha: 0.5);
         accentColor = Colors.green.shade700;
         break;
       default:
@@ -754,19 +757,19 @@ class _TaskBucket extends StatelessWidget {
             height: double.infinity,
             decoration: BoxDecoration(
               color: isOver
-                  ? (isDark ? accentColor.withOpacity(0.25) : accentColor.withOpacity(0.12)) // Slightly richer over state
+                  ? (isDark ? accentColor.withValues(alpha: 0.25) : accentColor.withValues(alpha: 0.12)) // Slightly richer over state
                   : baseColor,
               borderRadius: BorderRadius.circular(24), // Smoother corners for premium look
               border: Border.all(
                   color: isOver
                       ? accentColor
                       : (isDark
-                          ? Colors.white.withOpacity(0.08)
+                          ? Colors.white.withValues(alpha: 0.08)
                           : const Color(0xFFE2E8F0)), // Slate-200 border in light mode
                   width: isOver ? 1.5 : 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.03),
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.03),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -790,10 +793,10 @@ class _TaskBucket extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         title,
-                        style: GoogleFonts.outfit( // Switched to Outfit for modern feel
+                        style: GoogleFonts.manrope( // Switched to Outfit for modern feel
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white.withOpacity(0.9) : const Color(0xFF0F172A), // Deep Slate
+                            color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF0F172A), // Deep Slate
                             letterSpacing: -0.1),
                       ),
                       const Spacer(),
@@ -801,13 +804,13 @@ class _TaskBucket extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 2),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.black26 : Colors.white.withOpacity(0.8),
+                          color: isDark ? Colors.black26 : Colors.white.withValues(alpha: 0.8),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: accentColor.withOpacity(0.1)),
+                          border: Border.all(color: accentColor.withValues(alpha: 0.1)),
                         ),
                         child: Text(
                           "${tasks.length}",
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: accentColor),
@@ -821,7 +824,7 @@ class _TaskBucket extends StatelessWidget {
                   child: Divider(
                       height: 1, 
                       thickness: 0.5,
-                      color: isDark ? Colors.white.withOpacity(0.06) : accentColor.withOpacity(0.08)
+                      color: isDark ? Colors.white.withValues(alpha: 0.06) : accentColor.withValues(alpha: 0.08)
                   ),
                 ),
                 Expanded(
@@ -912,7 +915,7 @@ class _MilestonesSectionState extends State<_MilestonesSection> {
                   const SizedBox(width: 6),
                   Text(
                     'Milestones (${widget.milestones.length})',
-                    style: GoogleFonts.outfit( // Outfit for sub-sections
+                    style: GoogleFonts.manrope( // Outfit for sub-sections
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: widget.isDark ? Colors.white70 : const Color(0xFF475569)), // Slate-600
@@ -1033,7 +1036,7 @@ class _MilestonesSectionState extends State<_MilestonesSection> {
                                           style: GoogleFonts.inter(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.blue.shade400.withOpacity(0.8),
+                                            color: Colors.blue.shade400.withValues(alpha: 0.8),
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -1149,7 +1152,7 @@ class _BoardTaskCard extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: pColor.withOpacity(0.12),
+          color: pColor.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
@@ -1203,7 +1206,7 @@ class _BoardTaskCard extends StatelessWidget {
                     height: 28,
                     decoration: BoxDecoration(
                       color: UserColorService.getColorForUser(displayAssignees[i].id)
-                          .withOpacity(isDark ? 0.4 : 0.9),
+                          .withValues(alpha: isDark ? 0.4 : 0.9),
                       shape: BoxShape.circle,
                       border: Border.all(
                           color:
@@ -1269,12 +1272,12 @@ class _BoardTaskCard extends StatelessWidget {
         color: isDark ? const Color(0xFF111827) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100,
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1315,11 +1318,11 @@ class _BoardTaskCard extends StatelessWidget {
                             children: [
                               Text(
                                 task.name,
-                                style: GoogleFonts.outfit( // Outfit for task titles
+                                style: GoogleFonts.manrope( // Outfit for task titles
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: isDark
-                                        ? Colors.white.withOpacity(0.9)
+                                        ? Colors.white.withValues(alpha: 0.9)
                                       : const Color(0xFF1E293B), // Slate-800
                                   height: 1.3,
                                   letterSpacing: -0.1,
@@ -1332,11 +1335,11 @@ class _BoardTaskCard extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.purple.withOpacity(0.12),
+                                      color: Colors.purple.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(
                                           color:
-                                              Colors.purple.withOpacity(0.3)),
+                                              Colors.purple.withValues(alpha: 0.3)),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -1402,10 +1405,10 @@ class _BoardTaskCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.06),
+                          color: Colors.red.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(8),
                           border:
-                              Border.all(color: Colors.red.withOpacity(0.2)),
+                              Border.all(color: Colors.red.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1470,10 +1473,10 @@ class _BoardTaskCard extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 6, right: 2),
                           child: Text(
                             "$currentProgress%",
-                            style: GoogleFonts.outfit( // Outfit for progress numbers
+                            style: GoogleFonts.manrope( // Outfit for progress numbers
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: statusColor.withOpacity(0.95),
+                              color: statusColor.withValues(alpha: 0.95),
                             ),
                           ),
                         ),
@@ -1483,7 +1486,7 @@ class _BoardTaskCard extends StatelessWidget {
                             value: currentProgress / 100.0,
                             minHeight: 8, // More substantial bar
                             backgroundColor: isDark
-                                ? Colors.white.withOpacity(0.08)
+                                ? Colors.white.withValues(alpha: 0.08)
                                 : const Color(0xFFF1F5F9), // Slate-100
                             valueColor:
                                 AlwaysStoppedAnimation<Color>(statusColor),
@@ -1514,12 +1517,12 @@ class _BoardTaskCard extends StatelessWidget {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.orange.withOpacity(0.05)
-                        : Colors.orange.shade50.withOpacity(0.5),
+                        ? Colors.orange.withValues(alpha: 0.05)
+                        : Colors.orange.shade50.withValues(alpha: 0.5),
                     border: Border(
                         top: BorderSide(
                             color: isDark
-                        ? Colors.orange.withOpacity(0.2)
+                        ? Colors.orange.withValues(alpha: 0.2)
                                 : Colors.orange.shade100)),
                   ),
                   child: InkWell(
@@ -1915,16 +1918,23 @@ void _showGlobalReopenDialog(BuildContext context, WidgetRef ref) {
             }
 
             Navigator.pop(context);
-
             try {
               await ref
                   .read(projectRepositoryProvider)
                   .reopenProject(project.project.id, reasonController.text.trim());
-              
+
+              // --- GLOBAL REACTIVITY ---
+              ref.invalidate(apiProjectsProvider);
+              ref.invalidate(apiTasksProvider);
+              ref.invalidate(projectsWithTasksProvider);
+              ref.invalidate(paginatedDashboardProjectsProvider);
+              ref.invalidate(projectsPageProjectsProvider);
+              ref.invalidate(currentProjectProvider);
+
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                      content: Text('Project Reopened'),
+                      content: Text('Project Reopened & Tasks Reset'),
                       backgroundColor: Colors.green),
                 );
               }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/auth/auth_state_providers.dart';
@@ -31,6 +30,7 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
     super.dispose();
   }
 
+/*
   void _addNote() {
     showDialog(
         context: context,
@@ -41,6 +41,7 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                       .read(stickyNotesProvider.notifier)
                       .addNote(content, color);
                 } catch (e) {
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("Failed to add note: $e")),
                   );
@@ -48,6 +49,7 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
               },
             ));
   }
+*/
 
   void _deleteNote(String id) {
     ref.read(stickyNotesProvider.notifier).deleteNote(id);
@@ -79,9 +81,9 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                     child: TextField(
                       controller: _labelController,
                       autofocus: true,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         color: Colors.grey.shade600,
                         letterSpacing: 1.0,
                       ),
@@ -114,9 +116,9 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                     child: Text(
                         ref.watch(authNotifierProvider).value?.quickNotesLabel ??
                             "QUICK NOTES",
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             color: Colors.grey.shade500,
                             letterSpacing: 1.0)),
                   ),
@@ -129,7 +131,7 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(12)),
                     child: Text("${notes.length}",
-                        style: const TextStyle(
+                        style: GoogleFonts.inter(
                             fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
               ],
@@ -139,6 +141,7 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
         if (isExpanded) ...[
           const SizedBox(height: 4),
           // "Take a note..." input style trigger
+/*
           InkWell(
             onTap: _addNote,
             borderRadius: BorderRadius.circular(8),
@@ -149,28 +152,36 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 4)
+                    color: Colors.black.withAlpha(5),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Take a note...",
-                      style: TextStyle(color: Colors.grey.shade400)),
-                  const Icon(FontAwesomeIcons.plus,
-                      size: 16, color: Colors.grey),
+                  Icon(Icons.edit_note_rounded,
+                      color: Colors.grey.shade400, size: 20),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Take a note...",
+                    style: GoogleFonts.inter(
+                      color: Colors.grey.shade400,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
+*/
 
           if (notes.isEmpty)
-            const Padding(
-                padding: EdgeInsets.all(16),
+            Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text("No notes yet.",
-                    style: TextStyle(color: Colors.grey))),
+                    style: GoogleFonts.inter(color: Colors.grey))),
 
           SizedBox(
             height: 180,
@@ -219,14 +230,14 @@ class _StickyNoteBoardState extends ConsumerState<StickyNoteBoard> {
                             Expanded(
                               child: Text(
                                 note.content,
-                                style: const TextStyle(fontSize: 13, height: 1.4),
+                                style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                                 maxLines: 6,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             Text(
                               "${note.createdAt.day}/${note.createdAt.month}/${note.createdAt.year}",
-                              style: TextStyle(
+                              style: GoogleFonts.inter(
                                   fontSize: 10,
                                   color: Colors.black.withValues(alpha: 0.4)),
                             )
@@ -290,15 +301,16 @@ class _AddNoteDialogState extends State<_AddNoteDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("New Note",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text("New Note",
+                style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w800, fontSize: 18)),
             const SizedBox(height: 16),
             TextField(
               controller: _ctrl,
               maxLines: 5,
               decoration: const InputDecoration.collapsed(
                   hintText: "What's on your mind?"),
-              style: const TextStyle(fontSize: 16),
+              style: GoogleFonts.inter(fontSize: 16),
               autofocus: true,
             ),
             const SizedBox(height: 24),
@@ -324,7 +336,9 @@ class _AddNoteDialogState extends State<_AddNoteDialog> {
                 const Spacer(),
                 TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text("Cancel")),
+                    child: Text("Cancel",
+                        style: GoogleFonts.inter(
+                            fontSize: 12, fontWeight: FontWeight.w600))),
                 ElevatedButton(
                   onPressed: () {
                     if (_ctrl.text.trim().isNotEmpty) {
@@ -332,7 +346,9 @@ class _AddNoteDialogState extends State<_AddNoteDialog> {
                       Navigator.pop(context);
                     }
                   },
-                  child: const Text("Add"),
+                  child: Text("Add",
+                      style: GoogleFonts.inter(
+                          fontSize: 12, fontWeight: FontWeight.w600)),
                 )
               ],
             )

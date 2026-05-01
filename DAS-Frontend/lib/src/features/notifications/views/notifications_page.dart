@@ -66,7 +66,7 @@ class NotificationsPage extends ConsumerWidget {
                       leading: CircleAvatar(
                         backgroundColor: notification.isRead
                             ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
-                            : Colors.blue.withOpacity(0.1),
+                            : Colors.blue.withValues(alpha: 0.1),
                         child: Icon(
                           _getIconForType(notification.notificationType),
                           color: notification.isRead
@@ -103,8 +103,8 @@ class NotificationsPage extends ConsumerWidget {
                       tileColor: notification.isRead
                           ? null
                           : (isDark
-                              ? Colors.blue.withOpacity(0.05)
-                              : Colors.blue.withOpacity(0.02)),
+                              ? Colors.blue.withValues(alpha: 0.05)
+                              : Colors.blue.withValues(alpha: 0.02)),
                       onTap: () async {
                         await notificationService.markAsRead(notification.id);
                         if (!context.mounted) return;

@@ -57,7 +57,7 @@ class AddItemModal extends HookConsumerWidget {
                         borderRadius: BorderRadius.circular(6),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2))
                         ],
@@ -308,7 +308,7 @@ class _RecurringTab extends HookConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50.withOpacity(0.3),
+              color: Colors.blue.shade50.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.blue.shade100),
             ),

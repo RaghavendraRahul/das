@@ -146,7 +146,7 @@ void showReviewTaskDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Review Task',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontWeight: FontWeight.w700,
               fontSize: 20,
               color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -159,7 +159,7 @@ void showReviewTaskDialog(
               children: [
                 Text(
                   'You worked on $taskName for',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                   ),
@@ -172,7 +172,7 @@ void showReviewTaskDialog(
                       children: [
                         Text(
                           '$startTimeDisplay - ${endTimeDisplay.isNotEmpty ? endTimeDisplay : "In Progress"}',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
                             color: Colors.blue.shade600,
@@ -202,7 +202,7 @@ void showReviewTaskDialog(
 
                 Text(
                   'PLANNED REMARK',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontWeight: FontWeight.w800,
                     fontSize: 11,
                     letterSpacing: 1.0,
@@ -248,7 +248,7 @@ void showReviewTaskDialog(
                           const SizedBox(width: 6),
                           Text(
                             'Completed',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                         ],
@@ -273,7 +273,7 @@ void showReviewTaskDialog(
                           const SizedBox(width: 6),
                           Text(
                             'Still Pending',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                         ],
@@ -364,7 +364,7 @@ void showReviewTaskDialog(
                 const SizedBox(height: 24),
                 Text(
                   'SCHEDULE DETAILS',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                     letterSpacing: 1.0,
@@ -473,7 +473,7 @@ void showReviewTaskDialog(
                                     startTimeController.text.isEmpty
                                         ? 'Select'
                                         : startTimeController.text,
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.inter(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                     ),
@@ -515,7 +515,7 @@ void showReviewTaskDialog(
                                     endTimeController.text.isEmpty
                                         ? 'Select'
                                         : endTimeController.text,
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.inter(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                     ),
@@ -569,7 +569,7 @@ void showReviewTaskDialog(
                                   isExtra 
                                     ? "Extra Time Worked: +${diff}m" 
                                     : (isUnder ? "Remaining to reach goal: ${diff}m" : "Planned goal reached!"),
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.inter(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13,
                                     color: isExtra ? Colors.green.shade900 : (isUnder ? Colors.orange.shade900 : Colors.blue.shade900),
@@ -589,7 +589,7 @@ void showReviewTaskDialog(
                 const SizedBox(height: 8),
                 Text(
                   'ACHIEVED REMARK',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontWeight: FontWeight.w800,
                     fontSize: 11,
                     letterSpacing: 1.0,
@@ -624,8 +624,9 @@ void showReviewTaskDialog(
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
+                  fontSize: 12,
                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                 ),
               ),
@@ -793,9 +794,9 @@ void showReviewTaskDialog(
                             ? 'Confirm & Complete'
                             : 'Save Progress')
                         : 'Select Start & End Time',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
                   ),
                 );

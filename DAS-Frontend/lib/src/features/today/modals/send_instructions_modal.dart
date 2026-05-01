@@ -48,7 +48,7 @@ class SendInstructionsModal extends HookConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.4),
+              color: Colors.black.withValues(alpha: 0.4),
               blurRadius: 24,
               offset: const Offset(0, 8),
             )
@@ -66,7 +66,7 @@ class SendInstructionsModal extends HookConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [_kSidebarBg, _kSidebarBg.withOpacity(0.9)],
+                  colors: [_kSidebarBg, _kSidebarBg.withValues(alpha: 0.9)],
                 ),
               ),
               child: Row(
@@ -75,12 +75,11 @@ class SendInstructionsModal extends HookConsumerWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'TEAM INSTRUCTION',
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                      'Send Team Instructions',
+                      style: GoogleFonts.manrope(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
                         color: Colors.white,
-                        letterSpacing: 0.8,
                       ),
                     ),
                   ),
@@ -223,12 +222,12 @@ class SendInstructionsModal extends HookConsumerWidget {
                                   return Container(
                                     decoration: BoxDecoration(
                                       color: isDark
-                                          ? _kSidebarBg.withOpacity(0.3)
+                                          ? _kSidebarBg.withValues(alpha: 0.3)
                                           : Colors.blue.shade50,
                                       borderRadius: BorderRadius.circular(6),
                                       border: Border.all(
                                         color: isDark
-                                            ? _kPrimaryBlue.withOpacity(0.3)
+                                            ? _kPrimaryBlue.withValues(alpha: 0.3)
                                             : Colors.blue.shade100,
                                       ),
                                     ),
@@ -320,6 +319,7 @@ class SendInstructionsModal extends HookConsumerWidget {
               ),
               child: Row(
                 children: [
+                  const Spacer(),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: TextButton.styleFrom(
@@ -327,10 +327,10 @@ class SendInstructionsModal extends HookConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
                     child: Text('Cancel',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                             fontWeight: FontWeight.w600, fontSize: 13)),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
@@ -341,7 +341,7 @@ class SendInstructionsModal extends HookConsumerWidget {
                           : null,
                       color: canSubmit && !isSending.value
                           ? null
-                          : Colors.grey.withOpacity(0.1),
+                          : Colors.grey.withValues(alpha: 0.1),
                     ),
                     child: ElevatedButton(
                       onPressed: canSubmit && !isSending.value
@@ -401,7 +401,7 @@ class SendInstructionsModal extends HookConsumerWidget {
                             isSending.value
                                 ? 'SENDING...'
                                 : 'SEND INSTRUCTION (${selectedRecipients.value.length})',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -433,11 +433,10 @@ class SendInstructionsModal extends HookConsumerWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: _kPrimaryBlue.withOpacity(0.8),
-                letterSpacing: 0.5,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF002E6A),
               ),
             ),
             if (isRequired)

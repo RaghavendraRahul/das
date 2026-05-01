@@ -190,20 +190,20 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       child: Container(
                         padding: const EdgeInsets.all(40),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.96),
+                          color: Colors.white.withValues(alpha: 0.96),
                           borderRadius: BorderRadius.circular(32),
                           border: Border.all(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               width: 1.5),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 40,
                               offset: const Offset(0, 20),
                             ),
                             BoxShadow(
                               color: const Color(0xFF3B82F6)
-                                  .withOpacity(0.05),
+                                  .withValues(alpha: 0.05),
                               blurRadius: 10,
                               spreadRadius: -5,
                             ),
@@ -212,7 +212,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         child: _buildLoginForm(),
                       ).animate().shimmer(
                           duration: 5.seconds,
-                          color: Colors.white.withOpacity(0.1)),
+                          color: Colors.white.withValues(alpha: 0.1)),
                     ),
                   ),
                 ),
@@ -276,7 +276,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
           // Greeting
           Text(
             'Welcome to DAS',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 34,
               fontWeight: FontWeight.w900,
               color: _brandDark,
@@ -286,7 +286,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
           const SizedBox(height: 8),
           Text(
             'The next generation of team coordination.',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF6B7280),
@@ -395,7 +395,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
           Center(
             child: Text(
               '© 2025 DAS Ecosystem. All rights reserved.',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 11,
                 color: Colors.grey.shade400,
               ),
@@ -430,7 +430,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      style: GoogleFonts.outfit(
+      style: GoogleFonts.inter(
         fontSize: 16,
         fontWeight: FontWeight.w500,
         color: const Color(0xFF111827),
@@ -438,12 +438,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
       decoration: InputDecoration(
         hintText: hint,
         hintStyle:
-            GoogleFonts.outfit(color: Colors.grey.shade400, fontSize: 14),
+            GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14),
         prefixIcon:
-            Icon(icon, color: _brandPrimary.withOpacity(0.6), size: 20),
+            Icon(icon, color: _brandPrimary.withValues(alpha: 0.6), size: 20),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: const Color(0xFFF3F4F6).withOpacity(0.5),
+        fillColor: const Color(0xFFF3F4F6).withValues(alpha: 0.5),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
         enabledBorder: OutlineInputBorder(
@@ -538,19 +538,19 @@ class _HeroBrandPanel extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
+                      color: Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.08),
+                          color: Colors.white.withValues(alpha: 0.08),
                           width: 1.5),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 4,
                           offset: const Offset(0, 1),
                         ),
@@ -574,7 +574,7 @@ class _HeroBrandPanel extends StatelessWidget {
                           'Plan smarter, execute faster.\nTrack your team\'s daily activities, tasks, and goals — all in one place.',
                           style: GoogleFonts.inter(
                             fontSize: 16,
-                            color: Colors.white.withOpacity(0.72),
+                            color: Colors.white.withValues(alpha: 0.72),
                             height: 1.6,
                           ),
                         ),
@@ -601,7 +601,7 @@ class _HeroBrandPanel extends StatelessWidget {
                     'Trusted by modern engineering teams',
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: Colors.white.withOpacity(0.45),
+                      color: Colors.white.withValues(alpha: 0.45),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -644,9 +644,9 @@ class _DasLogo extends StatelessWidget {
                           boxShadow: [
                             BoxShadow(
                               color: [
-                                const Color(0xFF3B82F6).withOpacity(0.15),
-                                const Color(0xFF60A5FA).withOpacity(0.1),
-                                const Color(0xFF2563EB).withOpacity(0.05),
+                                const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                                const Color(0xFF60A5FA).withValues(alpha: 0.1),
+                                const Color(0xFF2563EB).withValues(alpha: 0.05),
                               ][i],
                               blurRadius: 20 + (i * 15),
                               spreadRadius: 2 + (i * 5),
@@ -674,7 +674,7 @@ class _DasLogo extends StatelessWidget {
                     ],
                   ),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     width: 1,
                   ),
                 ),
@@ -688,12 +688,12 @@ class _DasLogo extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: Colors.white,
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 15,
                       spreadRadius: 2,
                       offset: const Offset(0, 6),
@@ -724,7 +724,7 @@ class _DasLogo extends StatelessWidget {
                         gradient: RadialGradient(
                           colors: [
                             Colors.transparent,
-                            Colors.black.withOpacity(0.15),
+                            Colors.black.withValues(alpha: 0.15),
                           ],
                           stops: const [0.7, 1.0],
                         ),
@@ -735,7 +735,7 @@ class _DasLogo extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           width: 1,
                         ),
                       ),
@@ -745,11 +745,11 @@ class _DasLogo extends StatelessWidget {
                     .animate(onPlay: (c) => c.repeat())
                     .shimmer(
                         duration: 3.seconds,
-                        color: Colors.white.withOpacity(0.4))
+                        color: Colors.white.withValues(alpha: 0.4))
                     .shimmer(
                         duration: 5.seconds,
                         delay: 1.seconds,
-                        color: Colors.blue.withOpacity(0.2)),
+                        color: Colors.blue.withValues(alpha: 0.2)),
               ),
             ],
           ),
@@ -771,7 +771,7 @@ class _DasWordmark extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = light ? Colors.white : const Color(0xFF0A0E2A);
     final subColor =
-        light ? Colors.white.withOpacity(0.6) : const Color(0xFF6B7280);
+        light ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF6B7280);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,7 +782,7 @@ class _DasWordmark extends StatelessWidget {
             children: [
               TextSpan(
                 text: 'MERIDA ',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontSize: compact ? 22 : 28,
                   fontWeight: FontWeight.w800,
                   color: textColor,
@@ -810,14 +810,14 @@ class _DasWordmark extends StatelessWidget {
                   ),
                 ).animate(onPlay: (c) => c.repeat()).shimmer(
                     duration: 3.seconds,
-                    color: Colors.white.withOpacity(0.4)),
+                    color: Colors.white.withValues(alpha: 0.4)),
               ),
             ],
           ),
         ),
         Text(
           'Daily Activity Scheduler',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontSize: compact ? 11 : 14,
             fontWeight: FontWeight.w500,
             color: subColor,
@@ -870,7 +870,7 @@ class _SignInButtonState extends State<_SignInButton> {
           boxShadow: [
             BoxShadow(
               color:
-                  widget.primaryColor.withOpacity(_hovered ? 0.45 : 0.3),
+                  widget.primaryColor.withValues(alpha: _hovered ? 0.45 : 0.3),
               blurRadius: _hovered ? 25 : 15,
               offset: const Offset(0, 8),
             ),
@@ -911,7 +911,7 @@ class _SignInButtonState extends State<_SignInButton> {
                         ],
                       ).animate(onPlay: (c) => c.repeat()).shimmer(
                         duration: 3.seconds,
-                        color: Colors.white.withOpacity(0.3)),
+                        color: Colors.white.withValues(alpha: 0.3)),
               ),
             ),
           ),
@@ -937,7 +937,7 @@ class _FeaturePill extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
+            color: Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 17, color: const Color(0xFFF5A623)),
@@ -947,7 +947,7 @@ class _FeaturePill extends StatelessWidget {
           label,
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: Colors.white.withOpacity(0.85),
+            color: Colors.white.withValues(alpha: 0.85),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -972,8 +972,8 @@ class _GlowCircle extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: [
-            color.withOpacity(0.18),
-            color.withOpacity(0.0),
+            color.withValues(alpha: 0.18),
+            color.withValues(alpha: 0.0),
           ],
         ),
       ),
@@ -985,7 +985,7 @@ class _AtmosphericPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.03)
+      ..color = Colors.white.withValues(alpha: 0.03)
       ..strokeWidth = 1.0;
 
     const spacing = 50.0;
@@ -999,7 +999,7 @@ class _AtmosphericPainter extends CustomPainter {
 
     // Ambient "Points of Light"
     final pointPaint = Paint()
-      ..color = Colors.blue.withOpacity(0.1)
+      ..color = Colors.blue.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(

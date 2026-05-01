@@ -109,18 +109,18 @@ class DashboardPage extends HookConsumerWidget {
                                 children: [
                                   Text(
                                     'Dashboard',
-                                    style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 26,
-                                      letterSpacing: -0.5,
-                                      color: isDark ? Colors.white : const Color(0xFF0B1B2F),
+                                    style: GoogleFonts.manrope(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 36,
+                                      letterSpacing: -1.0,
+                                      color: isDark ? Colors.white : const Color(0xFF002E6A),
                                     ),
                                   ),
                                   Text(
                                     'Your intelligent command center for the all projects',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.inter(
                                       fontSize: 12,
-                                      color: (isDark ? Colors.white : const Color(0xFF0B1B2F)).withValues(alpha: 0.6),
+                                      color: (isDark ? Colors.white : const Color(0xFF002E6A)).withValues(alpha: 0.6),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -169,15 +169,15 @@ class DashboardPage extends HookConsumerWidget {
                           Row(
                             children: [
                               Icon(Icons.search_rounded, 
-                                color: isDark ? Colors.white70 : const Color(0xFF0B1B2F), 
+                                color: isDark ? Colors.white70 : const Color(0xFF002E6A), 
                                 size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Global Discovery',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 18,
-                                  color: isDark ? Colors.white : const Color(0xFF0B1B2F),
+                                  color: isDark ? Colors.white : const Color(0xFF002E6A),
                                 ),
                               ),
                               const Spacer(),
@@ -489,10 +489,10 @@ class _SearchResultItem extends ConsumerWidget {
                     project.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF0B1B2F),
+                      color: isDark ? Colors.white : const Color(0xFF002E6A),
                     ),
                   ),
                   const SizedBox(height: 4),

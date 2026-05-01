@@ -295,7 +295,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                       projectToEdit != null
                                           ? "Update Project"
                                           : "Create New Project",
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.manrope(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
@@ -425,7 +425,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                   Expanded(
                                     child: Text(
                                       localError.value!,
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.inter(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w700,
                                         fontSize: 13,
@@ -560,7 +560,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text("Cancel",
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                             fontWeight: FontWeight.w600,
                             color: Colors.grey.shade600,
                             fontSize: 15)),
@@ -580,7 +580,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text("Continue",
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
                             letterSpacing: 0.5)),
@@ -643,7 +643,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                             children: [
                               Text(
                                 'PROJECT REJECTION FEEDBACK',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   color: const Color(0xFF991B1B),
                                   fontSize: 11,
                                   fontWeight: FontWeight.w900,
@@ -653,7 +653,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                               const SizedBox(height: 8),
                               Text(
                                 projectToEdit!.project.rejectionReason!,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   color: const Color(0xFF7F1D1D),
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -669,7 +669,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                               const SizedBox(height: 12),
                               Text(
                                 'Please align with the feedback above and resubmit for approval.',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   color: const Color(0xFF991B1B)
                                       .withValues(alpha: 0.7),
                                   fontSize: 12,
@@ -769,7 +769,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                     TextButton(
                         onPressed: onBack,
                         child: Text("BACK",
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w700,
                                 color: Colors.grey.shade500,
                                 letterSpacing: 1.2,
@@ -824,7 +824,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                             : (projectToEdit != null
                                 ? "UPDATE WORKSPACE"
                                 : "CREATE WORKSPACE"),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                             fontWeight: FontWeight.w800,
                             fontSize: 14,
                             letterSpacing: 0.8),
@@ -854,8 +854,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                     Row(
                       children: [
                         Text("Task Planning",
-                            style: GoogleFonts.outfit(
-                                fontSize: 22,
+                            style: GoogleFonts.manrope(
+                                fontSize: 24,
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF05263E),
                                 letterSpacing: -0.5)),
@@ -869,7 +869,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text("PROJECT: ${nameController.text.toUpperCase()}",
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF3B82F6),
@@ -940,7 +940,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                     projectToEdit != null
                         ? "RESUBMIT FOR APPROVAL"
                         : "CREATE PROJECT",
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                         fontWeight: FontWeight.w800, letterSpacing: 0.8),
                   ),
                 ),
@@ -1050,8 +1050,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text("Create New Client",
-                    style: GoogleFonts.outfit(
-                        fontSize: 22,
+                    style: GoogleFonts.manrope(
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF05263E),
                         letterSpacing: -0.5)),
@@ -1096,7 +1096,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                   ),
                   child: Text(
                     "BACK",
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                         letterSpacing: 0.8),
@@ -1134,7 +1134,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                   ),
                   child: Text(
                     "CREATE CLIENT",
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                         letterSpacing: 0.8),
@@ -1187,9 +1187,9 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
             children: [
               Text(
                 "Planned Tasks",
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontWeight: FontWeight.w800,
-                  fontSize: 20,
+                  fontSize: 24,
                   color: isDark ? brandAccent : brandNavy,
                   letterSpacing: -0.5,
                 ),
@@ -1204,7 +1204,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                 ),
                 child: Text(
                   "${taskList.value.length} Tasks",
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: brandNavy),
@@ -1224,7 +1224,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                         const SizedBox(height: 16),
                         Text(
                           "No tasks added yet",
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                               color: Colors.grey.shade400,
                               fontWeight: FontWeight.w500),
                         ),
@@ -1273,7 +1273,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                 children: [
                                   Text(
                                     task.name,
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.inter(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 15,
                                       color: isDark ? Colors.white : brandNavy,
@@ -1365,7 +1365,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                           const SizedBox(height: 16),
                           Text(
                             "No tasks added yet",
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                                 color: Colors.grey.shade400,
                                 fontWeight: FontWeight.w500),
                           ),
@@ -1412,7 +1412,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                   children: [
                                     Text(
                                       task.name,
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.inter(
                                         fontWeight: FontWeight.w700,
                                         fontSize: 15,
                                         color:
@@ -1777,7 +1777,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
       children: [
         Text(
           label.toUpperCase(),
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontWeight: FontWeight.w800,
             fontSize: 11,
             color: const Color(0xFF05263E),
@@ -1796,7 +1796,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                 users.where((u) => allowedIds.value.contains(u['id'])).toList();
             if (filteredUsers.isEmpty) {
               return Text("Select Assignees first",
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                       color: Colors.grey,
                       fontSize: 13,
                       fontStyle: FontStyle.italic));
@@ -1843,7 +1843,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         Text((user['name'] as String?) ?? 'User',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: isSelected
                                     ? FontWeight.bold
@@ -1874,7 +1874,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
       children: [
         Text(
           label.toUpperCase(),
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontWeight: FontWeight.w800,
             fontSize: 11,
             color: const Color(0xFF05263E),
@@ -1895,7 +1895,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                 DropdownButtonFormField<int>(
                   key: ValueKey('project_assignee_${selectedIds.value.length}'),
                   initialValue: null,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Colors.black,
                       fontWeight: FontWeight.w500),
@@ -1905,7 +1905,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                     filled: true,
                     fillColor: Colors.white,
                     hintText: "Add Assignee",
-                    hintStyle: GoogleFonts.outfit(
+                    hintStyle: GoogleFonts.inter(
                         fontSize: 13,
                         color: Colors.grey.shade400,
                         fontStyle: FontStyle.italic),
@@ -1924,7 +1924,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                       .map((u) => DropdownMenuItem<int>(
                           value: u['id'] as int,
                           child: Text((u['name'] as String?) ?? 'User',
-                              style: GoogleFonts.outfit())))
+                              style: GoogleFonts.inter())))
                       .toList(),
                   onChanged: (val) {
                     if (val != null) {
@@ -1947,7 +1947,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                             color:
                                 const Color(0xFF05263E).withValues(alpha: 0.1)),
                         label: Text((user['name'] as String?) ?? 'User',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: const Color(0xFF05263E))),
@@ -2091,7 +2091,7 @@ class _AddTaskForm extends HookConsumerWidget {
             ),
             const SizedBox(height: 24),
             Text("ASSIGN TO",
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontWeight: FontWeight.w800,
                   fontSize: 11,
                   color: brandNavy,
@@ -2114,7 +2114,7 @@ class _AddTaskForm extends HookConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
                         "Select Project members in 'Details' step first.",
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                             color: Colors.orange.shade700,
                             fontSize: 12,
                             fontStyle: FontStyle.italic)),
@@ -2127,7 +2127,7 @@ class _AddTaskForm extends HookConsumerWidget {
                       DropdownButtonFormField<int>(
                         key: ValueKey(
                             'task_assignee_${taskAssignees.value.length}'),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                             fontSize: 14,
                             color: Colors.black,
                             fontWeight: FontWeight.w500),
@@ -2137,7 +2137,7 @@ class _AddTaskForm extends HookConsumerWidget {
                           filled: true,
                           fillColor: Colors.white,
                           hintText: "Add Team Member",
-                          hintStyle: GoogleFonts.outfit(
+                          hintStyle: GoogleFonts.inter(
                               fontSize: 13,
                               color: Colors.grey.shade400,
                               fontStyle: FontStyle.italic),
@@ -2156,7 +2156,7 @@ class _AddTaskForm extends HookConsumerWidget {
                             .map((u) => DropdownMenuItem<int>(
                                 value: u['id'] as int,
                                 child: Text((u['name'] as String?) ?? 'User',
-                                    style: GoogleFonts.outfit())))
+                                    style: GoogleFonts.inter())))
                             .toList(),
                         onChanged: (val) {
                           if (val != null) {
@@ -2177,7 +2177,7 @@ class _AddTaskForm extends HookConsumerWidget {
                             side: BorderSide(
                                 color: brandNavy.withValues(alpha: 0.1)),
                             label: Text((user['name'] as String?) ?? 'User',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: brandNavy)),
@@ -2196,7 +2196,7 @@ class _AddTaskForm extends HookConsumerWidget {
             ),
             const SizedBox(height: 24),
             Text("MILESTONES",
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontWeight: FontWeight.w800,
                   fontSize: 11,
                   color: brandNavy,
@@ -2256,7 +2256,7 @@ class _AddTaskForm extends HookConsumerWidget {
                           side: BorderSide(
                               color: brandAccent.withValues(alpha: 0.2)),
                           label: Text(m,
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   color: brandNavy)),
@@ -2355,7 +2355,7 @@ class _AddTaskForm extends HookConsumerWidget {
                     editingTaskIndex.value != null
                         ? "UPDATE TASK"
                         : "ADD TO PROJECT PLAN",
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                         fontWeight: FontWeight.w800, letterSpacing: 1.0)),
               ),
             ),
@@ -2440,7 +2440,7 @@ class _Breadcrumb extends StatelessWidget {
                   size: 14, color: Color(0xFF05263E))
               : Text(
                   "${step.index + 1}",
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: isActive ? const Color(0xFF05263E) : color,
@@ -2450,7 +2450,7 @@ class _Breadcrumb extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
             color: color,
@@ -2532,16 +2532,16 @@ class _SelectionCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
                       color: isDark ? Colors.white : brandNavy,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       color:
                           isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -2582,7 +2582,7 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w900,
           color: Colors.white,
@@ -2636,7 +2636,7 @@ class _BudgetBadge extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 "Budget: ${projectLimit.toStringAsFixed(0)}h | Planned: ${totalPlanned.toStringAsFixed(0)}h",
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: isOver
@@ -2662,7 +2662,7 @@ class _BudgetBadge extends StatelessWidget {
             isOver
                 ? "Exceeded: ${(-remaining).toStringAsFixed(0)}h"
                 : "Remaining: ${remaining.toStringAsFixed(0)}h",
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w800,
               color: isOver
@@ -2693,7 +2693,7 @@ class _TaskTag extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w800,
             color: color,
@@ -2710,7 +2710,7 @@ Widget _buildPriorityDropdown(
     children: [
       Text(
         "PRIORITY",
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
           fontWeight: FontWeight.w800,
           fontSize: 11,
           color: brandNavy,
@@ -2727,7 +2727,7 @@ Widget _buildPriorityDropdown(
           DropdownMenuItem(value: 'CRITICAL', child: Text('Critical')),
         ],
         onChanged: (val) => priority.value = val!,
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
             fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           contentPadding:
@@ -2763,7 +2763,7 @@ Widget _buildTextField(
       if (label.isNotEmpty) ...[
         Text(
           label.toUpperCase(),
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontWeight: FontWeight.w800,
             fontSize: 11,
             color: const Color(0xFF05263E),
@@ -2780,10 +2780,10 @@ Widget _buildTextField(
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         onSubmitted: onSubmitted != null ? (_) => onSubmitted() : null,
-        style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500),
+        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: GoogleFonts.outfit(
+          hintStyle: GoogleFonts.inter(
               fontSize: 13,
               color: Colors.grey.shade400,
               fontStyle: FontStyle.italic),
@@ -2819,7 +2819,7 @@ Widget _buildDropdown(
     children: [
       Text(
         label.toUpperCase(),
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
           fontWeight: FontWeight.w800,
           fontSize: 11,
           color: const Color(0xFF05263E),
@@ -2832,10 +2832,10 @@ Widget _buildDropdown(
         items: items
             .map((s) => DropdownMenuItem(
                 value: s,
-                child: Text(s, style: GoogleFonts.outfit(fontSize: 14))))
+                child: Text(s, style: GoogleFonts.inter(fontSize: 14))))
             .toList(),
         onChanged: onChanged,
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
             fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           contentPadding:
@@ -2866,7 +2866,7 @@ Widget _buildClientDropdown(
     children: [
       Text(
         label.toUpperCase(),
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.inter(
           fontWeight: FontWeight.w800,
           fontSize: 11,
           color: const Color(0xFF05263E),
@@ -2892,7 +2892,7 @@ Widget _buildClientDropdown(
                 initialValue: null,
                 items: const [],
                 onChanged: null,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                     fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   contentPadding:
@@ -2900,7 +2900,7 @@ Widget _buildClientDropdown(
                   filled: true,
                   fillColor: Colors.white,
                   hintText: "No approved clients available",
-                  hintStyle: GoogleFonts.outfit(
+                  hintStyle: GoogleFonts.inter(
                       fontSize: 13,
                       color: Colors.grey.shade400,
                       fontStyle: FontStyle.italic),
@@ -2927,14 +2927,14 @@ Widget _buildClientDropdown(
                   final name = (client['client_name'] ?? client['name'] ?? 'Unknown') as String;
                   return DropdownMenuItem<int?>(
                     value: id,
-                    child: Text(name, style: GoogleFonts.outfit(fontSize: 14)),
+                    child: Text(name, style: GoogleFonts.inter(fontSize: 14)),
                   );
                 })
               ],
               onChanged: (value) {
                 selectedClientId.value = value;
               },
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                   fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
               decoration: InputDecoration(
                 contentPadding:

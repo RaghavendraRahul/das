@@ -104,7 +104,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Removed dual "Planner" text to save vertical space and improve premium layout.
+                // Header logic handled by ShellPage's AppHeader
                 Consumer(
                   builder: (context, ref, _) {
                     final user = ref.watch(currentUserProvider).valueOrNull;
@@ -114,7 +114,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                       clipBehavior: Clip.none,
                       children: [
                         _PillButton(
-                          label: 'Instructions',
+                          label: 'Instruction',
                           icon: Icons.inbox_rounded,
                           isSelected: currentView == CalendarViewMode.instructions,
                           onTap: () {
@@ -280,7 +280,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                                 // 3. Send Instructions - Restricted for Employees
                                 if (isElevatedRole)
                                   _PillButton(
-                                    label: 'Send Instructions',
+                                    label: 'Send Instruction',
                                     icon: Icons.group_rounded,
                                     isSelected: false,
                                     onTap: () {
@@ -459,7 +459,7 @@ class _PillButton extends StatelessWidget {
           boxShadow: showShadow && !isSelected
               ? [
                   BoxShadow(
-                    color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.06),
+                    color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.06),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   )
@@ -474,17 +474,17 @@ class _PillButton extends StatelessWidget {
               size: 16,
               color: isSelected
                   ? Colors.white
-                  : (isDark ? Colors.white70 : const Color(0xFF05263E).withOpacity(0.8)),
+                  : (isDark ? Colors.white70 : const Color(0xFF05263E).withValues(alpha: 0.8)),
             ),
             const SizedBox(width: 8),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
                 color: isSelected
                     ? Colors.white
-                    : (isDark ? Colors.white70 : const Color(0xFF05263E).withOpacity(0.8)),
+                    : (isDark ? Colors.white70 : const Color(0xFF64748B)),
               ),
             ),
           ],
@@ -516,7 +516,7 @@ class _IconButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.06),
+                color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               )
@@ -556,12 +556,12 @@ class _SubToggleButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? (isDark ? Colors.blue.withOpacity(0.2) : Colors.blue.shade50)
+              ? (isDark ? Colors.blue.withValues(alpha: 0.2) : Colors.blue.shade50)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isActive
-                ? Colors.blue.withOpacity(0.5)
+                ? Colors.blue.withValues(alpha: 0.5)
                 : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
           ),
         ),

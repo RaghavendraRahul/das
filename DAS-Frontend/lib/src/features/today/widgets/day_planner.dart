@@ -126,11 +126,10 @@ class DayPlanner extends HookConsumerWidget {
                     children: [
                       Text(
                         dateHeader,
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w900,
+                        style: GoogleFonts.manrope(
+                          fontWeight: FontWeight.w800,
                           fontSize: 18,
-                          letterSpacing: 0.3,
-                          color: isDark ? Colors.white : sidebarBlue,
+                          color: isDark ? Colors.white : const Color(0xFF114A75),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -288,7 +287,7 @@ class DayPlanner extends HookConsumerWidget {
                         children: [
                           Text(
                             "Pending Tasks",
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontWeight: FontWeight.w800,
                               fontSize: 16,
                               letterSpacing: 0.1,
@@ -436,7 +435,7 @@ class DayPlanner extends HookConsumerWidget {
                 children: [
                   Text(
                     "Pending Tasks",
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
                       letterSpacing: 0.1,
@@ -478,7 +477,7 @@ class DayPlanner extends HookConsumerWidget {
                           const SizedBox(width: 10),
                           Text(
                             'Day Plan has started!',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
                               color: isDark
@@ -525,10 +524,9 @@ class DayPlanner extends HookConsumerWidget {
                         icon: const Icon(Icons.play_arrow_rounded, size: 24),
                         label: Text(
                           'START DAY PLAN',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                            letterSpacing: 0.5,
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
@@ -863,7 +861,7 @@ class _ApiListView extends HookConsumerWidget {
                         const SizedBox(height: 16),
                         Text(
                           "NO TASKS PLANNED",
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 2,
@@ -1018,8 +1016,8 @@ class _FeatureButton extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -1281,7 +1279,7 @@ class _QuadrantBox extends HookConsumerWidget {
                         if (quadrant == 'Q1')
                           Text(
                             '!',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: iconColor.withValues(alpha: 0.8),
@@ -1297,11 +1295,10 @@ class _QuadrantBox extends HookConsumerWidget {
                         Expanded(
                           child: Text(
                             title.toUpperCase(),
-                            style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              letterSpacing: 0.2,
+                            style: GoogleFonts.manrope(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF114A75),
                             ),
                           ),
                         ),

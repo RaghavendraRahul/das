@@ -392,7 +392,7 @@ class AppHeader extends HookConsumerWidget {
                         const SizedBox(width: 16),
                         Text(
                           currentUser.name,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: isDark ? Colors.white : const Color(0xFF05263E),
@@ -423,22 +423,52 @@ class AppHeader extends HookConsumerWidget {
                       children: [
                         Text(
                           title,
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w700,
-                            fontSize: isMobile ? 24 : 32,
-                            letterSpacing: -0.5,
-                            color: isDark ? Colors.white : const Color(0xFF05263E),
-                          ),
+                          style: (title == 'Approvals')
+                            ? GoogleFonts.manrope(
+                                fontWeight: FontWeight.w800,
+                                fontSize: isMobile ? 32 : 36,
+                                color: const Color(0xFF002E6A),
+                              )
+                            : (title == 'Team Overview' || title == 'Quick Notes' || title == 'Projects')
+                            ? GoogleFonts.manrope(
+                                fontWeight: FontWeight.w800,
+                                fontSize: isMobile ? 28 : 36,
+                                color: const Color(0xFF002E6A),
+                              )
+                            : (title == 'Planner' || title == 'PLANNER') 
+                            ? GoogleFonts.manrope(
+                                fontWeight: FontWeight.w800,
+                                fontSize: isMobile ? 24 : 30,
+                                color: isDark ? Colors.white : const Color(0xFF114A75),
+                              )
+                            : GoogleFonts.manrope(
+                                fontWeight: FontWeight.w700,
+                                fontSize: isMobile ? 24 : 32,
+                                letterSpacing: -0.5,
+                                color: isDark ? Colors.white : const Color(0xFF05263E),
+                              ),
                         ),
                         if (subtitle.isNotEmpty) ...[
                           const SizedBox(height: 0),
                           Text(
                             subtitle,
-                            style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              color: isDark ? Colors.white70 : const Color(0xFF05263E).withAlpha(160),
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: (title == 'Quick Notes')
+                              ? GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF42474F),
+                                )
+                              : (title == 'Approvals')
+                              ? GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.normal,
+                                  color: isDark ? Colors.white70 : const Color(0xFF05263E).withAlpha(160),
+                                )
+                              : GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: isDark ? Colors.white70 : const Color(0xFF05263E).withAlpha(160),
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ],
                       ],
@@ -578,7 +608,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Notifications', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text('Notifications', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -797,7 +827,7 @@ class _CriticalAttentionButtonState extends ConsumerState<_CriticalAttentionButt
                             Row(children: [
                               const Icon(Icons.warning_rounded, color: Colors.white, size: 18),
                               const SizedBox(width: 8),
-                              Text('Critical Attention', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                              Text('Critical Attention', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                             ]),
                             IconButton(icon: const Icon(Icons.close, size: 20, color: Colors.white), onPressed: _closeDropdown, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
                           ],
